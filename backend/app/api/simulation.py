@@ -1844,10 +1844,33 @@ def get_prepare_status():
         }), 500
 
 
+def _check_simulation_ownership(simulation_id: str, user_id: Optional[str]) -> bool:
+    if not user_id:
+        return True
+    manager = SimulationManager()
+    state = manager.get_simulation(simulation_id)
+    if not state:
+        return True
+    from ..models.project import ProjectManager
+    project = ProjectManager.get_project(state.project_id)
+    if not project:
+        return True
+    if project.user_id and project.user_id != user_id:
+        return False
+    return True
+
+
 @simulation_bp.route('/<simulation_id>', methods=['GET'])
 def get_simulation(simulation_id: str):
     """获取模拟状态"""
     try:
+        user_id = request.headers.get('X-User-Id')
+        if not _check_simulation_ownership(simulation_id, user_id):
+            return jsonify({
+                "success": False,
+                "error": "Accès non autorisé"
+            }), 403
+
         manager = SimulationManager()
         state = manager.get_simulation(simulation_id)
         
@@ -1902,9 +1925,10 @@ def list_simulations():
     """
     try:
         project_id = request.args.get('project_id')
+        user_id = request.headers.get('X-User-Id')
         
         manager = SimulationManager()
-        simulations = manager.list_simulations(project_id=project_id)
+        simulations = manager.list_simulations(project_id=project_id, user_id=user_id)
         
         return jsonify({
             "success": True,
@@ -2016,10 +2040,9 @@ def get_simulation_history():
         }
     """
     try:
-        limit = request.args.get('limit', 20, type=int)
-        
+        user_id = request.headers.get('X-User-Id')
         manager = SimulationManager()
-        simulations = manager.list_simulations()[:limit]
+        simulations = manager.list_simulations(user_id=user_id)[:limit]
         
         # 增强模拟数据，只从 Simulation 文件读取
         enriched_simulations = []

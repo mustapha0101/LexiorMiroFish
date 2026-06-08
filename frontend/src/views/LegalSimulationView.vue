@@ -5,7 +5,7 @@
     <header class="legal-header">
       <div class="brand" @click="goHome">
         <img src="/logo.png" class="brand-logo" alt="Lexior" />
-        <span class="brand-name">LEXIOR <span class="brand-sub">SIMULATOR</span></span>
+        <span class="brand-name">{{ $t('common.brandFirst') }} <span class="brand-sub">{{ $t('common.brandSecond') }}</span></span>
       </div>
       <div class="header-title">Laboratoire Juridique • Monte-Carlo</div>
       <div class="header-right">

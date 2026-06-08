@@ -10,7 +10,9 @@ for (const path in localeFiles) {
   const key = path.match(/\/([^/]+)\.json$/)[1]
   if (languages[key]) {
     messages[key] = localeFiles[path].default
-    availableLocales.push({ key, label: languages[key].label })
+    if (key !== 'zh') {
+      availableLocales.push({ key, label: languages[key].label })
+    }
   }
 }
 

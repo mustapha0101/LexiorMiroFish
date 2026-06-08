@@ -520,7 +520,7 @@ class SimulationManager:
         """获取模拟状态"""
         return self._load_simulation_state(simulation_id)
     
-    def list_simulations(self, project_id: Optional[str] = None) -> List[SimulationState]:
+    def list_simulations(self, project_id: Optional[str] = None, user_id: Optional[str] = None) -> List[SimulationState]:
         """列出所有模拟"""
         simulations = []
         
@@ -533,8 +533,17 @@ class SimulationManager:
                 
                 state = self._load_simulation_state(sim_id)
                 if state:
-                    if project_id is None or state.project_id == project_id:
-                        simulations.append(state)
+                    if project_id is not None and state.project_id != project_id:
+                        continue
+                    
+                    # 过滤归属于其他用户的项目模拟
+                    if user_id:
+                        from ..models.project import ProjectManager
+                        project = ProjectManager.get_project(state.project_id)
+                        if project and project.user_id and project.user_id != user_id:
+                            continue
+                            
+                    simulations.append(state)
         
         # Sort by created_at descending (latest first)
         simulations.sort(key=lambda x: x.created_at, reverse=True)

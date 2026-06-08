@@ -1,19 +1,16 @@
 <template>
-  <div class="home-container">
+  <div class="home-container" :class="{ 'auth-bg': !session }">
     <!-- 顶部导航栏 -->
     <nav class="navbar">
       <div class="nav-brand" @click="router.push('/')">
         <img src="/logo.png" class="brand-logo" alt="Lexior" />
-        <span class="brand-name">LEXIOR <span class="brand-sub">SIMULATOR</span></span>
+        <span class="brand-name">{{ $t('common.brandFirst') }} <span class="brand-sub">{{ $t('common.brandSecond') }}</span></span>
       </div>
       <div class="nav-links">
-        <button class="legal-sandbox-btn" @click="$router.push('/legal-simulator')">
-          ⚖️ Laboratoire Juridique
-        </button>
         <button 
-          v-if="loginGate?.session" 
+          v-if="session" 
           class="signout-btn" 
-          @click="loginGate.handleSignOut"
+          @click="loginGate?.handleSignOut"
         >
           🔑 {{ $t('auth.signOut') }}
         </button>
@@ -22,7 +19,7 @@
     </nav>
 
     <div class="main-content">
-      <LoginGate ref="loginGate">
+      <LoginGate ref="loginGate" @session-change="handleSessionChange">
         <!-- 上半部分：Hero 区域 -->
         <section class="hero-section">
         <div class="hero-left">
@@ -215,7 +212,7 @@
                     <span class="mode-icon">💬</span>
                     <span class="mode-title">{{ $t('home.modeSocial') }}</span>
                   </div>
-                  <p class="mode-desc">Simulation d'opinion publique et propagation d'impact sur les réseaux sociaux (Twitter / Reddit) avec l'intégration du moteur d'intégrité cognitive PIE.</p>
+                  <p class="mode-desc">{{ $t('home.modeSocialDesc') }}</p>
                 </div>
 
                 <div 
@@ -227,7 +224,7 @@
                     <span class="mode-icon">⚖️</span>
                     <span class="mode-title">{{ $t('home.modeLegal') }}</span>
                   </div>
-                  <p class="mode-desc">Simulation de procès contradictoire devant le Juge sur les faits du document.</p>
+                  <p class="mode-desc">{{ $t('home.modeLegalDesc') }}</p>
                 </div>
               </div>
             </div>
@@ -264,6 +261,11 @@ import LoginGate from '../components/LoginGate.vue'
 
 const router = useRouter()
 const loginGate = ref(null)
+const session = ref(null)
+
+const handleSessionChange = (newSession) => {
+  session.value = newSession
+}
 
 
 
@@ -381,6 +383,17 @@ const startSimulation = () => {
   background: var(--white);
   font-family: var(--font-sans);
   color: var(--black);
+}
+
+.home-container.auth-bg {
+  background: #F8FAFC;
+}
+
+.home-container.auth-bg .main-content {
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+  background: #F8FAFC;
 }
 
 /* 顶部导航 */

@@ -1,5 +1,7 @@
 {
   "common": {
+    "brandFirst": "LEXIOR",
+    "brandSecond": "SIMULATOR",
     "confirm": "Confirm",
     "cancel": "Cancel",
     "loading": "Loading...",
@@ -51,7 +53,7 @@
     "metricHighAvailDesc": "Millions of Agents",
     "workflowSequence": "Workflow",
     "step01Title": "Graph Build",
-    "step01Desc": "Seed extraction & memory injection & GraphRAG construction",
+    "step01Desc": "Concept extraction, memory injection & knowledge graph construction",
     "step02Title": "Env Setup",
     "step02Desc": "Entity extraction & persona generation & Agent config injection",
     "step03Title": "Simulation",
@@ -72,7 +74,9 @@
     "initializing": "Initializing...",
     "simulationMode": "Simulation Mode",
     "modeSocial": "Public Social Network (with PIE)",
-    "modeLegal": "Courtroom Trial"
+    "modeSocialDesc": "Simulation of public opinion and impact propagation on social networks (Twitter / Reddit) integrated with the PIE cognitive integrity engine.",
+    "modeLegal": "Courtroom Trial",
+    "modeLegalDesc": "Simulation of courtroom trials before the Judge based on the facts of the document."
   },
   "main": {
     "layoutGraph": "Graph",
@@ -87,8 +91,8 @@
     "ontologyPending": "Pending",
     "ontologyDesc": "LLM analyzes document content and simulation requirements, extracts reality seeds, and auto-generates a suitable ontology structure",
     "analyzingDocs": "Analyzing documents...",
-    "graphRagBuild": "GraphRAG Build",
-    "graphRagDesc": "Based on the generated ontology, documents are auto-chunked and processed locally using Kuzu DB to build a sovereign knowledge graph, extracting entities and relations, forming temporal memory and community summaries",
+    "graphRagBuild": "Knowledge Graph Construction",
+    "graphRagDesc": "Based on the generated ontology, documents are analyzed securely and locally to build a sovereign knowledge graph, modeling actors, facts and their relations.",
     "entityNodes": "Entity Nodes",
     "relationEdges": "Relation Edges",
     "schemaTypes": "Schema Types",

@@ -116,6 +116,13 @@ def get_project(project_id: str):
             "success": False,
             "error": t('api.projectNotFound', id=project_id)
         }), 404
+        
+    user_id = request.headers.get('X-User-Id')
+    if user_id and project.user_id and project.user_id != user_id:
+        return jsonify({
+            "success": False,
+            "error": "Accès non autorisé"
+        }), 403
 
     return jsonify({
         "success": True,
@@ -128,6 +135,20 @@ def get_project_text(project_id: str):
     """
     获取项目提取的文本
     """
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        return jsonify({
+            "success": False,
+            "error": t('api.projectNotFound', id=project_id)
+        }), 404
+        
+    user_id = request.headers.get('X-User-Id')
+    if user_id and project.user_id and project.user_id != user_id:
+        return jsonify({
+            "success": False,
+            "error": "Accès non autorisé"
+        }), 403
+
     text = ProjectManager.get_extracted_text(project_id)
     if text is None:
         return jsonify({
@@ -149,7 +170,8 @@ def list_projects():
     列出所有项目
     """
     limit = request.args.get('limit', 50, type=int)
-    projects = ProjectManager.list_projects(limit=limit)
+    user_id = request.headers.get('X-User-Id')
+    projects = ProjectManager.list_projects(limit=limit, user_id=user_id)
     
     return jsonify({
         "success": True,
@@ -163,6 +185,20 @@ def delete_project(project_id: str):
     """
     删除项目
     """
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        return jsonify({
+            "success": False,
+            "error": t('api.projectNotFound', id=project_id)
+        }), 404
+        
+    user_id = request.headers.get('X-User-Id')
+    if user_id and project.user_id and project.user_id != user_id:
+        return jsonify({
+            "success": False,
+            "error": "Accès non autorisé"
+        }), 403
+
     success = ProjectManager.delete_project(project_id)
     
     if not success:
@@ -189,6 +225,13 @@ def reset_project(project_id: str):
             "success": False,
             "error": t('api.projectNotFound', id=project_id)
         }), 404
+
+    user_id = request.headers.get('X-User-Id')
+    if user_id and project.user_id and project.user_id != user_id:
+        return jsonify({
+            "success": False,
+            "error": "Accès non autorisé"
+        }), 403
 
     # 重置到本体已生成状态
     if project.ontology:
@@ -287,7 +330,8 @@ def generate_ontology():
                 # Remove extension
                 project_name = os.path.splitext(first_filename)[0].strip()
 
-        project = ProjectManager.create_project(name=project_name, project_id=project_id)
+        user_id = request.headers.get('X-User-Id')
+        project = ProjectManager.create_project(name=project_name, project_id=project_id, user_id=user_id)
         project.simulation_requirement = simulation_requirement
         project.simulation_mode = simulation_mode
         logger.info(f"Création du projet '{project_name}' avec ID: {project.project_id}")
@@ -434,6 +478,13 @@ def build_graph():
                 "success": False,
                 "error": t('api.projectNotFound', id=project_id)
             }), 404
+
+        user_id = request.headers.get('X-User-Id')
+        if user_id and project.user_id and project.user_id != user_id:
+            return jsonify({
+                "success": False,
+                "error": "Accès non autorisé"
+            }), 403
 
         # 检查项目状态
         force = data.get('force', False)  # 强制重新构建

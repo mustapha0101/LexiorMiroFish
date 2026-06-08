@@ -1,5 +1,6 @@
 import axios from 'axios'
 import i18n from '../i18n'
+import { supabase } from '../utils/supabase'
 
 // 创建axios实例
 const service = axios.create({
@@ -12,8 +13,41 @@ const service = axios.create({
 
 // 请求拦截器
 service.interceptors.request.use(
-  config => {
+  async config => {
     config.headers['Accept-Language'] = i18n.global.locale.value
+    
+    // Inject X-User-Id header if user is authenticated
+    let userId = null
+    if (supabase) {
+      try {
+        const { data } = await supabase.auth.getSession()
+        if (data?.session?.user) {
+          userId = data.session.user.id
+        }
+      } catch (err) {
+        console.error('Error getting Supabase session in interceptor:', err)
+      }
+    }
+    
+    // Fallback to bypass session in localStorage
+    if (!userId) {
+      try {
+        const storedBypass = localStorage.getItem('lexior_bypass_session')
+        if (storedBypass) {
+          const bypassSession = JSON.parse(storedBypass)
+          if (bypassSession?.user?.id) {
+            userId = bypassSession.user.id
+          }
+        }
+      } catch (err) {
+        // Ignore
+      }
+    }
+    
+    if (userId) {
+      config.headers['X-User-Id'] = userId
+    }
+    
     return config
   },
   error => {

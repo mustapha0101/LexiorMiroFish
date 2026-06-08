@@ -3,7 +3,7 @@
     <div class="login-card">
       <div class="logo-area">
         <img src="/logo.png" alt="Lexior Logo" class="auth-logo" />
-        <h2 class="auth-brand">LEXIOR <span class="brand-sub">SIMULATOR</span></h2>
+        <h2 class="auth-brand">{{ $t('common.brandFirst') }} <span class="brand-sub">{{ $t('common.brandSecond') }}</span></h2>
       </div>
 
       <!-- No Supabase Config Warning -->
@@ -79,7 +79,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { supabase } from '../utils/supabase'
 
 const session = ref(null)
@@ -91,18 +91,35 @@ const successMsg = ref('')
 const isSignUp = ref(false)
 const isConfigured = ref(!!supabase)
 
+const emit = defineEmits(['session-change'])
+
+watch(session, (newVal) => {
+  emit('session-change', newVal)
+}, { immediate: true })
+
 onMounted(async () => {
   if (supabase) {
     // Check active session
     const { data, error: sessionErr } = await supabase.auth.getSession()
     if (!sessionErr && data?.session) {
       session.value = data.session
+      return
     }
 
     // Listen to auth state changes
     supabase.auth.onAuthStateChange((event, currentSession) => {
       session.value = currentSession
     })
+  }
+
+  // Fallback check for developer bypass session
+  const storedBypass = localStorage.getItem('lexior_bypass_session')
+  if (storedBypass) {
+    try {
+      session.value = JSON.parse(storedBypass)
+    } catch (e) {
+      localStorage.removeItem('lexior_bypass_session')
+    }
   }
 })
 
@@ -138,7 +155,9 @@ const handleAuth = async () => {
 
 // Development bypass
 const bypassAuth = () => {
-  session.value = { user: { email: 'dev-bypass@lexior.com' } }
+  const devSession = { user: { email: 'dev-bypass@lexior.com', id: 'dev-bypass-id' } }
+  session.value = devSession
+  localStorage.setItem('lexior_bypass_session', JSON.stringify(devSession))
 }
 
 // Expose sign out function
@@ -147,6 +166,7 @@ const handleSignOut = async () => {
     await supabase.auth.signOut()
   }
   session.value = null
+  localStorage.removeItem('lexior_bypass_session')
 }
 
 defineExpose({
@@ -160,7 +180,7 @@ defineExpose({
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 80vh;
+  min-height: calc(100vh - 60px);
   padding: 20px;
   background: #F8FAFC;
   font-family: 'Inter', -apple-system, sans-serif;

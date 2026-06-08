@@ -1,5 +1,7 @@
 {
   "common": {
+    "brandFirst": "SIMULATEUR",
+    "brandSecond": "LEXIOR",
     "confirm": "Confirmer",
     "cancel": "Annuler",
     "loading": "Chargement...",
@@ -51,7 +53,7 @@
     "metricHighAvailDesc": "Millions d'agents",
     "workflowSequence": "Flux de travail",
     "step01Title": "Construction du graphe",
-    "step01Desc": "Extraction de graines & injection de mémoire & construction GraphRAG",
+    "step01Desc": "Extraction de concepts, injection de mémoire et modélisation du graphe de connaissances",
     "step02Title": "Configuration de l'env.",
     "step02Desc": "Extraction d'entités & génération de personas & injection de configuration d'agent",
     "step03Title": "Simulation",
@@ -72,7 +74,9 @@
     "initializing": "Initialisation...",
     "simulationMode": "Mode de Simulation",
     "modeSocial": "Réseau Social Public (avec PIE)",
-    "modeLegal": "Procès Judiciaire (Tribunal)"
+    "modeSocialDesc": "Simulation d'opinion publique et propagation d'impact sur les réseaux sociaux (Twitter / Reddit) avec l'intégration du moteur d'intégrité cognitive PIE.",
+    "modeLegal": "Procès Judiciaire (Tribunal)",
+    "modeLegalDesc": "Simulation de débats judiciaires devant le Juge sur les faits du document."
   },
   "main": {
     "layoutGraph": "Graphe",
@@ -87,8 +91,8 @@
     "ontologyPending": "En attente",
     "ontologyDesc": "L'LLM analyse le contenu des documents et les exigences de la simulation, extrait les graines de réalité et génère automatiquement une structure d'ontologie adaptée",
     "analyzingDocs": "Analyse des documents...",
-    "graphRagBuild": "Construction GraphRAG",
-    "graphRagDesc": "Sur la base de l'ontologie générée, les documents sont automatiquement segmentés et traités localement avec Kuzu DB pour construire un graphe de connaissances souverain, extrayant les entités et relations, formant la mémoire temporelle et les résumés communautaires",
+    "graphRagBuild": "Construction du Graphe de Connaissances",
+    "graphRagDesc": "Sur la base de l'ontologie générée, les documents sont analysés de manière sécurisée et locale pour construire un graphe de connaissances souverain, modélisant les acteurs, les faits et leurs relations.",
     "entityNodes": "Nœuds d'entités",
     "relationEdges": "Relations",
     "schemaTypes": "Types de schéma",
