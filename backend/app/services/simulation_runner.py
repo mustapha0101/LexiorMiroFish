@@ -308,7 +308,7 @@ class SimulationRunner:
             
             return state
         except Exception as e:
-            logger.error(f"加载运行状态失败: {str(e)}")
+            logger.error(f"Échec du chargement de l'état d'exécution : {str(e)}")
             return None
     
     @classmethod
@@ -963,7 +963,7 @@ class SimulationRunner:
             original_rounds = total_rounds
             total_rounds = min(total_rounds, max_rounds)
             if total_rounds < original_rounds:
-                logger.info(f"轮数已截断: {original_rounds} -> {total_rounds} (max_rounds={max_rounds})")
+                logger.info(f"Nombre de tours tronqué : {original_rounds} -> {total_rounds} (max_rounds={max_rounds})")
         
         state = SimulationRunState(
             simulation_id=simulation_id,
@@ -984,9 +984,9 @@ class SimulationRunner:
             try:
                 ZepGraphMemoryManager.create_updater(simulation_id, graph_id)
                 cls._graph_memory_enabled[simulation_id] = True
-                logger.info(f"已启用图谱记忆更新: simulation_id={simulation_id}, graph_id={graph_id}")
+                logger.info(f"Mise à jour de la mémoire du graphe activée : simulation_id={simulation_id}, graph_id={graph_id}")
             except Exception as e:
-                logger.error(f"创建图谱记忆更新器失败: {e}")
+                logger.error(f"Échec de la création de la mise à jour de la mémoire du graphe : {e}")
                 cls._graph_memory_enabled[simulation_id] = False
         else:
             cls._graph_memory_enabled[simulation_id] = False
@@ -1075,7 +1075,7 @@ class SimulationRunner:
             monitor_thread.start()
             cls._monitor_threads[simulation_id] = monitor_thread
             
-            logger.info(f"模拟启动成功: {simulation_id}, pid={process.pid}, platform={platform}")
+            logger.info(f"Simulation démarrée avec succès : {simulation_id}, pid={process.pid}, plateforme={platform}")
             
         except Exception as e:
             state.runner_status = RunnerStatus.FAILED
@@ -1429,7 +1429,7 @@ class SimulationRunner:
             if exit_code == 0:
                 state.runner_status = RunnerStatus.COMPLETED
                 state.completed_at = datetime.now().isoformat()
-                logger.info(f"模拟完成: {simulation_id}")
+                logger.info(f"Simulation terminée : {simulation_id}")
             else:
                 state.runner_status = RunnerStatus.FAILED
                 # 从主日志文件读取错误信息
@@ -1442,14 +1442,14 @@ class SimulationRunner:
                 except Exception:
                     pass
                 state.error = f"进程退出码: {exit_code}, 错误: {error_info}"
-                logger.error(f"模拟失败: {simulation_id}, error={state.error}")
+                logger.error(f"Simulation échouée : {simulation_id}, error={state.error}")
             
             state.twitter_running = False
             state.reddit_running = False
             cls._save_run_state(state)
             
         except Exception as e:
-            logger.error(f"监控线程异常: {simulation_id}, error={str(e)}")
+            logger.error(f"Exception dans le thread de surveillance : {simulation_id}, error={str(e)}")
             state.runner_status = RunnerStatus.FAILED
             state.error = str(e)
             cls._save_run_state(state)
@@ -1459,9 +1459,9 @@ class SimulationRunner:
             if cls._graph_memory_enabled.get(simulation_id, False):
                 try:
                     ZepGraphMemoryManager.stop_updater(simulation_id)
-                    logger.info(f"已停止图谱记忆更新: simulation_id={simulation_id}")
+                    logger.info(f"Mise à jour de la mémoire du graphe arrêtée : simulation_id={simulation_id}")
                 except Exception as e:
-                    logger.error(f"停止图谱记忆更新器失败: {e}")
+                    logger.error(f"Échec de l'arrêt de la mise à jour de la mémoire du graphe : {e}")
                 cls._graph_memory_enabled.pop(simulation_id, None)
             
             # 清理进程资源
@@ -1526,11 +1526,11 @@ class SimulationRunner:
                                     if platform == "twitter":
                                         state.twitter_completed = True
                                         state.twitter_running = False
-                                        logger.info(f"Twitter 模拟已完成: {state.simulation_id}, total_rounds={action_data.get('total_rounds')}, total_actions={action_data.get('total_actions')}")
+                                        logger.info(f"Simulation Twitter terminée : {state.simulation_id}, total_rounds={action_data.get('total_rounds')}, total_actions={action_data.get('total_actions')}")
                                     elif platform == "reddit":
                                         state.reddit_completed = True
                                         state.reddit_running = False
-                                        logger.info(f"Reddit 模拟已完成: {state.simulation_id}, total_rounds={action_data.get('total_rounds')}, total_actions={action_data.get('total_actions')}")
+                                        logger.info(f"Simulation Reddit terminée : {state.simulation_id}, total_rounds={action_data.get('total_rounds')}, total_actions={action_data.get('total_actions')}")
                                     
                                     # 检查是否所有启用的平台都已完成
                                     # 如果只运行了一个平台，只检查那个平台
@@ -1539,7 +1539,7 @@ class SimulationRunner:
                                     if all_completed:
                                         state.runner_status = RunnerStatus.COMPLETED
                                         state.completed_at = datetime.now().isoformat()
-                                        logger.info(f"所有平台模拟已完成: {state.simulation_id}")
+                                        logger.info(f"Simulations sur toutes les plateformes terminées : {state.simulation_id}")
                                 
                                 # 更新轮次信息（从 round_end 事件）
                                 elif event_type == "round_end":
@@ -1589,7 +1589,7 @@ class SimulationRunner:
                             pass
                 return f.tell()
         except Exception as e:
-            logger.warning(f"读取动作日志失败: {log_path}, error={e}")
+            logger.warning(f"Échec de la lecture du journal d'actions : {log_path}, error={e}")
             return position
     
     @classmethod
@@ -1632,7 +1632,7 @@ class SimulationRunner:
         if IS_WINDOWS:
             # Windows: 使用 taskkill 命令终止进程树
             # /F = 强制终止, /T = 终止进程树（包括子进程）
-            logger.info(f"终止进程树 (Windows): simulation={simulation_id}, pid={process.pid}")
+            logger.info(f"Arrêt de l'arbre de processus (Windows) : simulation={simulation_id}, pid={process.pid}")
             try:
                 # 先尝试优雅终止
                 subprocess.run(
@@ -1644,7 +1644,7 @@ class SimulationRunner:
                     process.wait(timeout=timeout)
                 except subprocess.TimeoutExpired:
                     # 强制终止
-                    logger.warning(f"进程未响应，强制终止: {simulation_id}")
+                    logger.warning(f"Processus ne répond pas, arrêt forcé : {simulation_id}")
                     subprocess.run(
                         ['taskkill', '/F', '/PID', str(process.pid), '/T'],
                         capture_output=True,
@@ -1652,7 +1652,7 @@ class SimulationRunner:
                     )
                     process.wait(timeout=5)
             except Exception as e:
-                logger.warning(f"taskkill 失败，尝试 terminate: {e}")
+                logger.warning(f"Échec de taskkill, tentative de résiliation (terminate) : {e}")
                 process.terminate()
                 try:
                     process.wait(timeout=5)
@@ -1662,7 +1662,7 @@ class SimulationRunner:
             # Unix: 使用进程组终止
             # 由于使用了 start_new_session=True，进程组 ID 等于主进程 PID
             pgid = os.getpgid(process.pid)
-            logger.info(f"终止进程组 (Unix): simulation={simulation_id}, pgid={pgid}")
+            logger.info(f"Arrêt du groupe de processus (Unix) : simulation={simulation_id}, pgid={pgid}")
             
             # 先发送 SIGTERM 给整个进程组
             os.killpg(pgid, signal.SIGTERM)
@@ -1671,7 +1671,7 @@ class SimulationRunner:
                 process.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
                 # 如果超时后还没结束，强制发送 SIGKILL
-                logger.warning(f"进程组未响应 SIGTERM，强制终止: {simulation_id}")
+                logger.warning(f"Le groupe de processus ne répond pas à SIGTERM, arrêt forcé : {simulation_id}")
                 os.killpg(pgid, signal.SIGKILL)
                 process.wait(timeout=5)
     
@@ -2284,7 +2284,7 @@ class SimulationRunner:
                 # 进程已经不存在
                 pass
             except Exception as e:
-                logger.error(f"终止进程组失败: {simulation_id}, error={e}")
+                logger.error(f"Échec de l'arrêt du groupe de processus : {simulation_id}, error={e}")
                 # 回退到直接终止进程
                 try:
                     process.terminate()
@@ -2302,12 +2302,12 @@ class SimulationRunner:
         if cls._graph_memory_enabled.get(simulation_id, False):
             try:
                 ZepGraphMemoryManager.stop_updater(simulation_id)
-                logger.info(f"已停止图谱记忆更新: simulation_id={simulation_id}")
+                logger.info(f"Mise à jour de la mémoire du graphe arrêtée : simulation_id={simulation_id}")
             except Exception as e:
-                logger.error(f"停止图谱记忆更新器失败: {e}")
+                logger.error(f"Échec de l'arrêt de la mise à jour de la mémoire du graphe : {e}")
             cls._graph_memory_enabled.pop(simulation_id, None)
         
-        logger.info(f"模拟已停止: {simulation_id}")
+        logger.info(f"Simulation arrêtée : {simulation_id}")
         return state
     
     @classmethod
@@ -2663,7 +2663,7 @@ class SimulationRunner:
         if simulation_id in cls._run_states:
             del cls._run_states[simulation_id]
         
-        logger.info(f"清理模拟日志完成: {simulation_id}, 删除文件: {cleaned_files}")
+        logger.info(f"Nettoyage des journaux de simulation terminé : {simulation_id}, fichiers supprimés : {cleaned_files}")
         
         return {
             "success": len(errors) == 0,
@@ -2693,13 +2693,13 @@ class SimulationRunner:
         if not has_processes and not has_updaters:
             return  # 没有需要清理的内容，静默返回
         
-        logger.info("正在清理所有模拟进程...")
+        logger.info("Nettoyage de tous les processus de simulation en cours...")
         
         # 首先停止所有图谱记忆更新器（stop_all 内部会打印日志）
         try:
             ZepGraphMemoryManager.stop_all()
         except Exception as e:
-            logger.error(f"停止图谱记忆更新器失败: {e}")
+            logger.error(f"Échec de l'arrêt de la mise à jour de la mémoire du graphe : {e}")
         cls._graph_memory_enabled.clear()
         
         # 复制字典以避免在迭代时修改
@@ -2708,7 +2708,7 @@ class SimulationRunner:
         for simulation_id, process in processes:
             try:
                 if process.poll() is None:  # 进程仍在运行
-                    logger.info(f"终止模拟进程: {simulation_id}, pid={process.pid}")
+                    logger.info(f"Arrêt du processus de simulation : {simulation_id}, pid={process.pid}")
                     
                     try:
                         # 使用跨平台的进程终止方法
@@ -2735,7 +2735,7 @@ class SimulationRunner:
                     try:
                         sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
                         state_file = os.path.join(sim_dir, "state.json")
-                        logger.info(f"尝试更新 state.json: {state_file}")
+                        logger.info(f"Tentative de mise à jour de state.json : {state_file}")
                         if os.path.exists(state_file):
                             with open(state_file, 'r', encoding='utf-8') as f:
                                 state_data = json.load(f)
@@ -2743,14 +2743,14 @@ class SimulationRunner:
                             state_data['updated_at'] = datetime.now().isoformat()
                             with open(state_file, 'w', encoding='utf-8') as f:
                                 json.dump(state_data, f, indent=2, ensure_ascii=False)
-                            logger.info(f"已更新 state.json 状态为 stopped: {simulation_id}")
+                            logger.info(f"Statut de state.json mis à jour à stopped : {simulation_id}")
                         else:
-                            logger.warning(f"state.json 不存在: {state_file}")
+                            logger.warning(f"state.json n'existe pas : {state_file}")
                     except Exception as state_err:
-                        logger.warning(f"更新 state.json 失败: {simulation_id}, error={state_err}")
+                        logger.warning(f"Échec de la mise à jour de state.json : {simulation_id}, error={state_err}")
                         
             except Exception as e:
-                logger.error(f"清理进程失败: {simulation_id}, error={e}")
+                logger.error(f"Échec du nettoyage du processus : {simulation_id}, error={e}")
         
         # 清理文件句柄
         for simulation_id, file_handle in list(cls._stdout_files.items()):
@@ -2773,7 +2773,7 @@ class SimulationRunner:
         cls._processes.clear()
         cls._action_queues.clear()
         
-        logger.info("模拟进程清理完成")
+        logger.info("Nettoyage des processus de simulation terminé")
     
     @classmethod
     def cleanup_orphaned_simulations_on_startup(cls):
@@ -2882,7 +2882,7 @@ class SimulationRunner:
             """信号处理器：先清理模拟进程，再调用原处理器"""
             # 只有在有进程需要清理时才打印日志
             if cls._processes or cls._graph_memory_enabled:
-                logger.info(f"收到信号 {signum}，开始清理...")
+                logger.info(f"Signal {signum} reçu, début du nettoyage...")
             cls.cleanup_all_simulations()
             
             # 调用原有的信号处理器，让 Flask 正常退出
@@ -2915,7 +2915,7 @@ class SimulationRunner:
                 signal.signal(signal.SIGHUP, cleanup_handler)
         except ValueError:
             # 不在主线程中，只能使用 atexit
-            logger.warning("无法注册信号处理器（不在主线程），仅使用 atexit")
+            logger.warning("Impossible d'enregistrer le gestionnaire de signal (hors du thread principal), utilisation de atexit uniquement")
         
         _cleanup_registered = True
     
@@ -3024,7 +3024,7 @@ class SimulationRunner:
         if not ipc_client.check_env_alive():
             raise ValueError(f"L'environnement de simulation n'est pas actif ou a été fermé. Impossible d'exécuter l'interview : {simulation_id}")
 
-        logger.info(f"发送Interview命令: simulation_id={simulation_id}, agent_id={agent_id}, platform={platform}")
+        logger.info(f"Envoi de la commande d'interview : simulation_id={simulation_id}, agent_id={agent_id}, plateforme={platform}")
 
         response = ipc_client.send_interview(
             agent_id=agent_id,
@@ -3086,7 +3086,7 @@ class SimulationRunner:
         if not ipc_client.check_env_alive():
             raise ValueError(f"L'environnement de simulation n'est pas actif ou a été fermé. Impossible d'exécuter l'interview : {simulation_id}")
 
-        logger.info(f"发送批量Interview命令: simulation_id={simulation_id}, count={len(interviews)}, platform={platform}")
+        logger.info(f"Envoi de la commande d'interview groupée : simulation_id={simulation_id}, count={len(interviews)}, plateforme={platform}")
 
         response = ipc_client.send_batch_interview(
             interviews=interviews,
@@ -3160,7 +3160,7 @@ class SimulationRunner:
                     "prompt": prompt
                 })
 
-        logger.info(f"发送全局Interview命令: simulation_id={simulation_id}, agent_count={len(interviews)}, platform={platform}")
+        logger.info(f"Envoi de la commande d'interview globale : simulation_id={simulation_id}, agent_count={len(interviews)}, plateforme={platform}")
 
         return cls.interview_agents_batch(
             simulation_id=simulation_id,
@@ -3199,7 +3199,7 @@ class SimulationRunner:
                 "message": "环境已经关闭"
             }
         
-        logger.info(f"发送关闭环境命令: simulation_id={simulation_id}")
+        logger.info(f"Envoi de la commande de fermeture de l'environnement : simulation_id={simulation_id}")
         
         try:
             response = ipc_client.send_close_env(timeout=timeout)
@@ -3271,7 +3271,7 @@ class SimulationRunner:
             conn.close()
             
         except Exception as e:
-            logger.error(f"读取Interview历史失败 ({platform_name}): {e}")
+            logger.error(f"Échec de la lecture de l'historique d'interview ({platform_name}) : {e}")
         
         return results
 

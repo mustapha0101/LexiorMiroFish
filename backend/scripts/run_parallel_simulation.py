@@ -94,13 +94,13 @@ from dotenv import load_dotenv
 _env_file = os.path.join(_project_root, '.env')
 if os.path.exists(_env_file):
     load_dotenv(_env_file)
-    print(f"已加载环境配置: {_env_file}")
+    print(f"Configuration de l'environnement chargée : {_env_file}")
 else:
     # 尝试加载 backend/.env
     _backend_env = os.path.join(_backend_dir, '.env')
     if os.path.exists(_backend_env):
         load_dotenv(_backend_env)
-        print(f"已加载环境配置: {_backend_env}")
+        print(f"Configuration de l'environnement chargée : {_backend_env}")
 
 
 class MaxTokensWarningFilter(logging.Filter):
@@ -169,8 +169,8 @@ try:
         generate_reddit_agent_graph
     )
 except ImportError as e:
-    print(f"错误: 缺少依赖 {e}")
-    print("请先安装: pip install oasis-ai camel-ai")
+    print(f"Erreur : Dépendance manquante {e}")
+    print("Veuillez installer d'abord : pip install oasis-ai camel-ai")
     sys.exit(1)
 
 
@@ -364,11 +364,11 @@ class ParallelIPCHandler:
             
             if "error" in result:
                 self.send_response(command_id, "failed", error=result["error"])
-                print(f"  Interview失败: agent_id={agent_id}, platform={platform}, error={result['error']}")
+                print(f"  Échec de l'interview : agent_id={agent_id}, plateforme={platform}, erreur={result['error']}")
                 return False
             else:
                 self.send_response(command_id, "completed", result=result)
-                print(f"  Interview完成: agent_id={agent_id}, platform={platform}")
+                print(f"  Interview terminée : agent_id={agent_id}, plateforme={platform}")
                 return True
         
         # 未指定平台：同时采访两个平台
@@ -405,12 +405,12 @@ class ParallelIPCHandler:
         
         if success_count > 0:
             self.send_response(command_id, "completed", result=results)
-            print(f"  Interview完成: agent_id={agent_id}, 成功平台数={success_count}/{len(platforms_to_interview)}")
+            print(f"  Interview terminée : agent_id={agent_id}, plateformes réussies={success_count}/{len(platforms_to_interview)}")
             return True
         else:
             errors = [f"{p}: {r.get('error', '未知错误')}" for p, r in results["platforms"].items()]
             self.send_response(command_id, "failed", error="; ".join(errors))
-            print(f"  Interview失败: agent_id={agent_id}, 所有平台都失败")
+            print(f"  Échec de l'interview : agent_id={agent_id}, toutes les plateformes ont échoué")
             return False
     
     async def handle_batch_interview(self, command_id: str, interviews: List[Dict], platform: str = None) -> bool:
@@ -463,7 +463,7 @@ class ParallelIPCHandler:
                             action_args={"prompt": prompt}
                         )
                     except Exception as e:
-                        print(f"  警告: 无法获取Twitter Agent {agent_id}: {e}")
+                        print(f"  Avertissement : Impossible d'obtenir l'Agent Twitter {agent_id} : {e}")
                 
                 if twitter_actions:
                     await self.twitter_env.step(twitter_actions)
@@ -474,7 +474,7 @@ class ParallelIPCHandler:
                         result["platform"] = "twitter"
                         results[f"twitter_{agent_id}"] = result
             except Exception as e:
-                print(f"  Twitter批量Interview失败: {e}")
+                print(f"  Échec de l'interview groupée Twitter : {e}")
         
         # 处理Reddit平台的采访
         if reddit_interviews and self.reddit_env:
@@ -490,7 +490,7 @@ class ParallelIPCHandler:
                             action_args={"prompt": prompt}
                         )
                     except Exception as e:
-                        print(f"  警告: 无法获取Reddit Agent {agent_id}: {e}")
+                        print(f"  Avertissement : Impossible d'obtenir l'Agent Reddit {agent_id} : {e}")
                 
                 if reddit_actions:
                     await self.reddit_env.step(reddit_actions)
@@ -501,14 +501,14 @@ class ParallelIPCHandler:
                         result["platform"] = "reddit"
                         results[f"reddit_{agent_id}"] = result
             except Exception as e:
-                print(f"  Reddit批量Interview失败: {e}")
+                print(f"  Échec de l'interview groupée Reddit : {e}")
         
         if results:
             self.send_response(command_id, "completed", result={
                 "interviews_count": len(results),
                 "results": results
             })
-            print(f"  批量Interview完成: {len(results)} 个Agent")
+            print(f"  Interview groupée terminée : {len(results)} Agents")
             return True
         else:
             self.send_response(command_id, "failed", error="没有成功的采访")
@@ -553,7 +553,7 @@ class ParallelIPCHandler:
             conn.close()
             
         except Exception as e:
-            print(f"  读取Interview结果失败: {e}")
+            print(f"  Échec de la lecture des résultats d'interview : {e}")
         
         return result
     
@@ -572,7 +572,7 @@ class ParallelIPCHandler:
         command_type = command.get("command_type")
         args = command.get("args", {})
         
-        print(f"\n收到IPC命令: {command_type}, id={command_id}")
+        print(f"\nCommande IPC reçue : {command_type}, id={command_id}")
         
         if command_type == CommandType.INTERVIEW:
             await self.handle_interview(
@@ -592,7 +592,7 @@ class ParallelIPCHandler:
             return True
             
         elif command_type == CommandType.CLOSE_ENV:
-            print("收到关闭环境命令")
+            print("Commande de fermeture de l'environnement reçue")
             self.send_response(command_id, "completed", result={"message": "环境即将关闭"})
             return False
         
@@ -741,7 +741,7 @@ def fetch_new_actions_from_db(
         
         conn.close()
     except Exception as e:
-        print(f"读取数据库动作失败: {e}")
+        print(f"Échec de la lecture des actions de la base de données : {e}")
     
     return actions, new_last_rowid
 
@@ -851,7 +851,7 @@ def _enrich_action_context(
     
     except Exception as e:
         # 补充上下文失败不影响主流程
-        print(f"补充动作上下文失败: {e}")
+        print(f"Échec du complément du contexte d'action : {e}")
 
 
 def _get_post_info(
@@ -1029,7 +1029,7 @@ def create_model(config: Dict[str, Any], use_boost: bool = False):
     if llm_base_url:
         os.environ["OPENAI_API_BASE_URL"] = llm_base_url
     
-    print(f"{config_label} model={llm_model}, base_url={llm_base_url[:40] if llm_base_url else '默认'}...")
+    print(f"{config_label} model={llm_model}, base_url={llm_base_url[:40] if llm_base_url else 'défaut'}...")
     
     return ModelFactory.create(
         model_platform=ModelPlatformType.OPENAI,
@@ -1231,7 +1231,7 @@ async def run_twitter_simulation(
         # 检查是否收到退出信号
         if _shutdown_event and _shutdown_event.is_set():
             if main_logger:
-                main_logger.info(f"收到退出信号，在第 {round_num + 1} 轮停止模拟")
+                main_logger.info(f"Signal de sortie reçu, arrêt de la simulation au tour {round_num + 1}")
             break
         
         # Pour les cas judiciaires (legal), on commence la journée à 9h du matin (heure active des agents)
@@ -1449,7 +1449,7 @@ async def run_reddit_simulation(
         # 检查是否收到退出信号
         if _shutdown_event and _shutdown_event.is_set():
             if main_logger:
-                main_logger.info(f"收到退出信号，在第 {round_num + 1} 轮停止模拟")
+                main_logger.info(f"Signal de sortie reçu, arrêt de la simulation au tour {round_num + 1}")
             break
         
         # Pour les cas judiciaires (legal), on commence la journée à 9h du matin (heure active des agents)
@@ -1565,7 +1565,7 @@ async def main():
     _shutdown_event = asyncio.Event()
     
     if not os.path.exists(args.config):
-        print(f"错误: 配置文件不存在: {args.config}")
+        print(f"Erreur : Le fichier de configuration n'existe pas : {args.config}")
         sys.exit(1)
     
     config = load_config(args.config)
@@ -1661,11 +1661,11 @@ async def main():
                 except asyncio.TimeoutError:
                     pass  # 超时继续循环
         except KeyboardInterrupt:
-            print("\n收到中断信号")
+            print("\nSignal d'interruption reçu")
         except asyncio.CancelledError:
-            print("\n任务被取消")
+            print("\nTâche annulée")
         except Exception as e:
-            print(f"\n命令处理出错: {e}")
+            print(f"\nErreur lors du traitement de la commande : {e}")
         
         log_manager.info("\n关闭环境...")
         ipc_handler.update_status("stopped")
@@ -1701,7 +1701,7 @@ def setup_signal_handlers(loop=None):
     def signal_handler(signum, frame):
         global _cleanup_done
         sig_name = "SIGTERM" if signum == signal.SIGTERM else "SIGINT"
-        print(f"\n收到 {sig_name} 信号，正在退出...")
+        print(f"\nSignal {sig_name} reçu, sortie en cours...")
         
         if not _cleanup_done:
             _cleanup_done = True
@@ -1712,7 +1712,7 @@ def setup_signal_handlers(loop=None):
         # 不要直接 sys.exit()，让 asyncio 循环正常退出并清理资源
         # 如果是重复收到信号，才强制退出
         else:
-            print("强制退出...")
+            print("Sortie forcée...")
             sys.exit(1)
     
     signal.signal(signal.SIGTERM, signal_handler)
@@ -1724,7 +1724,7 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n程序被中断")
+        print("\nProgramme interrompu")
     except SystemExit:
         pass
     finally:
@@ -1734,4 +1734,4 @@ if __name__ == "__main__":
             resource_tracker._resource_tracker._stop()
         except Exception:
             pass
-        print("模拟进程已退出")
+        print("Le processus de simulation a quitté")
