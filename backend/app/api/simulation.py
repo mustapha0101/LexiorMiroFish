@@ -7,6 +7,7 @@ import os
 import json
 import traceback
 from flask import request, jsonify, send_file
+from typing import Optional
 
 from . import simulation_bp
 from ..config import Config
