@@ -33,15 +33,15 @@
     "visitGithub": "Visit our Github page"
   },
   "home": {
-    "tagline": "Concise & Universal Swarm Intelligence Engine",
+    "tagline": "Neuro-Symbolic & Cognitive Analysis",
     "version": "/ v0.1-Preview",
-    "heroTitle1": "Upload Reports,",
-    "heroTitle2": "Predict the Future",
-    "heroDesc": "From a single document, {brand} extracts reality seeds to auto-generate a parallel world with up to {agentScale}. Inject variables from a god's-eye view to find the {optimalSolution} in complex group dynamics.",
+    "heroTitle1": "Calculate your victory,",
+    "heroTitle2": "Don't assume it.",
+    "heroDesc": "From your case files and legal pleadings, Lexior models and stress-tests your legal strategies by confronting them with digital twins of key actors (judges, prosecutors, witnesses) endowed with their own convictions, cognitive biases, and behavioral dynamics.",
     "heroDescBrand": "Lexior Simulator",
     "heroDescAgentScale": "million-scale Agents",
     "heroDescOptimalSolution": "\"local optimum\"",
-    "slogan": "Let Agents rehearse the future, let decisions prevail",
+    "slogan": "Don't let human unpredictability dictate the outcome of your cases.",
     "systemStatus": "System Status",
     "systemReady": "Ready",
     "systemReadyDesc": "Prediction engine on standby. Upload unstructured data to initialize a simulation sequence.",
@@ -692,5 +692,20 @@
     "llmSelectAgentFailed": "LLM agent selection failed, using default selection: {error}",
     "generateInterviewQuestionsFailed": "Failed to generate interview questions: {error}",
     "generateInterviewSummaryFailed": "Failed to generate interview summary: {error}"
+  },
+  "auth": {
+    "titleLogin": "Secure Access - Lexior",
+    "titleSignUp": "Create Account",
+    "emailLabel": "Email Address",
+    "passwordLabel": "Password",
+    "loginBtn": "Sign In",
+    "signUpBtn": "Sign Up",
+    "toggleToSignUp": "Don't have an account? Sign up",
+    "toggleToLogin": "Already have an account? Sign in",
+    "errorMsg": "Authentication error: ",
+    "missingConfig": "Supabase is not configured. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
+    "signOut": "Sign Out",
+    "loading": "Loading...",
+    "successLogin": "Successfully logged in!"
   }
 }

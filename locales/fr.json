@@ -33,15 +33,15 @@
     "visitGithub": "Visiter notre page Github"
   },
   "home": {
-    "tagline": "Moteur d'intelligence collective concis et universel",
+    "tagline": "Neuro-Symbolique & Analyse Cognitive",
     "version": "/ v0.1-Preview",
-    "heroTitle1": "Téléchargez des rapports,",
-    "heroTitle2": "Prédisez l'avenir",
-    "heroDesc": "À partir d'un seul document, {brand} extrait des graines de réalité pour générer automatiquement un monde parallèle avec jusqu'à {agentScale}. Injectez des variables depuis une vue omnisciente pour trouver le {optimalSolution} dans des dynamiques de groupe complexes.",
+    "heroTitle1": "Calculez votre victoire,",
+    "heroTitle2": "Ne la supposez pas.",
+    "heroDesc": "À partir de vos dossiers et pièces de procédure, Lexior modélise et stresse vos stratégies juridiques en les confrontant aux jumeaux numériques des acteurs clés (juges, procureurs, témoins) dotés de leurs propres convictions, biais cognitifs et dynamiques comportementales.",
     "heroDescBrand": "Lexior Simulator",
     "heroDescAgentScale": "un million d'agents",
     "heroDescOptimalSolution": "\"optimum local\"",
-    "slogan": "Laissez les agents répéter l'avenir, laissez les décisions prévaloir",
+    "slogan": "Ne laissez plus l'imprévisibilité humaine dicter l'issue de vos dossiers.",
     "systemStatus": "Statut du système",
     "systemReady": "Prêt",
     "systemReadyDesc": "Moteur de prédiction en attente. Téléchargez des données non structurées pour initialiser une séquence de simulation.",
@@ -692,5 +692,20 @@
     "llmSelectAgentFailed": "Échec de sélection d'agent par LLM, sélection par défaut utilisée : {error}",
     "generateInterviewQuestionsFailed": "Échec de génération des questions d'interview : {error}",
     "generateInterviewSummaryFailed": "Échec de génération du résumé d'interview : {error}"
+  },
+  "auth": {
+    "titleLogin": "Accès Sécurisé - Lexior",
+    "titleSignUp": "Créer un Compte",
+    "emailLabel": "Adresse Courriel",
+    "passwordLabel": "Mot de passe",
+    "loginBtn": "Se connecter",
+    "signUpBtn": "S'inscrire",
+    "toggleToSignUp": "Pas de compte ? Créer un compte",
+    "toggleToLogin": "Déjà un compte ? Se connecter",
+    "errorMsg": "Erreur d'authentification : ",
+    "missingConfig": "Supabase n'est pas configuré. Veuillez définir VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY.",
+    "signOut": "Déconnexion",
+    "loading": "Chargement...",
+    "successLogin": "Connexion réussie !"
   }
 }
