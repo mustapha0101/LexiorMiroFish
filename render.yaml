@@ -17,7 +17,7 @@ services:
       - key: LLM_BASE_URL
         value: https://generativelanguage.googleapis.com/v1beta/openai/ # Defaults to Gemini OpenAI compatible endpoint
       - key: LLM_MODEL_NAME
-        value: gemini-1.5-flash # 1.5-flash allows 1500 req/day on the free tier (2.5-flash is limited to 20 req/day)
+        value: gemini-2.5-flash # Reverted back to gemini-2.5-flash since user has a paid tier
       - key: ZEP_API_KEY
         value: "" # Optional, leave blank if not using Zep Cloud
       - key: FLASK_DEBUG
