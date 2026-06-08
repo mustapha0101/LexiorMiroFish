@@ -6,12 +6,18 @@ import SimulationRunView from '../views/SimulationRunView.vue'
 import ReportView from '../views/ReportView.vue'
 import InteractionView from '../views/InteractionView.vue'
 import LegalSimulationView from '../views/LegalSimulationView.vue'
+import ResearchPaper from '../views/ResearchPaper.vue'
 
 const routes = [
   {
     path: '/',
     name: 'Home',
     component: Home
+  },
+  {
+    path: '/research',
+    name: 'Research',
+    component: ResearchPaper
   },
   {
     path: '/legal-simulator',

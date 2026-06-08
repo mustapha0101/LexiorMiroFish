@@ -32,7 +32,8 @@
     "description": "Lexior Simulator - Système de simulation cognitive multi-agent"
   },
   "nav": {
-    "visitGithub": "Visiter notre page Github"
+    "visitGithub": "Visiter notre page Github",
+    "researchPaper": "Papier de recherche"
   },
   "home": {
     "tagline": "Neuro-Symbolique & Analyse Cognitive",
@@ -47,10 +48,12 @@
     "systemStatus": "Statut du système",
     "systemReady": "Prêt",
     "systemReadyDesc": "Moteur de prédiction en attente. Téléchargez des données non structurées pour initialiser une séquence de simulation.",
-    "metricLowCost": "Faible coût",
-    "metricLowCostDesc": "Moy. 5 $ / sim",
-    "metricHighAvail": "Évolutif",
-    "metricHighAvailDesc": "Millions d'agents",
+    "metricSimulationsRun": "Simulations réalisées",
+    "metricSimulationsRunDesc": "{count} exécutions",
+    "metricActorsSimulated": "Jumeaux cognitifs",
+    "metricActorsSimulatedDesc": "{count} agents générés",
+    "metricRoundsRun": "Rounds simulés",
+    "metricRoundsRunDesc": "{count} rounds de débats",
     "workflowSequence": "Flux de travail",
     "step01Title": "Construction du graphe",
     "step01Desc": "Extraction de concepts, injection de mémoire et modélisation du graphe de connaissances",

@@ -80,12 +80,12 @@ class ZepEntityReader:
             raise e
             
     def get_all_nodes(self, graph_id: str) -> List[Dict[str, Any]]:
-        db = LocalGraphDatabase(graph_id)
-        return db.fetch_all_nodes()
+        with LocalGraphDatabase(graph_id) as db:
+            return db.fetch_all_nodes()
 
     def get_all_edges(self, graph_id: str) -> List[Dict[str, Any]]:
-        db = LocalGraphDatabase(graph_id)
-        return db.fetch_all_edges()
+        with LocalGraphDatabase(graph_id) as db:
+            return db.fetch_all_edges()
         
     def get_node_edges(self, node_uuid: str, graph_id: str = None) -> List[Dict[str, Any]]:
         # In Kuzu, we need the graph_id to open the DB.
@@ -98,10 +98,10 @@ class ZepEntityReader:
         return []
 
     def filter_defined_entities(self, graph_id: str, defined_entity_types: Optional[List[str]] = None, enrich_with_edges: bool = True) -> FilteredEntities:
-        db = LocalGraphDatabase(graph_id)
-        all_nodes = db.fetch_all_nodes()
-        total_count = len(all_nodes)
-        all_edges = db.fetch_all_edges() if enrich_with_edges else []
+        with LocalGraphDatabase(graph_id) as db:
+            all_nodes = db.fetch_all_nodes()
+            total_count = len(all_nodes)
+            all_edges = db.fetch_all_edges() if enrich_with_edges else []
         node_map = {n["uuid"]: n for n in all_nodes}
         
         filtered_entities = []
@@ -178,8 +178,8 @@ class ZepEntityReader:
         )
 
     def get_entity_with_context(self, graph_id: str, entity_uuid: str) -> Optional[EntityNode]:
-        db = LocalGraphDatabase(graph_id)
-        all_nodes = db.fetch_all_nodes()
+        with LocalGraphDatabase(graph_id) as db:
+            all_nodes = db.fetch_all_nodes()
         node_map = {n["uuid"]: n for n in all_nodes}
         node = node_map.get(entity_uuid)
         if not node:

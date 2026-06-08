@@ -152,29 +152,32 @@ class ZepGraphMemoryUpdater:
     
     def _worker_loop(self, locale: str = 'zh'):
         set_locale(locale)
-        db = LocalGraphDatabase(self.graph_id)
         # Dummy ontology so NER finds standard entities if no custom ontology is present
         dummy_ontology = {"entity_types": [{"name": "Person"}, {"name": "Concept"}], "edge_types": [{"name": "INTERACTS_WITH"}]}
         
-        while self._running or not self._activity_queue.empty():
-            try:
-                try:
-                    activity = self._activity_queue.get(timeout=1)
-                    platform = activity.platform.lower()
-                    with self._buffer_lock:
-                        if platform not in self._platform_buffers:
-                            self._platform_buffers[platform] = []
-                        self._platform_buffers[platform].append(activity)
-                        
-                        if len(self._platform_buffers[platform]) >= self.BATCH_SIZE:
-                            batch = self._platform_buffers[platform][:self.BATCH_SIZE]
-                            self._platform_buffers[platform] = self._platform_buffers[platform][self.BATCH_SIZE:]
-                            self._send_batch_activities(batch, platform, db, dummy_ontology)
-                            time.sleep(self.SEND_INTERVAL)
-                except Empty:
-                    pass
-            except Exception as e:
-                time.sleep(1)
+        try:
+            with LocalGraphDatabase(self.graph_id) as db:
+                while self._running or not self._activity_queue.empty():
+                    try:
+                        try:
+                            activity = self._activity_queue.get(timeout=1)
+                            platform = activity.platform.lower()
+                            with self._buffer_lock:
+                                if platform not in self._platform_buffers:
+                                    self._platform_buffers[platform] = []
+                                self._platform_buffers[platform].append(activity)
+                                
+                                if len(self._platform_buffers[platform]) >= self.BATCH_SIZE:
+                                    batch = self._platform_buffers[platform][:self.BATCH_SIZE]
+                                    self._platform_buffers[platform] = self._platform_buffers[platform][self.BATCH_SIZE:]
+                                    self._send_batch_activities(batch, platform, db, dummy_ontology)
+                                    time.sleep(self.SEND_INTERVAL)
+                        except Empty:
+                            pass
+                    except Exception as e:
+                        time.sleep(1)
+        except Exception as db_err:
+            logger.error(f"Error initializing LocalGraphDatabase in worker loop: {db_err}")
     
     def _send_batch_activities(self, activities: List[AgentActivity], platform: str, db: LocalGraphDatabase, dummy_ontology: Dict):
         if not activities:
@@ -207,12 +210,12 @@ class ZepGraphMemoryUpdater:
                 break
         
         try:
-            db = LocalGraphDatabase(self.graph_id)
-            dummy_ontology = {"entity_types": [{"name": "Person"}, {"name": "Concept"}], "edge_types": [{"name": "INTERACTS_WITH"}]}
-            with self._buffer_lock:
-                for platform, buffer in self._platform_buffers.items():
-                    if buffer:
-                        self._send_batch_activities(buffer, platform, db, dummy_ontology)
+            with LocalGraphDatabase(self.graph_id) as db:
+                dummy_ontology = {"entity_types": [{"name": "Person"}, {"name": "Concept"}], "edge_types": [{"name": "INTERACTS_WITH"}]}
+                with self._buffer_lock:
+                    for platform, buffer in self._platform_buffers.items():
+                        if buffer:
+                            self._send_batch_activities(buffer, platform, db, dummy_ontology)
         except Exception as e:
             logger.warning(f"Error during graph memory flush_remaining: {e}")
         finally:

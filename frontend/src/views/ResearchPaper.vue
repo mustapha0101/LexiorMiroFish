@@ -1,0 +1,741 @@
+<template>
+  <div class="research-container">
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+      <div class="nav-brand" @click="router.push('/')">
+        <img src="/logo.png" class="brand-logo" alt="Lexior" />
+        <span class="brand-name">{{ $t('common.brandFirst') }} <span class="brand-sub">{{ $t('common.brandSecond') }}</span></span>
+      </div>
+      <div class="nav-links">
+        <button class="back-btn" @click="router.push('/')">
+          ← {{ $t('common.back') || 'Retour' }}
+        </button>
+        <LanguageSwitcher />
+      </div>
+    </nav>
+
+    <!-- Main Grid Content -->
+    <div class="research-grid">
+      <!-- Sidebar Index -->
+      <aside class="sidebar-index">
+        <div class="sidebar-title">TABLE DES MATIÈRES</div>
+        <ul class="index-list">
+          <li v-for="(sec, idx) in sections" :key="idx" :class="{ active: activeSection === sec.id }" @click="scrollToSection(sec.id)">
+            <span class="sec-num">0{{ idx + 1 }}</span>
+            <span class="sec-name">{{ sec.title }}</span>
+          </li>
+        </ul>
+      </aside>
+
+      <!-- Main Scientific Body -->
+      <main class="scientific-body">
+        <header class="paper-header">
+          <div class="rd-tag">DOSSIER DE JUSTIFICATION TECHNIQUE R&D</div>
+          <h1 class="paper-title">
+            Modélisation de la Continuité Identitaire et Cohérence Décisionnelle dans les Systèmes Multi-Agents Complexes
+          </h1>
+          <div class="paper-subtitle">
+            L'Architecture Neuro-Symbolique PIE (Probabilistic Identity Engine)
+          </div>
+          <div class="paper-meta">
+            <span><strong>Date :</strong> Juin 2026</span>
+            <span><strong>Classification :</strong> RS&DE (Crédit d'impôt recherche)</span>
+            <span><strong>Auteur :</strong> Département R&D Lexior</span>
+          </div>
+        </header>
+
+        <!-- Section 1 -->
+        <section id="section1" class="paper-section">
+          <h2><span>01.</span> Résumé du Projet et Objectifs Scientifiques</h2>
+          <p>
+            Les architectures classiques d'agents autonomes basées sur des modèles de langage de grande taille (LLM) souffrent d'une absence inhérente de continuité comportementale et d'une uniformisation de leurs décisions. Face à des stimuli complexes et contradictoires, ces modèles tendent à converger vers des réponses lissées et neutres, conséquence directe des mécanismes d'alignement post-entraînement par rétroaction humaine (RLHF).
+          </p>
+          <p>
+            Ce projet de R&D introduit le <strong>Probabilistic Identity Engine</strong> (PIE), une architecture logicielle neuro-symbolique hybride visant à surmonter ces verrous en maintenant une cohérence décisionnelle stable à travers des cycles de simulation longs. Ce système résout l'absence de continuité comportementale par l'implémentation d'un espace d'états d'un système dynamique multi-agents régulé par des couches logiques symboliques persistantes, assurant la plasticité et la persistance des variables d'état sous contraintes de fenêtres de contexte limitées.
+          </p>
+        </section>
+
+        <!-- Section 2 -->
+        <section id="section2" class="paper-section">
+          <h2><span>02.</span> Verrous Technologiques et État de l'Art</h2>
+          <p>
+            Dans l'état de l'art actuel, la modélisation de comportements d'agents simulés repose majoritairement sur des prompts système statiques couplés à des bases de connaissances vectorielles par génération augmentée par récupération (RAG) (Park et al., 2023). Ces architectures conventionnelles se heurtent à trois verrous technologiques majeurs :
+          </p>
+          <div class="verrous-list">
+            <div class="verrou-card">
+              <div class="verrou-icon">⚡</div>
+              <h4>Nature apatride (stateless)</h4>
+              <p>L'agent LLM ne dispose d'aucune dérive dynamique de son comportement basée sur son historique d'exécution. L'état d'évaluation s'effondre à chaque appel.</p>
+            </div>
+            <div class="verrou-card">
+              <div class="verrou-icon">🧠</div>
+              <h4>Saturation et dérive de mémoire</h4>
+              <p>La mémoire vectorielle classique maximise la restitution factuelle, sans modéliser les biais attentionnels restrictifs requis pour simuler les limites de la rationalité.</p>
+            </div>
+            <div class="verrou-card">
+              <div class="verrou-icon">⚖️</div>
+              <h4>Instabilité inter-cycles (Verdict Flip-Flop)</h4>
+              <p>Les modèles subissent des incohérences de verdict d'un tour à l'autre (ex: Coupable au cycle 1, puis Non Coupable au cycle 2) sans justification factuelle.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 3 -->
+        <section id="section3" class="paper-section">
+          <h2><span>03.</span> Formalisation de l'Espace d'États Persistant</h2>
+          <p>
+            Pour surmonter ces verrous, nous modélisons l'identité et le profil décisionnel de l'agent à l'instant <em>t</em> par un vecteur d'état <strong>S<sub>t</sub></strong> évoluant dans un espace produit hybride continu-discret :
+          </p>
+          <div class="formula-box">
+            S<sub>t</sub> = &lang; T<sub>t</sub>, B<sub>t</sub>, M<sub>t</sub> &rang; &isin; &real;<sup>d</sup> &times; &Delta;<sup>k</sup> &times; D
+          </div>
+          <p>Où :</p>
+          <ul>
+            <li><strong>T<sub>t</sub> &isin; &real;<sup>d</sup> :</strong> l'espace continu des variables de régulation logique internes de l'agent. Dans le cadre d'un procès judiciaire, ces variables modélisent les axes professionnels déontologiques : <em>Procédure vs Équité</em>, <em>Offensive vs Négociation</em>, <em>Prudence vs Rapidité</em>.</li>
+            <li><strong>B<sub>t</sub> &isin; &Delta;<sup>k</sup> :</strong> l'espace des croyances sémantiques formalisé par des simplexes de probabilité (Bayesian belief vectors).</li>
+            <li><strong>M<sub>t</sub> &isin; D :</strong> désigne l'espace discret des configurations d'état logique et de la posture d'humeur de l'agent (ex. <em>Coopératif</em>, <em>Méfiant</em>, <em>Paranoïaque</em>, <em>Isolé</em>).</li>
+          </ul>
+        </section>
+
+        <!-- Section 4 -->
+        <section id="section4" class="paper-section">
+          <h2><span>04.</span> Stabilisation Algorithmique par Inertie</h2>
+          <p>
+            Afin de prévenir des oscillations erratiques sous l'effet de stimuli contradictoires, nous implémentons un tenseur d'inertie <strong>I<sub>t</sub></strong>. La mise à jour d'une variable de tension <strong>T<sub>i</sub></strong> suite à une action <strong>a</strong> obéit à l'équation différentielle discrète suivante :
+          </p>
+          <div class="formula-box">
+            T<sub>i</sub><sup>(t+1)</sup> = clip &Big( T<sub>i</sub><sup>(t)</sup> + &eta; &middot; (1 - I<sub>i</sub><sup>(t)</sup>) &middot; &nabla;<sub>a</sub> S(a), 0, 1 &Big)
+          </div>
+          <p>
+            L'inertie mémorielle est dérivée symboliquement de la densité de connexions sémantiques et de l'activation des souvenirs persistants dans le graphe relationnel de l'agent :
+          </p>
+          <div class="formula-box">
+            I<sub>i</sub><sup>(t)</sup> = tanh &Big( &gamma; &middot; &sum;<sub>m &isin; M<sub>active</sub></sub> A(m) &middot; W<sub>s</sub>(m, T<sub>i</sub>) &Big)
+          </div>
+          <p>
+            Ci-dessous, la simulation comparative montre comment le tenseur d'inertie de PIE stabilise la trajectoire cognitive de l'agent face à des perturbations bruyantes de l'environnement, contrairement au modèle contrôle sans inertie :
+          </p>
+
+          <!-- Inertia SVG Chart -->
+          <div class="chart-container">
+            <div class="chart-title">Trajectoire comportementale : Tensions face aux stimuli</div>
+            <svg viewBox="0 0 700 320" class="rd-svg-chart">
+              <!-- Grid Lines -->
+              <line x1="50" y1="20" x2="650" y2="20" stroke="#1A2333" stroke-dasharray="3,3" />
+              <line x1="50" y1="140" x2="650" y2="140" stroke="#1A2333" stroke-dasharray="3,3" />
+              <line x1="50" y1="260" x2="650" y2="260" stroke="#1A2333" />
+              
+              <!-- Axes labels -->
+              <text x="45" y="25" fill="#64748B" font-size="10" text-anchor="end">1.0 (Offensif)</text>
+              <text x="45" y="145" fill="#64748B" font-size="10" text-anchor="end">0.5</text>
+              <text x="45" y="265" fill="#64748B" font-size="10" text-anchor="end">0.0 (Prudent)</text>
+              
+              <!-- Step labels -->
+              <text x="50" y="285" fill="#64748B" font-size="10" text-anchor="middle">S1</text>
+              <text x="170" y="285" fill="#64748B" font-size="10" text-anchor="middle">S4</text>
+              <text x="290" y="285" fill="#64748B" font-size="10" text-anchor="middle">S8</text>
+              <text x="410" y="285" fill="#64748B" font-size="10" text-anchor="middle">S12</text>
+              <text x="530" y="285" fill="#64748B" font-size="10" text-anchor="middle">S15</text>
+              
+              <!-- Control Line (Wild fluctuations) -->
+              <!-- Points: (50, 140) -> (140, 212) -> (230, 92) -> (320, 212) -> (410, 260) -> (500, 140) -> (590, 260) -->
+              <path d="M 50 140 L 90 212 L 130 92 L 170 212 L 210 260 L 250 140 L 290 260 L 330 140 L 370 212 L 410 260 L 450 140 L 490 260 L 530 260 L 570 260 L 610 260" 
+                    fill="none" stroke="#EF4444" stroke-width="2" stroke-dasharray="4,4" />
+              
+              <!-- PIE Line (Stabilized damped convergence) -->
+              <!-- Points: (50, 140) -> (90, 158) -> (130, 171) -> (170, 162) -> (210, 168) -> (250, 172) -> (290, 174) -> ... -> (610, 176) -->
+              <path d="M 50 140 L 90 158 L 130 171 L 170 162 L 210 168 L 250 172 L 290 174 L 330 175 L 370 175 L 410 176 L 450 176 L 490 176 L 530 176 L 570 176 L 610 176" 
+                    fill="none" stroke="#D4AF37" stroke-width="3.5" class="pie-chart-line" />
+                    
+              <!-- Legend -->
+              <rect x="450" y="40" width="12" height="12" fill="#EF4444" />
+              <text x="470" y="50" fill="#E2E8F0" font-size="11">Contrôle (Sans Inertie - Fluctuations)</text>
+              
+              <rect x="450" y="65" width="12" height="12" fill="#D4AF37" />
+              <text x="470" y="75" fill="#E2E8F0" font-size="11">Lexior PIE (Avec Inertie - Stabilisé)</text>
+            </svg>
+            <div class="chart-caption">
+              Figure 1 : Stabilisation de la tension décisionnelle d'un Juge simulé sur 15 stimuli itératifs sous l'influence du tenseur d'inertie logique (stabilisation asymptotique par tanh).
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 5 -->
+        <section id="section5" class="paper-section">
+          <h2><span>05.</span> Dérive d'État par Hystérésis</h2>
+          <p>
+            L'état discret d'humeur évolue selon un processus de transition contrôlé par les écarts sémantiques mesurés par similarité cosinus (embeddings) lors d'interactions asynchrones. Afin de simuler des attracteurs décisionnels persistants, certains états logiques agissent comme des puits de potentiel. La probabilité de sortie d'un état fortement contraint (ex. <em>Paranoïaque</em>) vers l'état <em>Neutre</em> sous l'effet d'une interaction collaborative obéit à une barrière d'hystérésis :
+          </p>
+          <div class="formula-box">
+            P(M<sub>t+1</sub> = Neutre | M<sub>t</sub> = Paranoïaque) = P<sub>0</sub> &middot; e<sup>- &mu; &middot; &Sigma; A(m<sub>neg</sub>)</sup>
+          </div>
+          <p>
+            Tant que les vecteurs d'interactions négatifs restent actifs en mémoire, la barrière de potentiel pour modifier la décision de l'agent demeure infranchissable, garantissant la cohérence comportementale même sous stimuli contradictoires répétés.
+          </p>
+
+          <!-- Hysteresis Chart -->
+          <div class="chart-container">
+            <div class="chart-title">Courbe d'Hystérésis : Transition d'humeur d'un témoin</div>
+            <svg viewBox="0 0 700 320" class="rd-svg-chart">
+              <!-- Grid lines -->
+              <line x1="100" y1="260" x2="600" y2="260" stroke="#1A2333" />
+              <line x1="100" y1="60" x2="100" y2="260" stroke="#1A2333" />
+              
+              <!-- State thresholds (dashed y-lines) -->
+              <line x1="100" y1="210" x2="600" y2="210" stroke="#1A2333" stroke-dasharray="2,2" />
+              <line x1="100" y1="140" x2="600" y2="140" stroke="#1A2333" stroke-dasharray="2,2" />
+              <line x1="100" y1="70" x2="600" y2="70" stroke="#1A2333" stroke-dasharray="2,2" />
+              
+              <!-- State Names -->
+              <text x="90" y="265" fill="#64748B" font-size="10" text-anchor="end">Neutre</text>
+              <text x="90" y="215" fill="#64748B" font-size="10" text-anchor="end">Méfiant</text>
+              <text x="90" y="145" fill="#64748B" font-size="10" text-anchor="end">Paranoïaque</text>
+              <text x="90" y="75" fill="#64748B" font-size="10" text-anchor="end">Isolé</text>
+              
+              <!-- Timeline steps -->
+              <text x="100" y="280" fill="#64748B" font-size="9" text-anchor="middle">R0 (Init)</text>
+              <text x="180" y="280" fill="#64748B" font-size="9" text-anchor="middle">R1 (Mute)</text>
+              <text x="260" y="280" fill="#64748B" font-size="9" text-anchor="middle">R2 (Mute)</text>
+              <text x="340" y="280" fill="#64748B" font-size="9" text-anchor="middle">R3 (Dislike)</text>
+              <text x="420" y="280" fill="#64748B" font-size="9" text-anchor="middle">R5 (Like)</text>
+              <text x="500" y="280" fill="#64748B" font-size="9" text-anchor="middle">R7 (Follow)</text>
+              <text x="580" y="280" fill="#64748B" font-size="9" text-anchor="middle">R9 (Like)</text>
+              
+              <!-- Hysteresis Path Line -->
+              <!-- Friction phase: (100, 260) -> (180, 210) -> (260, 140) -> (340, 70) -->
+              <!-- Reconciliation (Hysteresis delay): (340, 70) -> (420, 70) -> (500, 140) -> (580, 210) -->
+              <path d="M 100 260 L 180 210 L 260 140 L 340 70 L 420 70 L 500 140 L 580 210" 
+                    fill="none" stroke="#EF4444" stroke-width="2.5" />
+                    
+              <path d="M 580 210 L 590 260" fill="none" stroke="#10B981" stroke-dasharray="2,2" stroke-width="2.5" />
+              
+              <!-- Draw nodes -->
+              <circle cx="100" cy="260" r="4" fill="#64748B" />
+              <circle cx="180" cy="210" r="4" fill="#F59E0B" />
+              <circle cx="260" cy="140" r="4" fill="#EF4444" />
+              <circle cx="340" cy="70" r="5" fill="#B91C1C" />
+              <circle cx="420" cy="70" r="4" fill="#B91C1C" />
+              <circle cx="500" cy="140" r="4" fill="#EF4444" />
+              <circle cx="580" cy="210" r="4" fill="#F59E0B" />
+              
+              <!-- Arrows indicators -->
+              <text x="210" y="170" fill="#EF4444" font-size="10" transform="rotate(-30, 210, 170)">Friction ➔</text>
+              <text x="460" y="110" fill="#10B981" font-size="10" transform="rotate(38, 460, 110)">Réconciliation (Retardé) ➔</text>
+            </svg>
+            <div class="chart-caption">
+              Figure 2 : Asymétrie de transition émotionnelle. Une seule action négative (Mute) pousse l'agent vers la suspicion, tandis que 3 actions positives successives (Like, Follow) sont nécessaires pour s'extirper de la paranoïa (puits de potentiel inducteur d'hystérésis).
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 6 -->
+        <section id="section6" class="paper-section">
+          <h2><span>06.</span> Architecture Système & Pipeline de Données</h2>
+          <p>
+            Le calcul décisionnel complet s'articule selon le pipeline de données symbolique et neuronal suivant :
+          </p>
+          <div class="pipeline-flow">
+            <div class="flow-step">
+              <div class="step-badge">1</div>
+              <h4>Génération d'experts</h4>
+              <p>Le LLM local génère parallèlement <em>K</em> propositions d'actions <strong>a<sub>k</sub></strong> (perspectives divergentes).</p>
+            </div>
+            <div class="flow-step">
+              <div class="step-badge">2</div>
+              <h4>Surprise narrative</h4>
+              <p>Calcul de la divergence Kullback-Leibler entre le modèle de croyance interne <strong>B<sub>t</sub></strong> et l'action <strong>a</strong>.</p>
+            </div>
+            <div class="flow-step">
+              <div class="step-badge">3</div>
+              <h4>Filtrage d'attention</h4>
+              <p>Pondération par rapport à l'humeur <strong>M<sub>t</sub></strong> et contraintes mémorielles actives.</p>
+            </div>
+            <div class="flow-step">
+              <div class="step-badge">4</div>
+              <h4>Stochastic Collapse</h4>
+              <p>Échantillonnage final via une distribution de Boltzmann pour converger vers la décision.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 7 -->
+        <section id="section7" class="paper-section">
+          <h2><span>07.</span> Incertitudes Technologiques et Résolution R&D</h2>
+          <h3>7.1 Résolution du Phénomène de « Prompt Bleeding »</h3>
+          <p>
+            <strong>Défaillance constatée :</strong> Lors de simulations longues, l'accumulation linéaire des souvenirs dans le prompt provoquait une saturation de la mémoire de travail (<em>Prompt Bleeding</em>), entraînant une latence insoutenable (> 5s) et des hallucinations d'identité.
+          </p>
+          <p>
+            <strong>Résolution R&D :</strong> Développement d'un mécanisme d'attention cognitive adaptative (budget attentionnel). Ce filtre restreint les souvenirs insérés dans le prompt système aux éléments ayant un poids d'activation mémorielle élevé. Les souvenirs secondaires sont archivés à froid. Cette optimisation a permis de ramener la latence d'exécution sous la barre de 1 seconde (voir Figure 3).
+          </p>
+
+          <!-- Latency Chart -->
+          <div class="chart-container">
+            <div class="chart-title">Analyse R&D : Impact du budget attentionnel sur la latence</div>
+            <svg viewBox="0 0 700 240" class="rd-svg-chart">
+              <!-- Grid line -->
+              <line x1="50" y1="200" x2="650" y2="200" stroke="#1A2333" />
+              <line x1="50" y1="40" x2="650" y2="40" stroke="#1A2333" stroke-dasharray="3,3" />
+              
+              <!-- Axes labels -->
+              <text x="45" y="205" fill="#64748B" font-size="10" text-anchor="end">0s</text>
+              <text x="45" y="125" fill="#64748B" font-size="10" text-anchor="end">2.5s</text>
+              <text x="45" y="45" fill="#64748B" font-size="10" text-anchor="end">5.0s (Seuil critique)</text>
+              
+              <!-- X axis labels -->
+              <text x="100" y="220" fill="#64748B" font-size="10" text-anchor="middle">10 souvenirs</text>
+              <text x="250" y="220" fill="#64748B" font-size="10" text-anchor="middle">50 souvenirs</text>
+              <text x="400" y="220" fill="#64748B" font-size="10" text-anchor="middle">100 souvenirs</text>
+              <text x="550" y="220" fill="#64748B" font-size="10" text-anchor="middle">200 souvenirs</text>
+              
+              <!-- Without budget curve (exponential latency growth) -->
+              <!-- (100, 190) -> (250, 160) -> (400, 100) -> (550, 40) -->
+              <path d="M 100 190 Q 250 160 400 100 T 550 40" fill="none" stroke="#EF4444" stroke-width="2" stroke-dasharray="4,4" />
+              
+              <!-- With Lexior budget curve (flat sub-second latency) -->
+              <!-- (100, 192) -> (250, 185) -> (400, 182) -> (550, 180) -->
+              <path d="M 100 192 L 250 185 L 400 182 L 550 180" fill="none" stroke="#10B981" stroke-width="3" />
+              
+              <!-- Legend -->
+              <rect x="80" y="50" width="12" height="12" fill="#EF4444" />
+              <text x="100" y="60" fill="#E2E8F0" font-size="10">Sans budget (Prompt Bleeding)</text>
+              
+              <rect x="80" y="75" width="12" height="12" fill="#10B981" />
+              <text x="100" y="85" fill="#E2E8F0" font-size="10">Lexior Attention Filter (Sub-seconde)</text>
+            </svg>
+            <div class="chart-caption">
+              Figure 3 : Latence d'inférence en fonction du nombre de souvenirs accumulés. Le filtrage mémoriel de Lexior empêche la saturation du contexte LLM en maintenant la latence sous 1 seconde.
+            </div>
+          </div>
+
+          <h3>7.2 Résolution du Verdict Flip-Flop</h3>
+          <p>
+            <strong>Défaillance constatée :</strong> Le Juge changeait aléatoirement de décision entre les rounds d'audiences fermés sans justification légale, dû au manque de mémoire structurelle entre les requêtes HTTP stateless.
+          </p>
+          <p>
+            <strong>Résolution R&D :</strong> Conception d'une boucle symbolique Python réinjectant les conclusions du tour précédent sous forme d'ancrages factuels immuables (Stockage persistant Kuzu DB). Le Juge conserve sa conviction à moins qu'un élément de preuve ou argument disruptif ne vienne percer la barrière d'énergie calculée par le modèle d'hystérésis.
+          </p>
+        </section>
+      </main>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import LanguageSwitcher from '../components/LanguageSwitcher.vue'
+
+const router = useRouter()
+const activeSection = ref('section1')
+
+const sections = [
+  { id: 'section1', title: 'Résumé & Objectifs R&D' },
+  { id: 'section2', title: 'Verrous & État de l\'Art' },
+  { id: 'section3', title: 'Espace d\'États PIE' },
+  { id: 'section4', title: 'Algorithme d\'Inertie' },
+  { id: 'section5', title: 'Transitions & Hystérésis' },
+  { id: 'section6', title: 'Pipeline & Collapse' },
+  { id: 'section7', title: 'Résolution des Défaillances' }
+]
+
+const scrollToSection = (id) => {
+  activeSection.value = id
+  const el = document.getElementById(id)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
+
+// Scroll listener to update active tab
+onMounted(() => {
+  const observerOptions = {
+    root: null,
+    rootMargin: '-10% 0px -70% 0px',
+    threshold: 0
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        activeSection.value = entry.target.id
+      }
+    })
+  }, observerOptions)
+
+  sections.forEach(sec => {
+    const el = document.getElementById(sec.id)
+    if (el) observer.observe(el)
+  })
+})
+</script>
+
+<style scoped>
+.research-container {
+  --obsidian: #05080C;
+  --gold: #D4AF37;
+  --gold-dim: #A88725;
+  --panel-bg: #0C121D;
+  --border-color: #1A2333;
+  --text-main: #E2E8F0;
+  --text-muted: #8A99AD;
+  
+  min-height: 100vh;
+  background: var(--obsidian);
+  color: var(--text-main);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Navbar */
+.navbar {
+  height: 60px;
+  background: #0B1220;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 40px;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.brand-logo {
+  height: 24px;
+}
+
+.brand-name {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #FFFFFF;
+}
+
+.brand-sub {
+  color: var(--gold);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.back-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* Layout */
+.research-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  gap: 40px;
+}
+
+/* Sidebar Index */
+.sidebar-index {
+  position: sticky;
+  top: 100px;
+  height: fit-content;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.sidebar-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--gold);
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+}
+
+.index-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.index-list li {
+  display: flex;
+  gap: 12px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s;
+  align-items: flex-start;
+}
+
+.index-list li:hover {
+  color: var(--text-main);
+}
+
+.index-list li.active {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.sec-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.index-list li.active .sec-num {
+  opacity: 1;
+}
+
+/* Scientific Body */
+.scientific-body {
+  max-width: 900px;
+}
+
+.paper-header {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 30px;
+  margin-bottom: 40px;
+}
+
+.rd-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+  padding: 3px 8px;
+  border-radius: 3px;
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+}
+
+.paper-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.2rem;
+  line-height: 1.3;
+  color: #FFFFFF;
+  margin: 0 0 16px 0;
+}
+
+.paper-subtitle {
+  font-size: 1.15rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.paper-meta {
+  display: flex;
+  gap: 24px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Sections */
+.paper-section {
+  margin-bottom: 50px;
+}
+
+.paper-section h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  color: #FFFFFF;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.paper-section h2 span {
+  color: var(--gold);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+}
+
+.paper-section h3 {
+  font-size: 1.15rem;
+  color: var(--gold);
+  margin: 24px 0 12px 0;
+}
+
+.paper-section p {
+  font-size: 1.02rem;
+  line-height: 1.65;
+  color: var(--text-main);
+  margin-bottom: 18px;
+}
+
+.paper-section ul {
+  padding-left: 20px;
+  margin-bottom: 20px;
+}
+
+.paper-section li {
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 8px;
+  color: var(--text-main);
+}
+
+.formula-box {
+  background: #090E16;
+  border-left: 3px solid var(--gold);
+  padding: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  color: #FFFFFF;
+  margin: 24px 0;
+  border-radius: 0 6px 6px 0;
+  text-align: center;
+}
+
+/* Verrous Layout */
+.verrous-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.verrou-card {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 20px;
+  text-align: center;
+}
+
+.verrou-icon {
+  font-size: 1.8rem;
+  margin-bottom: 12px;
+}
+
+.verrou-card h4 {
+  font-size: 1rem;
+  color: var(--gold);
+  margin: 0 0 10px 0;
+  font-weight: 600;
+}
+
+.verrou-card p {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Pipeline Flow */
+.pipeline-flow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 30px;
+}
+
+.flow-step {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 20px;
+  position: relative;
+}
+
+.step-badge {
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  background: var(--gold);
+  color: var(--obsidian);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.flow-step h4 {
+  margin: 10px 0 8px 0;
+  font-size: 0.95rem;
+  color: #FFFFFF;
+}
+
+.flow-step p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Chart Styles */
+.chart-container {
+  background: #090E16;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 24px;
+  margin: 30px 0;
+}
+
+.chart-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  margin-bottom: 16px;
+  border-left: 2px solid var(--gold);
+  padding-left: 8px;
+}
+
+.rd-svg-chart {
+  width: 100%;
+  height: auto;
+}
+
+.chart-caption {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 16px;
+  text-align: center;
+}
+
+/* Micro-animations */
+@keyframes drawLine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.pie-chart-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawLine 2.5s ease-out forwards;
+}
+</style>

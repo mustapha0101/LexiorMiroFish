@@ -7,6 +7,9 @@
         <span class="brand-name">{{ $t('common.brandFirst') }} <span class="brand-sub">{{ $t('common.brandSecond') }}</span></span>
       </div>
       <div class="nav-links">
+        <router-link to="/research" class="nav-item-link">
+          📚 {{ $t('nav.researchPaper') }}
+        </router-link>
         <button 
           v-if="session" 
           class="signout-btn" 
@@ -77,12 +80,16 @@
           <!-- 数据指标卡片 -->
           <div class="metrics-row">
             <div class="metric-card">
-              <div class="metric-value">{{ $t('home.metricLowCost') }}</div>
-              <div class="metric-label">{{ $t('home.metricLowCostDesc') }}</div>
+              <div class="metric-value">{{ stats.totalSimulations }}</div>
+              <div class="metric-label">{{ $t('home.metricSimulationsRun') }}</div>
             </div>
             <div class="metric-card">
-              <div class="metric-value">{{ $t('home.metricHighAvail') }}</div>
-              <div class="metric-label">{{ $t('home.metricHighAvailDesc') }}</div>
+              <div class="metric-value">{{ stats.totalActors }}</div>
+              <div class="metric-label">{{ $t('home.metricActorsSimulated') }}</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value">{{ stats.totalRounds }}</div>
+              <div class="metric-label">{{ $t('home.metricRoundsRun') }}</div>
             </div>
           </div>
 
@@ -253,15 +260,39 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
 import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import LoginGate from '../components/LoginGate.vue'
+import { getSimulationHistory } from '../api/simulation'
 
 const router = useRouter()
 const loginGate = ref(null)
 const session = ref(null)
+
+const stats = ref({
+  totalSimulations: 0,
+  totalActors: 0,
+  totalRounds: 0
+})
+
+const loadRealStats = async () => {
+  try {
+    const res = await getSimulationHistory(100)
+    if (res.success && res.data) {
+      stats.value.totalSimulations = res.data.length
+      stats.value.totalActors = res.data.reduce((acc, curr) => acc + (curr.entities_count || curr.profiles_count || 5), 0)
+      stats.value.totalRounds = res.data.reduce((acc, curr) => acc + (curr.current_round || 0), 0)
+    }
+  } catch (err) {
+    console.error('Failed to load real stats:', err)
+  }
+}
+
+onMounted(() => {
+  loadRealStats()
+})
 
 const handleSessionChange = (newSession) => {
   session.value = newSession
@@ -437,6 +468,25 @@ const startSimulation = () => {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.nav-item-link {
+  color: var(--white);
+  text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-item-link:hover {
+  color: #C5A880;
+  background: rgba(197, 168, 128, 0.08);
 }
 
 .github-link {

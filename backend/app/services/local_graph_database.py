@@ -12,6 +12,7 @@ class LocalGraphDatabase:
     Each graph gets its own directory to maintain isolation.
     """
     import threading
+    _KUZU_DATABASES = {}
 
     def __init__(self, graph_id: str, base_path: str = None, read_only: bool = False):
         if base_path is None:
@@ -69,6 +70,7 @@ class LocalGraphDatabase:
                     raise e
             
         self.conn = kuzu.Connection(self.db)
+        self._results = []
 
     def __enter__(self):
         return self
@@ -76,10 +78,14 @@ class LocalGraphDatabase:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def __del__(self):
-        self.close()
-
     def close(self):
+        if hasattr(self, '_results') and self._results:
+            for res in self._results:
+                try:
+                    res.close()
+                except Exception:
+                    pass
+            self._results.clear()
         try:
             if hasattr(self, 'conn') and self.conn:
                 self.conn.close()
@@ -97,7 +103,9 @@ class LocalGraphDatabase:
         if parameters is None:
             parameters = {}
         try:
-            return self.conn.execute(query, parameters)
+            res = self.conn.execute(query, parameters)
+            self._results.append(res)
+            return res
         except Exception as e:
             logger.error(f"Kuzu execution error on query: {query}\nError: {e}")
             raise e

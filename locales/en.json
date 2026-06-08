@@ -32,7 +32,8 @@
     "description": "Lexior Simulator - Multi-Agent Cognitive Simulation System"
   },
   "nav": {
-    "visitGithub": "Visit our Github page"
+    "visitGithub": "Visit our Github page",
+    "researchPaper": "Research Paper"
   },
   "home": {
     "tagline": "Neuro-Symbolic & Cognitive Analysis",
@@ -47,10 +48,12 @@
     "systemStatus": "System Status",
     "systemReady": "Ready",
     "systemReadyDesc": "Prediction engine on standby. Upload unstructured data to initialize a simulation sequence.",
-    "metricLowCost": "Low Cost",
-    "metricLowCostDesc": "Avg. $5/sim",
-    "metricHighAvail": "Scalable",
-    "metricHighAvailDesc": "Millions of Agents",
+    "metricSimulationsRun": "Simulations Run",
+    "metricSimulationsRunDesc": "{count} executions",
+    "metricActorsSimulated": "Cognitive Twins",
+    "metricActorsSimulatedDesc": "{count} agents generated",
+    "metricRoundsRun": "Simulated Rounds",
+    "metricRoundsRunDesc": "{count} debate rounds",
     "workflowSequence": "Workflow",
     "step01Title": "Graph Build",
     "step01Desc": "Concept extraction, memory injection & knowledge graph construction",

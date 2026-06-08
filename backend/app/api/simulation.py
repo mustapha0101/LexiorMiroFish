@@ -478,20 +478,20 @@ def prepare_simulation():
                 from app.services.local_graph_database import LocalGraphDatabase
                 graph_nodes = []
                 try:
-                    db = LocalGraphDatabase(state.graph_id, read_only=True)
-                    tables = db._get_all_tables()
-                    node_tables = [t for t in tables if t.startswith("Node_")]
-                    for table_name in node_tables:
-                        label = table_name[5:]
-                        query = f"MATCH (n:{table_name}) RETURN n.uuid, n.name"
-                        res = db._execute(query)
-                        while res.has_next():
-                            row = res.get_next()
-                            graph_nodes.append({
-                                "uuid": row[0],
-                                "name": row[1],
-                                "label": label
-                            })
+                    with LocalGraphDatabase(state.graph_id, read_only=True) as db:
+                        tables = db._get_all_tables()
+                        node_tables = [t for t in tables if t.startswith("Node_")]
+                        for table_name in node_tables:
+                            label = table_name[5:]
+                            query = f"MATCH (n:{table_name}) RETURN n.uuid, n.name"
+                            res = db._execute(query)
+                            while res.has_next():
+                                row = res.get_next()
+                                graph_nodes.append({
+                                    "uuid": row[0],
+                                    "name": row[1],
+                                    "label": label
+                                })
                 except Exception as db_err:
                     logger.warning(f"Impossible de lire les nœuds en synchrone : {db_err}")
                 
@@ -675,21 +675,21 @@ def prepare_simulation():
                     from app.services.local_graph_database import LocalGraphDatabase
                     graph_nodes = []
                     try:
-                        db = LocalGraphDatabase(state.graph_id, read_only=False)
-                        tables = db._get_all_tables()
-                        node_tables = [t for t in tables if t.startswith("Node_")]
-                        for table_name in node_tables:
-                            label = table_name[5:]  # Remove 'Node_'
-                            query = f"MATCH (n:{table_name}) RETURN n.uuid, n.name, n.summary"
-                            res = db._execute(query)
-                            while res.has_next():
-                                row = res.get_next()
-                                graph_nodes.append({
-                                    "uuid": row[0],
-                                    "name": row[1],
-                                    "summary": row[2] or "",
-                                    "label": label
-                                })
+                        with LocalGraphDatabase(state.graph_id, read_only=False) as db:
+                            tables = db._get_all_tables()
+                            node_tables = [t for t in tables if t.startswith("Node_")]
+                            for table_name in node_tables:
+                                label = table_name[5:]  # Remove 'Node_'
+                                query = f"MATCH (n:{table_name}) RETURN n.uuid, n.name, n.summary"
+                                res = db._execute(query)
+                                while res.has_next():
+                                    row = res.get_next()
+                                    graph_nodes.append({
+                                        "uuid": row[0],
+                                        "name": row[1],
+                                        "summary": row[2] or "",
+                                        "label": label
+                                    })
                     except Exception as e:
                         logger.warning(f"Impossible de lire les nœuds Kuzu : {e}")
                     
@@ -3021,8 +3021,8 @@ def delete_simulation():
         # 4. Supprimer la base de données d'état cognitif Kuzu
         try:
             from app.services.local_graph_database import LocalGraphDatabase
-            db = LocalGraphDatabase(simulation_id)
-            db.delete_graph()
+            with LocalGraphDatabase(simulation_id) as db:
+                db.delete_graph()
             logger.info(f"Cognitive state graph database deleted for simulation {simulation_id}")
         except Exception as e:
             logger.warning(f"Failed to delete cognitive state graph database for {simulation_id}: {e}")
@@ -3493,30 +3493,30 @@ def get_cognitive_states(simulation_id: str):
         from app.services.cognitive_memory import CognitiveMemoryService
         from app.services.local_graph_database import LocalGraphDatabase
         
-        db = LocalGraphDatabase(simulation_id, read_only=True)
-        tables = db._get_all_tables()
-        if "Node_CognitiveState" not in tables:
-            return jsonify({
-                "success": True,
-                "data": []
-            })
-            
-        # Parcourir et renvoyer tous les nœuds CognitiveState
-        query = "MATCH (n:Node_CognitiveState) RETURN n.uuid, n.name, n.summary, n.attributes"
-        res = db._execute(query)
-        states = []
-        while res.has_next():
-            row = res.get_next()
-            attr = json.loads(row[3]) if row[3] else {}
-            states.append({
-                "agent_id": row[0],
-                "name": row[1],
-                "meta_narrative": row[2],
-                "personality": attr.get("personality", ""),
-                "tensions": attr.get("tensions", {}),
-                "beliefs": attr.get("beliefs", {}),
-                "recent_reflection": attr.get("recent_reflection", "")
-            })
+        with LocalGraphDatabase(simulation_id, read_only=True) as db:
+            tables = db._get_all_tables()
+            if "Node_CognitiveState" not in tables:
+                return jsonify({
+                    "success": True,
+                    "data": []
+                })
+                
+            # Parcourir et renvoyer tous les nœuds CognitiveState
+            query = "MATCH (n:Node_CognitiveState) RETURN n.uuid, n.name, n.summary, n.attributes"
+            res = db._execute(query)
+            states = []
+            while res.has_next():
+                row = res.get_next()
+                attr = json.loads(row[3]) if row[3] else {}
+                states.append({
+                    "agent_id": row[0],
+                    "name": row[1],
+                    "meta_narrative": row[2],
+                    "personality": attr.get("personality", ""),
+                    "tensions": attr.get("tensions", {}),
+                    "beliefs": attr.get("beliefs", {}),
+                    "recent_reflection": attr.get("recent_reflection", "")
+                })
             
         return jsonify({
             "success": True,
@@ -3939,34 +3939,34 @@ def interview_agent():
             cognitive_state_info = ""
             try:
                 from app.services.local_graph_database import LocalGraphDatabase
-                db = LocalGraphDatabase(simulation_id, read_only=True)
-                tables = db._get_all_tables()
-                if "Node_CognitiveState" in tables:
-                    query = "MATCH (n:Node_CognitiveState) RETURN n.uuid, n.name, n.summary, n.attributes"
-                    res = db._execute(query)
-                    while res.has_next():
-                        row = res.get_next()
-                        uuid_str = row[0]
-                        name_str = row[1]
-                        
-                        # Match agent by ID or name
-                        if uuid_str == str(agent_id) or name_str == agent_name or agent_name.lower() in name_str.lower() or name_str.lower() in agent_name.lower():
-                            summary = row[2] or ""
-                            attr = json.loads(row[3]) if row[3] else {}
-                            tensions = attr.get("tensions", {})
-                            beliefs = attr.get("beliefs", {})
-                            recent_reflection = attr.get("recent_reflection", "")
+                with LocalGraphDatabase(simulation_id, read_only=True) as db:
+                    tables = db._get_all_tables()
+                    if "Node_CognitiveState" in tables:
+                        query = "MATCH (n:Node_CognitiveState) RETURN n.uuid, n.name, n.summary, n.attributes"
+                        res = db._execute(query)
+                        while res.has_next():
+                            row = res.get_next()
+                            uuid_str = row[0]
+                            name_str = row[1]
                             
-                            cognitive_state_info = f"\n\n--- ÉTAT COGNITIF PIE DE L'AGENT ---\n"
-                            if summary:
-                                cognitive_state_info += f"Auto-narration/état d'esprit interne : {summary}\n"
-                            if tensions:
-                                cognitive_state_info += f"Tensions psychologiques actives (ex. Procédure vs Équité, etc.) : {tensions}\n"
-                            if beliefs:
-                                cognitive_state_info += f"Croyances sur l'affaire : {beliefs}\n"
-                            if recent_reflection:
-                                cognitive_state_info += f"Réflexions récentes : {recent_reflection}\n"
-                            break
+                            # Match agent by ID or name
+                            if uuid_str == str(agent_id) or name_str == agent_name or agent_name.lower() in name_str.lower() or name_str.lower() in agent_name.lower():
+                                summary = row[2] or ""
+                                attr = json.loads(row[3]) if row[3] else {}
+                                tensions = attr.get("tensions", {})
+                                beliefs = attr.get("beliefs", {})
+                                recent_reflection = attr.get("recent_reflection", "")
+                                
+                                cognitive_state_info = f"\n\n--- ÉTAT COGNITIF PIE DE L'AGENT ---\n"
+                                if summary:
+                                    cognitive_state_info += f"Auto-narration/état d'esprit interne : {summary}\n"
+                                if tensions:
+                                    cognitive_state_info += f"Tensions psychologiques actives (ex. Procédure vs Équité, etc.) : {tensions}\n"
+                                if beliefs:
+                                    cognitive_state_info += f"Croyances sur l'affaire : {beliefs}\n"
+                                if recent_reflection:
+                                    cognitive_state_info += f"Réflexions récentes : {recent_reflection}\n"
+                                break
             except Exception as db_err:
                 logger.warning(f"Impossible de charger l'état cognitif de l'agent: {db_err}")
 
@@ -4246,34 +4246,34 @@ def interview_agents_batch():
                 cognitive_state_info = ""
                 try:
                     from app.services.local_graph_database import LocalGraphDatabase
-                    db = LocalGraphDatabase(simulation_id, read_only=True)
-                    tables = db._get_all_tables()
-                    if "Node_CognitiveState" in tables:
-                        query = "MATCH (n:Node_CognitiveState) RETURN n.uuid, n.name, n.summary, n.attributes"
-                        res = db._execute(query)
-                        while res.has_next():
-                            row = res.get_next()
-                            uuid_str = row[0]
-                            name_str = row[1]
-                            
-                            # Match agent by ID or name
-                            if uuid_str == str(agent_id) or name_str == agent_name or agent_name.lower() in name_str.lower() or name_str.lower() in agent_name.lower():
-                                summary = row[2] or ""
-                                attr = json.loads(row[3]) if row[3] else {}
-                                tensions = attr.get("tensions", {})
-                                beliefs = attr.get("beliefs", {})
-                                recent_reflection = attr.get("recent_reflection", "")
+                    with LocalGraphDatabase(simulation_id, read_only=True) as db:
+                        tables = db._get_all_tables()
+                        if "Node_CognitiveState" in tables:
+                            query = "MATCH (n:Node_CognitiveState) RETURN n.uuid, n.name, n.summary, n.attributes"
+                            res = db._execute(query)
+                            while res.has_next():
+                                row = res.get_next()
+                                uuid_str = row[0]
+                                name_str = row[1]
                                 
-                                cognitive_state_info = f"\n\n--- ÉTAT COGNITIF PIE DE L'AGENT ---\n"
-                                if summary:
-                                    cognitive_state_info += f"Auto-narration/état d'esprit interne : {summary}\n"
-                                if tensions:
-                                    cognitive_state_info += f"Tensions psychologiques actives (ex. Procédure vs Équité, etc.) : {tensions}\n"
-                                if beliefs:
-                                    cognitive_state_info += f"Croyances sur l'affaire : {beliefs}\n"
-                                if recent_reflection:
-                                    cognitive_state_info += f"Réflexions récentes : {recent_reflection}\n"
-                                break
+                                # Match agent by ID or name
+                                if uuid_str == str(agent_id) or name_str == agent_name or agent_name.lower() in name_str.lower() or name_str.lower() in agent_name.lower():
+                                    summary = row[2] or ""
+                                    attr = json.loads(row[3]) if row[3] else {}
+                                    tensions = attr.get("tensions", {})
+                                    beliefs = attr.get("beliefs", {})
+                                    recent_reflection = attr.get("recent_reflection", "")
+                                    
+                                    cognitive_state_info = f"\n\n--- ÉTAT COGNITIF PIE DE L'AGENT ---\n"
+                                    if summary:
+                                        cognitive_state_info += f"Auto-narration/état d'esprit interne : {summary}\n"
+                                    if tensions:
+                                        cognitive_state_info += f"Tensions psychologiques actives (ex. Procédure vs Équité, etc.) : {tensions}\n"
+                                    if beliefs:
+                                        cognitive_state_info += f"Croyances sur l'affaire : {beliefs}\n"
+                                    if recent_reflection:
+                                        cognitive_state_info += f"Réflexions récentes : {recent_reflection}\n"
+                                    break
                 except Exception as db_err:
                     logger.warning(f"Impossible de charger l'état cognitif de l'agent: {db_err}")
 
@@ -4772,9 +4772,9 @@ def run_legal_simulation():
                 from ..services.local_graph_database import LocalGraphDatabase
                 project = ProjectManager.get_project(project_id)
                 if project and project.graph_id:
-                    db = LocalGraphDatabase(project.graph_id)
-                    nodes = db.fetch_all_nodes()
-                    edges = db.fetch_all_edges()
+                    with LocalGraphDatabase(project.graph_id) as db:
+                        nodes = db.fetch_all_nodes()
+                        edges = db.fetch_all_edges()
                     
                     if nodes:
                         # Smart selection of top 20 nodes based on connection degree
@@ -4995,38 +4995,38 @@ def create_pie_benchmark():
         ProjectManager.save_project(project)
         
         # 2. Insérer des nœuds dans Kuzu DB pour que le graphe s'affiche
-        db = LocalGraphDatabase(graph_id)
-        if benchmark_type == "hysteresis":
-            db.upsert_triplets(
-                nodes=[
-                    {"uuid": "1", "label": "Avocat", "name": "Maitre_Bob_Defenseur", "summary": "Avocat de la défense négociant un accord de règlement à l'amiable.", "attributes": {}},
-                    {"uuid": "2", "label": "Procureur", "name": "Maitre_Voisin_Procureur", "summary": "Procureur de la partie adverse initiant des clauses restrictives.", "attributes": {}}
-                ],
-                edges=[
-                    {"uuid": "e1", "label": "OPPOSE", "source": "1", "target": "2", "fact": "Maître Bob s'oppose au Procureur lors de la négociation."},
-                    {"uuid": "e2", "label": "NEGOCIE", "source": "2", "target": "1", "fact": "Le Procureur négocie les clauses du règlement."}
-                ]
-            )
-        elif benchmark_type == "inertia":
-            db.upsert_triplets(
-                nodes=[
-                    {"uuid": "1", "label": "Juge", "name": "Juge_Standard_Temoin", "summary": "Juge témoin sujet aux fluctuations des déclarations d'audience.", "attributes": {}},
-                    {"uuid": "2", "label": "Juge", "name": "Juge_PIE_Precedents", "summary": "Juge régulé par l'inertie des précédents judiciaires (stable).", "attributes": {}}
-                ],
-                edges=[
-                    {"uuid": "e1", "label": "COMPARE", "source": "2", "target": "1", "fact": "Comparaison de variance découlant du cadre jurisprudentiel."}
-                ]
-            )
-        else: # attention
-            db.upsert_triplets(
-                nodes=[
-                    {"uuid": "1", "label": "Avocat", "name": "Maitre_Alice_Avocat", "summary": "Avocate analysant un dossier juridique volumineux sous contrainte de temps.", "attributes": {}},
-                    {"uuid": "2", "label": "Greffier", "name": "Greffier_Tribunal", "summary": "Greffier ayant rédigé des notes de procédure secondaires.", "attributes": {}}
-                ],
-                edges=[
-                    {"uuid": "e1", "label": "ANALYSE", "source": "1", "target": "2", "fact": "Maître Alice analyse les notes rédigées par le greffier."}
-                ]
-            )
+        with LocalGraphDatabase(graph_id) as db:
+            if benchmark_type == "hysteresis":
+                db.upsert_triplets(
+                    nodes=[
+                        {"uuid": "1", "label": "Avocat", "name": "Maitre_Bob_Defenseur", "summary": "Avocat de la défense négociant un accord de règlement à l'amiable.", "attributes": {}},
+                        {"uuid": "2", "label": "Procureur", "name": "Maitre_Voisin_Procureur", "summary": "Procureur de la partie adverse initiant des clauses restrictives.", "attributes": {}}
+                    ],
+                    edges=[
+                        {"uuid": "e1", "label": "OPPOSE", "source": "1", "target": "2", "fact": "Maître Bob s'oppose au Procureur lors de la négociation."},
+                        {"uuid": "e2", "label": "NEGOCIE", "source": "2", "target": "1", "fact": "Le Procureur négocie les clauses du règlement."}
+                    ]
+                )
+            elif benchmark_type == "inertia":
+                db.upsert_triplets(
+                    nodes=[
+                        {"uuid": "1", "label": "Juge", "name": "Juge_Standard_Temoin", "summary": "Juge témoin sujet aux fluctuations des déclarations d'audience.", "attributes": {}},
+                        {"uuid": "2", "label": "Juge", "name": "Juge_PIE_Precedents", "summary": "Juge régulé par l'inertie des précédents judiciaires (stable).", "attributes": {}}
+                    ],
+                    edges=[
+                        {"uuid": "e1", "label": "COMPARE", "source": "2", "target": "1", "fact": "Comparaison de variance découlant du cadre jurisprudentiel."}
+                    ]
+                )
+            else: # attention
+                db.upsert_triplets(
+                    nodes=[
+                        {"uuid": "1", "label": "Avocat", "name": "Maitre_Alice_Avocat", "summary": "Avocate analysant un dossier juridique volumineux sous contrainte de temps.", "attributes": {}},
+                        {"uuid": "2", "label": "Greffier", "name": "Greffier_Tribunal", "summary": "Greffier ayant rédigé des notes de procédure secondaires.", "attributes": {}}
+                    ],
+                    edges=[
+                        {"uuid": "e1", "label": "ANALYSE", "source": "1", "target": "2", "fact": "Maître Alice analyse les notes rédigées par le greffier."}
+                    ]
+                )
             
         # 3. Créer la simulation
         sim_id = f"sim_proof_{benchmark_type}_{uuid.uuid4().hex[:8]}"

@@ -52,14 +52,15 @@ class GraphBuilderService:
     def create_graph(self, name: str) -> str:
         """Créer le répertoire du graphe"""
         graph_id = f"lexior_{uuid.uuid4().hex[:16]}"
-        db = LocalGraphDatabase(graph_id)
+        with LocalGraphDatabase(graph_id) as db:
+            pass
         # Keep db local directory ready
         return graph_id
     
     def set_ontology(self, graph_id: str, ontology: Dict[str, Any]):
         """Configurer l'ontologie du graphe dans Kuzu DB"""
-        db = LocalGraphDatabase(graph_id)
-        db.set_ontology(ontology)
+        with LocalGraphDatabase(graph_id) as db:
+            db.set_ontology(ontology)
     
     def add_text_batches(
         self,
@@ -69,45 +70,45 @@ class GraphBuilderService:
         progress_callback: Optional[Callable] = None
     ) -> List[str]:
         """Extraire les entités à l'aide du LLM et les insérer dans Kuzu DB"""
-        db = LocalGraphDatabase(graph_id)
-        
-        # Determine ontology to pass to extractor by finding the corresponding project
-        ontology = {"entity_types": [], "edge_types": []}
-        try:
-            from ..models.project import ProjectManager
-            projects = ProjectManager.list_projects(limit=100)
-            for p in projects:
-                if p.graph_id == graph_id:
-                    ontology = p.ontology or ontology
-                    break
-        except Exception as ont_err:
-            logger.error(f"Error fetching ontology for graph_id {graph_id}: {ont_err}")
-        
-        episode_uuids = []
-        total_chunks = len(chunks)
-        
-        for i in range(0, total_chunks, batch_size):
-            batch_chunks = chunks[i:i + batch_size]
-            batch_num = i // batch_size + 1
-            total_batches = (total_chunks + batch_size - 1) // batch_size
+        """Extraire les entités à l'aide du LLM et les insérer dans Kuzu DB"""
+        with LocalGraphDatabase(graph_id) as db:
+            # Determine ontology to pass to extractor by finding the corresponding project
+            ontology = {"entity_types": [], "edge_types": []}
+            try:
+                from ..models.project import ProjectManager
+                projects = ProjectManager.list_projects(limit=100)
+                for p in projects:
+                    if p.graph_id == graph_id:
+                        ontology = p.ontology or ontology
+                        break
+            except Exception as ont_err:
+                logger.error(f"Error fetching ontology for graph_id {graph_id}: {ont_err}")
             
-            if progress_callback:
-                progress = (i + len(batch_chunks)) / total_chunks
-                progress_callback(
-                    t('progress.sendingBatch', current=batch_num, total=total_batches, chunks=len(batch_chunks)),
-                    progress
-                )
+            episode_uuids = []
+            total_chunks = len(chunks)
             
-            for chunk in batch_chunks:
-                try:
-                    nodes, edges = self.extractor.extract_triplets(chunk, ontology)
-                    if nodes or edges:
-                        db.upsert_triplets(nodes, edges)
-                    episode_uuids.append(uuid.uuid4().hex)
-                except Exception as e:
-                    pass
-        
-        return episode_uuids
+            for i in range(0, total_chunks, batch_size):
+                batch_chunks = chunks[i:i + batch_size]
+                batch_num = i // batch_size + 1
+                total_batches = (total_chunks + batch_size - 1) // batch_size
+                
+                if progress_callback:
+                    progress = (i + len(batch_chunks)) / total_chunks
+                    progress_callback(
+                        t('progress.sendingBatch', current=batch_num, total=total_batches, chunks=len(batch_chunks)),
+                        progress
+                    )
+                
+                for chunk in batch_chunks:
+                    try:
+                        nodes, edges = self.extractor.extract_triplets(chunk, ontology)
+                        if nodes or edges:
+                            db.upsert_triplets(nodes, edges)
+                        episode_uuids.append(uuid.uuid4().hex)
+                    except Exception as e:
+                        pass
+            
+            return episode_uuids
     
     def _wait_for_episodes(self, episode_uuids: List[str], progress_callback: Optional[Callable] = None):
         """Complété directement en local de manière synchrone, pas besoin d'attendre le traitement Cloud"""
@@ -116,26 +117,26 @@ class GraphBuilderService:
     
     def _get_graph_info(self, graph_id: str) -> GraphInfo:
         """Obtenir les informations du graphe"""
-        db = LocalGraphDatabase(graph_id, read_only=True)
-        nodes = db.fetch_all_nodes()
-        edges = db.fetch_all_edges()
+        with LocalGraphDatabase(graph_id, read_only=True) as db:
+            nodes = db.fetch_all_nodes()
+            edges = db.fetch_all_edges()
 
-        entity_types = list(set([l for n in nodes for l in n.get("labels", [])]))
+            entity_types = list(set([l for n in nodes for l in n.get("labels", [])]))
 
-        return GraphInfo(
-            graph_id=graph_id,
-            node_count=len(nodes),
-            edge_count=len(edges),
-            entity_types=entity_types
-        )
+            return GraphInfo(
+                graph_id=graph_id,
+                node_count=len(nodes),
+                edge_count=len(edges),
+                entity_types=entity_types
+            )
     
     def get_graph_data(self, graph_id: str) -> Dict[str, Any]:
         """
         Obtenir les données complètes du graphe pour affichage dans l'interface utilisateur
         """
-        db = LocalGraphDatabase(graph_id, read_only=True)
-        nodes = db.fetch_all_nodes()
-        edges = db.fetch_all_edges()
+        with LocalGraphDatabase(graph_id, read_only=True) as db:
+            nodes = db.fetch_all_nodes()
+            edges = db.fetch_all_edges()
         
         # Remap to UI standards
         nodes_data = []
@@ -179,5 +180,5 @@ class GraphBuilderService:
     
     def delete_graph(self, graph_id: str):
         """Supprimer la base de données Kuzu locale"""
-        db = LocalGraphDatabase(graph_id)
-        db.delete_graph()
+        with LocalGraphDatabase(graph_id) as db:
+            db.delete_graph()

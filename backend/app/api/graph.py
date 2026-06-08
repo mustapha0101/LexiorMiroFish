@@ -585,56 +585,56 @@ def build_graph():
                         message=t('progress.settingOntology'),
                         progress=50
                     )
-                    db = LocalGraphDatabase(graph_id)
-                    db.set_ontology(project.ontology)
-                    time.sleep(0.5)
-                    
-                    task_manager.update_task(
-                        task_id,
-                        message="Extraction des entités juridiques en cours...",
-                        progress=70
-                    )
-                    
-                    # Détecter le type de benchmark pour peupler le graphe
-                    parts = project_id.split('_')
-                    benchmark_type = parts[2] if len(parts) > 2 else "hysteresis"
-                    
-                    nodes = []
-                    edges = []
-                    
-                    if benchmark_type == "hysteresis":
-                        nodes = [
-                            {"uuid": "node_avocat_bob", "label": "Avocat", "name": "Avocat Bob", "summary": "Avocat de la Défense (Bob), représente la partie défenderesse.", "attributes": {"rôle": "Défense"}},
-                            {"uuid": "node_procureur_voisin", "label": "Avocat", "name": "Procureur Voisin", "summary": "Procureur de la Poursuite, soutient l'accusation d'abus de confiance.", "attributes": {"rôle": "Poursuite"}},
-                            {"uuid": "node_contrat_achat", "label": "Fait", "name": "Contrat d'Achat", "summary": "Contrat contenant les clauses de négociation litigieuses.", "attributes": {"contesté": True}}
-                        ]
-                        edges = [
-                            {"uuid": "edge_1", "label": "REPRÉSENTE", "source": "node_avocat_bob", "target": "node_contrat_achat", "fact": "L'avocat Bob représente la défense concernant ce contrat."},
-                            {"uuid": "edge_2", "label": "SOUMET", "source": "node_procureur_voisin", "target": "node_contrat_achat", "fact": "Le procureur soumet ce contrat comme preuve d'abus."}
-                        ]
-                    elif benchmark_type == "inertia":
-                        nodes = [
-                            {"uuid": "node_juge_pie", "label": "Juge", "name": "Juge PIE", "summary": "Magistrat chargé de trancher le litige.", "attributes": {"tribunal": "Cour du Québec"}},
-                            {"uuid": "node_temoignage", "label": "Fait", "name": "Témoignage Contradictoire", "summary": "Déclaration confuse d'un témoin oculaire.", "attributes": {"contesté": True}},
-                            {"uuid": "node_arret_dunmore", "label": "Jurisprudence", "name": "Arrêt Dunmore", "summary": "Arrêt Dunmore c. Mehralian (2001) établissant le critère de bonne foi.", "attributes": {"année": 2001}}
-                        ]
-                        edges = [
-                            {"uuid": "edge_1", "label": "TRANCHE", "source": "node_juge_pie", "target": "node_temoignage", "fact": "Le juge évalue la crédibilité du témoignage."},
-                            {"uuid": "edge_2", "label": "S'APPLIQUE_À", "source": "node_arret_dunmore", "target": "node_temoignage", "fact": "L'arrêt Dunmore s'applique pour trancher la valeur de ce témoignage."}
-                        ]
-                    else: # attention
-                        nodes = [
-                            {"uuid": "node_avocate_alice", "label": "Avocat", "name": "Avocate Alice", "summary": "Avocate de la défense représentant les intérêts du prévenu.", "attributes": {"rôle": "Défense"}},
-                            {"uuid": "node_precedent_jordan", "label": "Jurisprudence", "name": "Arrêt Jordan", "summary": "Arrêt de la Cour Suprême R. c. Jordan (2016) sur les délais raisonnables.", "attributes": {"année": 2016}},
-                            {"uuid": "node_detail_greffe", "label": "Fait", "name": "Erreur de Greffe", "summary": "Erreur matérielle secondaire de date sur le formulaire de dépôt.", "attributes": {"contesté": False}}
-                        ]
-                        edges = [
-                            {"uuid": "edge_1", "label": "SOUMET", "source": "node_avocate_alice", "target": "node_precedent_jordan", "fact": "L'avocate Alice invoque l'arrêt Jordan pour demander l'arrêt des procédures."},
-                            {"uuid": "edge_2", "label": "SOUMET", "source": "node_avocate_alice", "target": "node_detail_greffe", "fact": "L'avocate Alice mentionne l'erreur de date."}
-                        ]
-                    
-                    db.upsert_triplets(nodes, edges)
-                    time.sleep(0.5)
+                    with LocalGraphDatabase(graph_id) as db:
+                        db.set_ontology(project.ontology)
+                        time.sleep(0.5)
+                        
+                        task_manager.update_task(
+                            task_id,
+                            message="Extraction des entités juridiques en cours...",
+                            progress=70
+                        )
+                        
+                        # Détecter le type de benchmark pour peupler le graphe
+                        parts = project_id.split('_')
+                        benchmark_type = parts[2] if len(parts) > 2 else "hysteresis"
+                        
+                        nodes = []
+                        edges = []
+                        
+                        if benchmark_type == "hysteresis":
+                            nodes = [
+                                {"uuid": "node_avocat_bob", "label": "Avocat", "name": "Avocat Bob", "summary": "Avocat de la Défense (Bob), représente la partie défenderesse.", "attributes": {"rôle": "Défense"}},
+                                {"uuid": "node_procureur_voisin", "label": "Avocat", "name": "Procureur Voisin", "summary": "Procureur de la Poursuite, soutient l'accusation d'abus de confiance.", "attributes": {"rôle": "Poursuite"}},
+                                {"uuid": "node_contrat_achat", "label": "Fait", "name": "Contrat d'Achat", "summary": "Contrat contenant les clauses de négociation litigieuses.", "attributes": {"contesté": True}}
+                            ]
+                            edges = [
+                                {"uuid": "edge_1", "label": "REPRÉSENTE", "source": "node_avocat_bob", "target": "node_contrat_achat", "fact": "L'avocat Bob représente la défense concernant ce contrat."},
+                                {"uuid": "edge_2", "label": "SOUMET", "source": "node_procureur_voisin", "target": "node_contrat_achat", "fact": "Le procureur soumet ce contrat comme preuve d'abus."}
+                            ]
+                        elif benchmark_type == "inertia":
+                            nodes = [
+                                {"uuid": "node_juge_pie", "label": "Juge", "name": "Juge PIE", "summary": "Magistrat chargé de trancher le litige.", "attributes": {"tribunal": "Cour du Québec"}},
+                                {"uuid": "node_temoignage", "label": "Fait", "name": "Témoignage Contradictoire", "summary": "Déclaration confuse d'un témoin oculaire.", "attributes": {"contesté": True}},
+                                {"uuid": "node_arret_dunmore", "label": "Jurisprudence", "name": "Arrêt Dunmore", "summary": "Arrêt Dunmore c. Mehralian (2001) établissant le critère de bonne foi.", "attributes": {"année": 2001}}
+                            ]
+                            edges = [
+                                {"uuid": "edge_1", "label": "TRANCHE", "source": "node_juge_pie", "target": "node_temoignage", "fact": "Le juge évalue la crédibilité du témoignage."},
+                                {"uuid": "edge_2", "label": "S'APPLIQUE_À", "source": "node_arret_dunmore", "target": "node_temoignage", "fact": "L'arrêt Dunmore s'applique pour trancher la valeur de ce témoignage."}
+                            ]
+                        else: # attention
+                            nodes = [
+                                {"uuid": "node_avocate_alice", "label": "Avocat", "name": "Avocate Alice", "summary": "Avocate de la défense représentant les intérêts du prévenu.", "attributes": {"rôle": "Défense"}},
+                                {"uuid": "node_precedent_jordan", "label": "Jurisprudence", "name": "Arrêt Jordan", "summary": "Arrêt de la Cour Suprême R. c. Jordan (2016) sur les délais raisonnables.", "attributes": {"année": 2016}},
+                                {"uuid": "node_detail_greffe", "label": "Fait", "name": "Erreur de Greffe", "summary": "Erreur matérielle secondaire de date sur le formulaire de dépôt.", "attributes": {"contesté": False}}
+                            ]
+                            edges = [
+                                {"uuid": "edge_1", "label": "SOUMET", "source": "node_avocate_alice", "target": "node_precedent_jordan", "fact": "L'avocate Alice invoque l'arrêt Jordan pour demander l'arrêt des procédures."},
+                                {"uuid": "edge_2", "label": "SOUMET", "source": "node_avocate_alice", "target": "node_detail_greffe", "fact": "L'avocate Alice mentionne l'erreur de date."}
+                            ]
+                        
+                        db.upsert_triplets(nodes, edges)
+                        time.sleep(0.5)
                     
                     # Mettre à jour le projet comme terminé
                     project.status = ProjectStatus.GRAPH_COMPLETED

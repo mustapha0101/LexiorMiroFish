@@ -30,7 +30,8 @@
     "description": "Lexior Simulator - 社交媒体舆论模拟系统"
   },
   "nav": {
-    "visitGithub": "访问我们的Github主页"
+    "visitGithub": "访问我们的Github主页",
+    "researchPaper": "研究论文"
   },
   "home": {
     "tagline": "简洁通用的群体智能引擎",
@@ -45,10 +46,12 @@
     "systemStatus": "系统状态",
     "systemReady": "准备就绪",
     "systemReadyDesc": "预测引擎待命中，可上传多份非结构化数据以初始化模拟序列",
-    "metricLowCost": "低成本",
-    "metricLowCostDesc": "常规模拟平均5$/次",
-    "metricHighAvail": "高可用",
-    "metricHighAvailDesc": "最多百万级Agent模拟",
+    "metricSimulationsRun": "已运行模拟",
+    "metricSimulationsRunDesc": "{count} 次运行",
+    "metricActorsSimulated": "认知双胞胎",
+    "metricActorsSimulatedDesc": "已生成 {count} 位Agent",
+    "metricRoundsRun": "模拟轮数",
+    "metricRoundsRunDesc": "{count} 轮辩论",
     "workflowSequence": "工作流序列",
     "step01Title": "图谱构建",
     "step01Desc": "现实种子提取 & 个体与群体记忆注入 & GraphRAG构建",
