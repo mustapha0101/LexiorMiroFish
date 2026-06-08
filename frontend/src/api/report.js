@@ -49,3 +49,11 @@ export const getReport = (reportId) => {
 export const chatWithReport = (data) => {
   return requestWithRetry(() => service.post('/api/report/chat', data), 3, 1000)
 }
+
+/**
+ * 与虚拟对手谈判
+ * @param {Object} data - { simulation_id, message, chat_history? }
+ */
+export const negotiateWithOpponent = (data) => {
+  return requestWithRetry(() => service.post('/api/report/negotiate', data), 3, 1000)
+}

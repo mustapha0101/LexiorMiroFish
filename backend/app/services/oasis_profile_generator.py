@@ -671,7 +671,7 @@ class OasisProfileGenerator:
     
     def _get_system_prompt(self, is_individual: bool) -> str:
         """获取系统提示词"""
-        base_prompt = "你是社交媒体用户画像生成专家。生成详细、真实的人设用于舆论模拟,最大程度还原已有现实情况。必须返回有效的JSON格式，所有字符串值不能包含未转义的换行符。"
+        base_prompt = "Tu es un expert en création de personas pour les réseaux sociaux. Tu dois générer des personas détaillés et réalistes pour une simulation d'opinion publique, en reflétant la réalité avec le plus de fidélité possible. Tu dois obligatoirement retourner un format JSON valide. Les valeurs textuelles ne doivent contenir aucun retour à la ligne non-échappé."
         return f"{base_prompt}\n\n{get_language_instruction()}"
     
     def _build_individual_persona_prompt(
@@ -687,40 +687,40 @@ class OasisProfileGenerator:
         attrs_str = json.dumps(entity_attributes, ensure_ascii=False) if entity_attributes else "无"
         context_str = context[:3000] if context else "无额外上下文"
         
-        return f"""为实体生成详细的社交媒体用户人设,最大程度还原已有现实情况。
+        return f"""Génère un profil social détaillé pour cette entité, en reflétant la réalité le plus fidèlement possible.
 
-实体名称: {entity_name}
-实体类型: {entity_type}
-实体摘要: {entity_summary}
-实体属性: {attrs_str}
+Nom de l'entité : {entity_name}
+Type de l'entité : {entity_type}
+Résumé de l'entité : {entity_summary}
+Attributs de l'entité : {attrs_str}
 
-上下文信息:
+Informations contextuelles :
 {context_str}
 
-请生成JSON，包含以下字段:
+Veuillez générer un JSON contenant les champs suivants :
 
-1. bio: 社交媒体简介，200字
-2. persona: 详细人设描述（2000字的纯文本），需包含:
-   - 基本信息（年龄、职业、教育背景、所在地）
-   - 人物背景（重要经历、与事件的关联、社会关系）
-   - 性格特征（MBTI类型、核心性格、情绪表达方式）
-   - 社交媒体行为（发帖频率、内容偏好、互动风格、语言特点）
-   - 立场观点（对话题的态度、可能被激怒/感动的内容）
-   - 独特特征（口头禅、特殊经历、个人爱好）
-   - 个人记忆（人设的重要部分，要介绍这个个体与事件的关联，以及这个个体在事件中的已有动作与反应）
-3. age: 年龄数字（必须是整数）
-4. gender: 性别，必须是英文: "male" 或 "female"
-5. mbti: MBTI类型（如INTJ、ENFP等）
-6. country: 国家（使用中文，如"中国"）
-7. profession: 职业
-8. interested_topics: 感兴趣话题数组
+1. bio: Biographie courte pour les réseaux sociaux, 200 caractères max.
+2. persona: Description détaillée du caractère (2000 caractères, texte brut), incluant :
+   - Informations de base (Âge, profession, éducation, lieu)
+   - Historique du personnage (Expériences importantes, relation avec l'événement, connexions sociales)
+   - Traits de personnalité (Type MBTI, tempérament principal, façon d'exprimer ses émotions)
+   - Comportement sur les réseaux sociaux (Fréquence de publication, types de contenus préférés, style d'interaction, ton linguistique)
+   - Position & Point de vue (Attitude envers le sujet, ce qui l'énerve / l'émeut)
+   - Caractéristiques uniques (Phrases d'accroche, antécédents spéciaux, hobbies personnels)
+   - Souvenirs personnels (Doivent expliquer comment cet individu est impliqué dans l'événement, quelles actions et réactions il a déjà eues)
+3. age: Un nombre représentant l'âge (doit être un entier).
+4. gender: Genre, DOIT ÊTRE une chaîne en anglais : "male" ou "female".
+5. mbti: Type MBTI (ex. INTJ, ENFP, etc.)
+6. country: Pays (par ex. "France", "Canada", etc.)
+7. profession: Profession.
+8. interested_topics: Un tableau des thématiques d'intérêt.
 
-重要:
-- 所有字段值必须是字符串或数字，不要使用换行符
-- persona必须是一段连贯的文字描述
-- {get_language_instruction()} (gender字段必须用英文male/female)
-- 内容要与实体信息保持一致
-- age必须是有效的整数，gender必须是"male"或"female"
+Important :
+- Toutes les valeurs doivent être des chaînes de caractères (strings) ou des nombres, pas de retours à la ligne \n non-échappés.
+- 'persona' doit être une description textuelle fluide.
+- {get_language_instruction()} (Le champ 'gender' doit être obligatoirement en anglais: male/female)
+- Le contenu doit être cohérent avec les informations de l'entité.
+- 'age' doit être un entier valide, 'gender' doit être "male" ou "female".
 """
 
     def _build_group_persona_prompt(
@@ -736,40 +736,40 @@ class OasisProfileGenerator:
         attrs_str = json.dumps(entity_attributes, ensure_ascii=False) if entity_attributes else "无"
         context_str = context[:3000] if context else "无额外上下文"
         
-        return f"""为机构/群体实体生成详细的社交媒体账号设定,最大程度还原已有现实情况。
+        return f"""Génère un profil de compte de réseau social détaillé pour cette institution/groupe, en reflétant la réalité le plus fidèlement possible.
 
-实体名称: {entity_name}
-实体类型: {entity_type}
-实体摘要: {entity_summary}
-实体属性: {attrs_str}
+Nom de l'entité : {entity_name}
+Type de l'entité : {entity_type}
+Résumé de l'entité : {entity_summary}
+Attributs de l'entité : {attrs_str}
 
-上下文信息:
+Informations contextuelles :
 {context_str}
 
-请生成JSON，包含以下字段:
+Veuillez générer un JSON contenant les champs suivants :
 
-1. bio: 官方账号简介，200字，专业得体
-2. persona: 详细账号设定描述（2000字的纯文本），需包含:
-   - 机构基本信息（正式名称、机构性质、成立背景、主要职能）
-   - 账号定位（账号类型、目标受众、核心功能）
-   - 发言风格（语言特点、常用表达、禁忌话题）
-   - 发布内容特点（内容类型、发布频率、活跃时间段）
-   - 立场态度（对核心话题的官方立场、面对争议的处理方式）
-   - 特殊说明（代表的群体画像、运营习惯）
-   - 机构记忆（机构人设的重要部分，要介绍这个机构与事件的关联，以及这个机构在事件中的已有动作与反应）
-3. age: 固定填30（机构账号的虚拟年龄）
-4. gender: 固定填"other"（机构账号使用other表示非个人）
-5. mbti: MBTI类型，用于描述账号风格，如ISTJ代表严谨保守
-6. country: 国家（使用中文，如"中国"）
-7. profession: 机构职能描述
-8. interested_topics: 关注领域数组
+1. bio: Courte description officielle du compte, 200 caractères max, professionnelle.
+2. persona: Description détaillée du caractère du compte (2000 caractères, texte brut), incluant :
+   - Informations de base de l'institution (Nom formel, nature de l'institution, historique officiel, fonctions principales)
+   - Positionnement du compte (Type de compte, audience cible, utilité principale)
+   - Style de communication (Ton, expressions courantes, sujets tabous)
+   - Caractéristiques du contenu (Type de contenu, fréquence, périodes de forte activité)
+   - Position officielle (Positionnement public concernant le sujet clé, traitement des controverses)
+   - Notes spéciales (Profil de groupe représenté, habitudes opérationnelles)
+   - Souvenirs institutionnels (Doivent expliquer comment cette institution est impliquée dans l'événement, quelles actions et réactions officielles existent déjà)
+3. age: Fixé à 30 (Âge virtuel de l'institution).
+4. gender: Fixé à "other" (Un compte institutionnel doit utiliser "other").
+5. mbti: Type MBTI pour décrire le style du compte (ex. ISTJ pour rigoureux et conservateur).
+6. country: Pays (par ex. "France", "Canada", etc.)
+7. profession: Description du rôle/secteur de l'institution.
+8. interested_topics: Un tableau des domaines d'intérêt.
 
-重要:
-- 所有字段值必须是字符串或数字，不允许null值
-- persona必须是一段连贯的文字描述，不要使用换行符
-- {get_language_instruction()} (gender字段必须用英文"other")
-- age必须是整数30，gender必须是字符串"other"
-- 机构账号发言要符合其身份定位"""
+Important :
+- Aucun champ null autorisé. Toutes les valeurs sont des chaînes ou des entiers.
+- 'persona' doit être un texte fluide sans retours à la ligne non-échappés.
+- {get_language_instruction()} (Le champ 'gender' doit être obligatoirement "other" en anglais)
+- 'age' Doit être l'entier 30, 'gender' Doit être la chaîne de caractères "other".
+- Les posts et activités de ce compte doivent correspondre à son identité institutionnelle."""
     
     def _generate_profile_rule_based(
         self,
@@ -848,6 +848,196 @@ class OasisProfileGenerator:
         """设置图谱ID用于Zep检索"""
         self.graph_id = graph_id
     
+    def generate_public_opinion_profiles(
+        self,
+        case_facts: str,
+        simulation_requirement: str,
+        count: int = 8,
+        progress_callback: Optional[callable] = None,
+        realtime_output_path: Optional[str] = None,
+        output_platform: str = "reddit"
+    ) -> List[OasisAgentProfile]:
+        """
+        Génère dynamiquement des profils d'opinion publique (activistes, journalistes, experts, citoyens)
+        basés sur les faits de l'affaire et les exigences de la simulation.
+        """
+        logger.info(f"Génération dynamique de {count} profils d'opinion publique via LLM.")
+        
+        target_roles = [
+            {
+                "role_name": "Lanceur d'Alerte / Activiste",
+                "stance_description": "Très critique, dénonce les abus ou manquements de l'entité accusée, réclame des réformes et la transparence."
+            },
+            {
+                "role_name": "Journaliste d'Investigation",
+                "stance_description": "Neutre et rigoureux. Synthétise les faits, pose des questions pointues aux deux côtés et informe de manière objective."
+            },
+            {
+                "role_name": "Porte-parole / RP de l'entité concernée",
+                "stance_description": "Défend la réputation de l'organisation impliquée avec des éléments de langage professionnels et rassurants."
+            },
+            {
+                "role_name": "Expert Technique ou Juridique",
+                "stance_description": "Analytique et vulgarisateur. Explique les lois, les aspects techniques ou les procédures sans parti pris."
+            },
+            {
+                "role_name": "Citoyen Modéré / Observateur",
+                "stance_description": "Représente le grand public. Réagit de manière équilibrée et cherche à comprendre les deux côtés."
+            },
+            {
+                "role_name": "Citoyen Indigné / Râleur",
+                "stance_description": "Très critique, en colère face aux injustices, exprime son mécontentement sur les réseaux et demande justice."
+            },
+            {
+                "role_name": "Sceptique / Complotiste",
+                "stance_description": "Méfie des versions officielles des deux côtés, cherche les agendas cachés et pose des théories alternatives."
+            },
+            {
+                "role_name": "Consommateur / Client Inquiet",
+                "stance_description": "Préoccupé par les conséquences pratiques de l'affaire sur sa vie quotidienne ou ses services personnels."
+            }
+        ]
+        
+        # Ajuster les rôles si le nombre demandé diffère de 8
+        if count < len(target_roles):
+            target_roles = target_roles[:count]
+        elif count > len(target_roles):
+            for i in range(len(target_roles), count):
+                target_roles.append({
+                    "role_name": f"Citoyen {i - len(target_roles) + 1}",
+                    "stance_description": "Membre du public réagissant au débat en fonction des faits présentés."
+                })
+                
+        prompt = f"""Tu es un concepteur de simulations d'opinion publique et de psychologie sociale.
+Ta tâche est de concevoir exactement {count} profils d'agents (personas) pour un réseau social (comme Twitter ou Reddit) en français.
+Ces agents doivent interagir dans le cadre d'un débat public ou d'une crise réputationnelle autour d'une affaire judiciaire ou d'un conflit décrit par les documents ci-dessous.
+
+Voici les faits de l'affaire (Seeds of reality) :
+---
+{case_facts[:4000]}
+---
+
+Voici l'exigence ou le contexte de simulation :
+---
+{simulation_requirement}
+---
+
+Tu dois créer exactement {count} profils correspondants aux rôles décrits ci-dessous, contextualisés par rapport aux faits de l'affaire ci-dessus :
+{json.dumps(target_roles, ensure_ascii=False, indent=2)}
+
+Chaque profil dans la liste doit respecter scrupuleusement la structure JSON suivante :
+- "username" : un identifiant court, en minuscules, sans espaces (ex: "lanceur_alerte_99", "expert_cyber", "citoyen_inquiet").
+- "name" : Le nom d'affichage de l'utilisateur en français (ex: "Marc Lavoie", "Apex Software Relations", "Dr. Sophie Martin").
+- "bio" : Une courte biographie accrocheuse en français pour le profil de réseau social (environ 150 caractères).
+- "persona" : Une description très détaillée (en français, minimum 3-4 phrases) du profil psychologique, de son opinion, de sa façon de s'exprimer (ton, style), de son attitude envers l'affaire, et de sa réaction attendue face aux preuves ou révélations.
+- "age" : un entier entre 18 et 65 ans.
+- "gender" : "male" ou "female".
+- "mbti" : un type MBTI valide à 4 lettres (ex: "INTJ", "ENFP", "ISTJ", "ESFJ").
+- "country" : Le pays de résidence (par exemple, "Canada", "France").
+- "profession" : La profession ou le rôle social de la personne (en français).
+- "interested_topics" : Une liste de 3 à 5 sujets ou mots-clés d'intérêt liés à l'affaire (en français).
+
+Renvoie UNIQUEMENT un objet JSON contenant une clé "profiles" qui est la liste de ces {count} profils. Aucun texte explicatif en dehors du JSON.
+"""
+
+        profiles = []
+        max_attempts = 3
+        last_error = None
+        
+        for attempt in range(max_attempts):
+            try:
+                if progress_callback:
+                    progress_callback(10 + attempt * 20, count, f"Génération des profils d'opinion par LLM (essai {attempt+1})...")
+                
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=[
+                        {"role": "system", "content": "Tu es un assistant expert en communication publique qui génère des profils JSON de personas."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.7 - (attempt * 0.1)
+                )
+                
+                content = response.choices[0].message.content
+                result = json.loads(content)
+                raw_profiles = result.get("profiles", [])
+                
+                if len(raw_profiles) < count:
+                    raise ValueError(f"Pas assez de profils générés: {len(raw_profiles)} au lieu de {count}")
+                
+                # Conversion en OasisAgentProfile
+                for idx, p in enumerate(raw_profiles[:count]):
+                    profile = OasisAgentProfile(
+                        user_id=idx,
+                        user_name=p.get("username") or p.get("user_name") or f"user_{idx}",
+                        name=p.get("name") or f"Agent {idx}",
+                        bio=p.get("bio") or "",
+                        persona=p.get("persona") or "",
+                        karma=random.randint(1000, 5000),
+                        friend_count=random.randint(100, 1000),
+                        follower_count=random.randint(100, 2000),
+                        statuses_count=random.randint(200, 5000),
+                        age=p.get("age", random.randint(20, 60)),
+                        gender=self._normalize_gender(p.get("gender")),
+                        mbti=p.get("mbti", "ISTJ"),
+                        country=p.get("country", "Canada"),
+                        profession=p.get("profession", "Citoyen"),
+                        interested_topics=p.get("interested_topics") or [],
+                        source_entity_uuid=f"node_{p.get('username') or f'user_{idx}'}",
+                        source_entity_type=p.get("profession") or "Citoyen"
+                    )
+                    profiles.append(profile)
+                break
+            except Exception as e:
+                logger.warning(f"Échec de la génération des profils d'opinion publique (tentative {attempt+1}): {e}")
+                last_error = e
+                time.sleep(1)
+                
+        # En cas d'échec complet, fallback vers des profils statiques francophones adaptés aux faits
+        if not profiles:
+            logger.error(f"Échec complet de la génération des profils d'opinion publique: {last_error}. Utilisation du fallback statique.")
+            fallback_names = [
+                ("lanceur_alerte_99", "Marc Lavoie", "Activiste", "Militant engagé pour l'éthique, la transparence et la justice sociale.", "S'insurge contre les abus révélés dans ce dossier et cherche à mobiliser l'opinion publique."),
+                ("actus_medias", "Sophie Tremblay", "Journaliste", "Journaliste indépendante couvrant l'actualité et les affaires publiques.", "Journaliste rigoureuse. Pose des questions pointues et cherche à clarifier la vérité de manière équilibrée."),
+                ("corporate_pr", "Relations Publiques", "Porte-parole", "Compte officiel pour la communication de crise de l'organisation impliquée.", "Porte-parole officiel défendant la réputation de l'organisation avec des éléments de langage professionnels."),
+                ("expert_legal", "Me Jean Roy", "Avocat expert", "Consultant juridique et vulgarisateur de droit public.", "Explique les concepts juridiques sous-jacents de l'affaire pour aider le public à comprendre les enjeux."),
+                ("citoyen_moyen", "Thomas Petit", "Citoyen", "Citoyen ordinaire curieux de l'actualité publique.", "Suit l'affaire par intérêt général et réagit de manière spontanée et modérée."),
+                ("citoyen_indigne", "Chantal Fortin", "Citoyenne indignée", "Citoyenne réclamant justice et transparence.", "Exprime sa colère face aux abus dénoncés dans l'affaire, demande des sanctions fermes."),
+                ("sceptique_77", "David Morin", "Observateur", "Observateur du débat public. Sceptique face à la communication officielle.", "Doute des déclarations des deux côtés et cherche à comprendre les motivations sous-jacentes."),
+                ("consommateur_inquiet", "Lucie Gagnon", "Consommatrice", "Citoyenne et consommatrice préoccupée par les impacts de l'affaire.", "S'inquiète des conséquences directes de cette situation sur sa vie ou la confiance envers les institutions.")
+            ]
+            for idx, (username, name, profession, bio, persona) in enumerate(fallback_names[:count]):
+                profile = OasisAgentProfile(
+                    user_id=idx,
+                    user_name=username,
+                    name=name,
+                    bio=bio,
+                    persona=persona,
+                    karma=random.randint(1000, 5000),
+                    friend_count=random.randint(100, 1000),
+                    follower_count=random.randint(100, 2000),
+                    statuses_count=random.randint(200, 5000),
+                    age=35,
+                    gender="male" if idx % 2 == 0 else "female",
+                    mbti="ISTJ",
+                    country="Canada",
+                    profession=profession,
+                    interested_topics=["Justice", "Actualité"],
+                    source_entity_uuid=f"node_{username}",
+                    source_entity_type=profession
+                )
+                profiles.append(profile)
+                
+        # Enregistrer en temps réel si demandé
+        if realtime_output_path:
+            try:
+                self.save_profiles(profiles, realtime_output_path, output_platform)
+            except Exception as e:
+                logger.warning(f"Erreur lors de la sauvegarde en temps réel: {e}")
+                
+        return profiles
+
     def generate_profiles_from_entities(
         self,
         entities: List[EntityNode],

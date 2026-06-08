@@ -1,0 +1,33 @@
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy uv from official image
+COPY --from=ghcr.io/astral-sh/uv:0.9.26 /uv /uvx /bin/
+
+# Set working directory
+WORKDIR /app
+
+# Copy python dependency definition files
+COPY backend/pyproject.toml backend/uv.lock ./backend/
+
+# Sync dependencies using uv (without development dependencies)
+RUN cd backend && uv sync --frozen --no-dev
+
+# Copy shared locales (needed for localization)
+COPY locales/ ./locales/
+
+# Copy backend code
+COPY backend/ ./backend/
+
+# Set working directory to backend folder
+WORKDIR /app/backend
+
+# Expose port
+EXPOSE 5001
+
+# Start Flask using Gunicorn with Render PORT environment variable
+CMD ["sh", "-c", "uv run gunicorn --bind 0.0.0.0:${PORT:-5001} --timeout 600 wsgi:app"]

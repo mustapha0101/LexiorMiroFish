@@ -26,8 +26,8 @@
     "files": "个文件"
   },
   "meta": {
-    "title": "MiroFish - 预测万物",
-    "description": "MiroFish - 社交媒体舆论模拟系统"
+    "title": "Lexior Simulator - 预测万物",
+    "description": "Lexior Simulator - 社交媒体舆论模拟系统"
   },
   "nav": {
     "visitGithub": "访问我们的Github主页"
@@ -38,7 +38,7 @@
     "heroTitle1": "上传任意报告",
     "heroTitle2": "即刻推演未来",
     "heroDesc": "即使只有一段文字，{brand} 也能基于其中的现实种子，全自动生成与之对应的至多{agentScale}构成的平行世界。通过上帝视角注入变量，在复杂的群体交互中寻找动态环境下的{optimalSolution}",
-    "heroDescBrand": "MiroFish",
+    "heroDescBrand": "Lexior Simulator",
     "heroDescAgentScale": "百万级Agent",
     "heroDescOptimalSolution": "\"局部最优解\"",
     "slogan": "让未来在 Agent 群中预演，让决策在百战后胜出",
@@ -67,9 +67,12 @@
     "inputParams": "输入参数",
     "simulationPrompt": ">_ 02 / 模拟提示词",
     "promptPlaceholder": "// 用自然语言输入模拟或预测需求（例.武大若发布撤销肖某处分的公告，会引发什么舆情走向）",
-    "engineBadge": "引擎: MiroFish-V1.0",
+    "engineBadge": "引擎: Lexior Cognitive PIE",
     "startEngine": "启动引擎",
-    "initializing": "初始化中..."
+    "initializing": "初始化中...",
+    "simulationMode": "模拟模式",
+    "modeSocial": "公共社交网络（带 PIE 引擎）",
+    "modeLegal": "司法诉讼（法庭）"
   },
   "main": {
     "layoutGraph": "图谱",
@@ -85,7 +88,7 @@
     "ontologyDesc": "LLM分析文档内容与模拟需求，提取出现实种子，自动生成合适的本体结构",
     "analyzingDocs": "正在分析文档...",
     "graphRagBuild": "GraphRAG构建",
-    "graphRagDesc": "基于生成的本体，将文档自动分块后调用 Zep 构建知识图谱，提取实体和关系，并形成时序记忆与社区摘要",
+    "graphRagDesc": "基于生成的本体，将文档自动分块后调用本地 Kuzu DB 构建主权知识图谱，提取实体和关系，并形成时序记忆与社区摘要",
     "entityNodes": "实体节点",
     "relationEdges": "关系边",
     "schemaTypes": "SCHEMA类型",
@@ -94,6 +97,8 @@
     "inProgress": "进行中",
     "creating": "创建中...",
     "enterEnvSetup": "进入环境搭建",
+    "enterLegalSim": "进入法庭模拟 ⚖️",
+    "buildCompleteDescLegal": "图谱构建已完成。请进入法庭模拟以分析法律辩论与判决。",
     "createSimulationFailed": "创建模拟失败: {error}",
     "createSimulationException": "创建模拟异常: {error}"
   },
@@ -145,7 +150,7 @@
     "setupComplete": "准备完成",
     "setupCompleteDesc": "模拟环境已准备完成，可以开始运行模拟",
     "roundsConfig": "模拟轮数设定",
-    "roundsConfigDesc": "MiroFish 自动规划推演现实 {hours} 小时，每轮代表现实 {minutesPerRound} 分钟时间流逝",
+    "roundsConfigDesc": "Lexior Simulator 自动规划推演现实 {hours} 小时，每轮代表现实 {minutesPerRound} 分钟时间流逝",
     "customToggle": "自定义",
     "roundsUnit": "轮",
     "estimatedDuration": "若Agent规模为100：预计耗时约 {minutes} 分钟",
@@ -210,6 +215,7 @@
   "step4": {
     "generatingSection": "正在生成{title}...",
     "goToInteraction": "进入深度互动",
+    "exportPDF": "导出为 PDF",
     "waitingForReportAgent": "Waiting for Report Agent...",
     "collapse": "收起 ▲",
     "expandAll": "展开全部 {count} 条 ▼",
@@ -251,13 +257,14 @@
   },
   "step5": {
     "interactiveTools": "Interactive Tools",
+    "exportChat": "导出对话",
     "agentsAvailable": "{count} agents available",
     "chatWithReportAgent": "与Report Agent对话",
     "chatWithAgent": "与世界中任意个体对话",
     "selectChatTarget": "选择对话对象",
     "sendSurvey": "发送问卷调查到世界中",
     "reportAgentChat": "Report Agent - Chat",
-    "reportAgentDesc": "报告生成智能体的快速对话版本，可调用 4 种专业工具，拥有MiroFish的完整记忆",
+    "reportAgentDesc": "报告生成智能体的快速对话版本，可调用 4 种专业工具，拥有Lexior的完整记忆",
     "toolInsightForge": "InsightForge 深度归因",
     "toolInsightForgeDesc": "对齐现实世界种子数据与模拟环境状态，结合Global/Local Memory机制，提供跨时空的深度归因分析",
     "toolPanoramaSearch": "PanoramaSearch 全景追踪",
@@ -279,6 +286,7 @@
     "surveyResultsCount": "{count} 条回复",
     "selectAll": "全选",
     "clearSelection": "清空",
+    "cognitiveStates": "认知状态",
     "errorOccurred": "抱歉，发生了错误: {error}",
     "noResponse": "无响应",
     "requestFailed": "请求失败",
@@ -316,7 +324,30 @@
     "notStarted": "未开始",
     "roundsProgress": "{current}/{total} 轮",
     "untitledSimulation": "未命名模拟",
-    "unknownFile": "未知文件"
+    "unknownFile": "未知文件",
+    "searchPlaceholder": "按ID或描述搜索...",
+    "filterStatus": "状态",
+    "filterMode": "模式",
+    "all": "全部",
+    "btnResume": "继续",
+    "btnRerun": "重新开始",
+    "btnDelete": "删除",
+    "deleteSuccess": "推演删除成功。",
+    "deleteError": "删除失败。",
+    "resumeSuccess": "推演已继续。",
+    "confirmTitle": "确认操作",
+    "confirmDelete": "您确认要永久删除此推演及其所有物理文件吗？",
+    "confirmRerun": "您确认要从头重新运行此模拟吗？当前运行的所有进度数据都将被清空。",
+    "btnConfirm": "确认",
+    "btnCancel": "取消",
+    "liveChatTitle": "庭外调解与辩护策略 💬",
+    "liveChatDesc": "在审判推演过程中，您可以直接与我方辩护律师对话调整策略，或与控方检察官/对手谈判。您的对话内容将形成新事实影响法官及陪审团的后续判决。",
+    "liveChatTarget": "对话对象",
+    "chatTargetAdvocate": "辩护律师 (策略调整)",
+    "chatTargetAdversary": "反方律师/检察官 (庭外调解)",
+    "chatTargetAdversaryCivil": "原告律师 (谈判)",
+    "chatInputPlaceholderLive": "在此输入您的策略调整指令或调解方案提案...",
+    "btnSend": "发送"
   },
   "api": {
     "projectNotFound": "项目不存在: {id}",

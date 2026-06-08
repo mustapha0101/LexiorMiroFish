@@ -26,8 +26,8 @@
     "files": "files"
   },
   "meta": {
-    "title": "MiroFish - Predict Everything",
-    "description": "MiroFish - Social Media Opinion Simulation System"
+    "title": "Lexior Simulator - Predict Everything",
+    "description": "Lexior Simulator - Multi-Agent Cognitive Simulation System"
   },
   "nav": {
     "visitGithub": "Visit our Github page"
@@ -38,7 +38,7 @@
     "heroTitle1": "Upload Reports,",
     "heroTitle2": "Predict the Future",
     "heroDesc": "From a single document, {brand} extracts reality seeds to auto-generate a parallel world with up to {agentScale}. Inject variables from a god's-eye view to find the {optimalSolution} in complex group dynamics.",
-    "heroDescBrand": "MiroFish",
+    "heroDescBrand": "Lexior Simulator",
     "heroDescAgentScale": "million-scale Agents",
     "heroDescOptimalSolution": "\"local optimum\"",
     "slogan": "Let Agents rehearse the future, let decisions prevail",
@@ -67,9 +67,12 @@
     "inputParams": "Input Parameters",
     "simulationPrompt": ">_ 02 / Simulation Prompt",
     "promptPlaceholder": "// Describe your simulation or prediction requirement in natural language",
-    "engineBadge": "Engine: MiroFish-V1.0",
+    "engineBadge": "Engine: Lexior Cognitive PIE",
     "startEngine": "Start Engine",
-    "initializing": "Initializing..."
+    "initializing": "Initializing...",
+    "simulationMode": "Simulation Mode",
+    "modeSocial": "Public Social Network (with PIE)",
+    "modeLegal": "Courtroom Trial"
   },
   "main": {
     "layoutGraph": "Graph",
@@ -85,7 +88,7 @@
     "ontologyDesc": "LLM analyzes document content and simulation requirements, extracts reality seeds, and auto-generates a suitable ontology structure",
     "analyzingDocs": "Analyzing documents...",
     "graphRagBuild": "GraphRAG Build",
-    "graphRagDesc": "Based on the generated ontology, documents are auto-chunked and sent to Zep to build a knowledge graph, extracting entities and relations, forming temporal memory and community summaries",
+    "graphRagDesc": "Based on the generated ontology, documents are auto-chunked and processed locally using Kuzu DB to build a sovereign knowledge graph, extracting entities and relations, forming temporal memory and community summaries",
     "entityNodes": "Entity Nodes",
     "relationEdges": "Relation Edges",
     "schemaTypes": "Schema Types",
@@ -94,6 +97,8 @@
     "inProgress": "In Progress",
     "creating": "Creating...",
     "enterEnvSetup": "Enter Environment Setup",
+    "enterLegalSim": "Go to Courtroom Simulation ⚖️",
+    "buildCompleteDescLegal": "Graph build is complete. Proceed to the courtroom trial simulation to analyze legal debates and verdicts.",
     "createSimulationFailed": "Failed to create simulation: {error}",
     "createSimulationException": "Simulation creation error: {error}"
   },
@@ -145,7 +150,7 @@
     "setupComplete": "Setup Complete",
     "setupCompleteDesc": "Simulation environment is ready. You can now start the simulation.",
     "roundsConfig": "Simulation Rounds Configuration",
-    "roundsConfigDesc": "MiroFish auto-plans to simulate {hours} real-world hours, each round representing {minutesPerRound} minutes of elapsed time",
+    "roundsConfigDesc": "Lexior Cognitive auto-plans to simulate {hours} real-world hours, each round representing {minutesPerRound} minutes of elapsed time",
     "customToggle": "Custom",
     "roundsUnit": "rounds",
     "estimatedDuration": "For 100 Agents: est. ~{minutes} minutes",
@@ -210,6 +215,7 @@
   "step4": {
     "generatingSection": "Generating {title}...",
     "goToInteraction": "Enter Deep Interaction",
+    "exportPDF": "Export to PDF",
     "waitingForReportAgent": "Waiting for Report Agent...",
     "collapse": "Collapse ▲",
     "expandAll": "Show all {count} ▼",
@@ -251,13 +257,14 @@
   },
   "step5": {
     "interactiveTools": "Interactive Tools",
+    "exportChat": "Export Discussion",
     "agentsAvailable": "{count} agents available",
     "chatWithReportAgent": "Chat with Report Agent",
     "chatWithAgent": "Chat with any individual in the world",
     "selectChatTarget": "Select chat target",
     "sendSurvey": "Send survey to the world",
     "reportAgentChat": "Report Agent - Chat",
-    "reportAgentDesc": "A conversational version of the report generation agent with access to 4 professional tools and MiroFish's complete memory",
+    "reportAgentDesc": "A conversational version of the report generation agent with access to 4 professional tools and Lexior's complete memory",
     "toolInsightForge": "InsightForge Deep Attribution",
     "toolInsightForgeDesc": "Aligns real-world seed data with simulation state, combining Global/Local Memory for cross-temporal deep attribution analysis",
     "toolPanoramaSearch": "PanoramaSearch Full Tracking",
@@ -279,6 +286,7 @@
     "surveyResultsCount": "{count} responses",
     "selectAll": "Select All",
     "clearSelection": "Clear",
+    "cognitiveStates": "Cognitive State",
     "errorOccurred": "Sorry, an error occurred: {error}",
     "noResponse": "No response",
     "requestFailed": "Request failed",
@@ -316,7 +324,30 @@
     "notStarted": "Not started",
     "roundsProgress": "{current}/{total} rounds",
     "untitledSimulation": "Untitled simulation",
-    "unknownFile": "Unknown file"
+    "unknownFile": "Unknown file",
+    "searchPlaceholder": "Search by ID or description...",
+    "filterStatus": "Status",
+    "filterMode": "Mode",
+    "all": "All",
+    "btnResume": "Resume",
+    "btnRerun": "Relaunch",
+    "btnDelete": "Delete",
+    "deleteSuccess": "Simulation deleted successfully.",
+    "deleteError": "Failed to delete.",
+    "resumeSuccess": "Simulation resumed.",
+    "confirmTitle": "Confirmation",
+    "confirmDelete": "Are you sure you want to permanently delete this simulation and all its files?",
+    "confirmRerun": "Are you sure you want to rerun this simulation from the beginning? Current data will be cleared.",
+    "btnConfirm": "Confirm",
+    "btnCancel": "Cancel",
+    "liveChatTitle": "Negotiation & Strategy 💬",
+    "liveChatDesc": "Chat in real-time with your Advocate (to suggest strategies) or with the Prosecutor (to negotiate a deal). Each message will influence subsequent live rounds.",
+    "liveChatTarget": "Speaker",
+    "chatTargetAdvocate": "Advocate (Strategy)",
+    "chatTargetAdversary": "Prosecutor (Negotiation)",
+    "chatTargetAdversaryCivil": "Plaintiff (Negotiation)",
+    "chatInputPlaceholderLive": "Propose a deal, formulate a threat, or adjust defense strategy...",
+    "btnSend": "Send"
   },
   "api": {
     "projectNotFound": "Project not found: {id}",

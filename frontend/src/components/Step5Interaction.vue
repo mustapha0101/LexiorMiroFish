@@ -16,6 +16,28 @@
             <div class="header-divider"></div>
           </div>
 
+          <!-- Win Dashboard for Legal Simulations -->
+          <div v-if="props.projectData?.simulation_mode === 'legal'" class="win-dashboard">
+            <div class="win-circle" :style="winStyle">
+              <span class="win-rate">{{ winRateDisplay !== null ? winRateDisplay : '--' }}%</span>
+              <span class="win-label">{{ winLabel }}</span>
+            </div>
+            <div class="win-stats-details">
+              <div class="stat-detail-item">
+                <span class="stat-number text-win">{{ positiveCount }}</span>
+                <span class="stat-label">{{ positiveLabel }}</span>
+              </div>
+              <div class="stat-detail-item">
+                <span class="stat-number text-loss">{{ negativeCount }}</span>
+                <span class="stat-label">{{ negativeLabel }}</span>
+              </div>
+              <div class="stat-detail-item">
+                <span class="stat-number text-gold">{{ legalResults ? legalResults.iterations : 0 }}</span>
+                <span class="stat-label">{{ legalResults?.run_mode === 'oasis' ? 'Débats analysés' : 'Procès simulés' }}</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Sections List -->
           <div class="sections-list">
             <div 
@@ -100,32 +122,35 @@
               </svg>
               <span>{{ $t('step5.chatWithReportAgent') }}</span>
             </button>
-            <div class="agent-dropdown" v-if="profiles.length > 0">
+            <div class="agent-dropdown" v-if="profiles.length > 0 || projectData?.simulation_mode === 'legal'">
               <button 
                 class="tab-pill agent-pill"
-                :class="{ active: activeTab === 'chat' && chatTarget === 'agent' }"
+                :class="{ active: activeTab === 'chat' && (chatTarget === 'agent' || chatTarget === 'negotiation' || chatTarget === 'report_agent') }"
                 @click="toggleAgentDropdown"
               >
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
-                <span>{{ selectedAgent ? selectedAgent.username : $t('step5.chatWithAgent') }}</span>
+                <span>{{ selectedAgent ? (selectedAgent.name || selectedAgent.username) : (chatTarget === 'negotiation' ? adversaryLabel : $t('step5.chatWithAgent')) }}</span>
                 <svg class="dropdown-arrow" :class="{ open: showAgentDropdown }" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </button>
               <div v-if="showAgentDropdown" class="dropdown-menu">
                 <div class="dropdown-header">{{ $t('step5.selectChatTarget') }}</div>
+                
+                <div v-if="projectData?.simulation_mode === 'legal'" class="dropdown-section-title">Interroger les acteurs</div>
+                
                 <div 
                   v-for="(agent, idx) in profiles" 
                   :key="idx"
                   class="dropdown-item"
                   @click="selectAgent(agent, idx)"
                 >
-                  <div class="agent-avatar">{{ (agent.username || 'A')[0] }}</div>
+                  <div class="agent-avatar">{{ (agent.name || agent.username || 'A')[0] }}</div>
                   <div class="agent-info">
-                    <span class="agent-name">{{ agent.username }}</span>
+                    <span class="agent-name">{{ agent.name || agent.username }}</span>
                     <span class="agent-role">{{ agent.profession || $t('step2.unknownProfession') }}</span>
                   </div>
                 </div>
@@ -142,6 +167,17 @@
                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
               </svg>
               <span>{{ $t('step5.sendSurvey') }}</span>
+            </button>
+            <button
+              class="tab-pill cognitive-pill"
+              :class="{ active: activeTab === 'cognitive' }"
+              @click="activeTab = 'cognitive'; selectedAgent = null; selectedAgentIndex = null; showAgentDropdown = false; chatTarget = ''"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+              </svg>
+              <span>{{ $t('step5.cognitiveStates') || 'État Cognitif' }}</span>
             </button>
           </div>
         </div>
@@ -219,11 +255,11 @@
           <!-- Agent Profile Card -->
           <div v-if="chatTarget === 'agent' && selectedAgent" class="agent-profile-card">
             <div class="profile-card-header">
-              <div class="profile-card-avatar">{{ (selectedAgent.username || 'A')[0] }}</div>
+              <div class="profile-card-avatar">{{ (selectedAgent.name || selectedAgent.username || 'A')[0] }}</div>
               <div class="profile-card-info">
-                <div class="profile-card-name">{{ selectedAgent.username }}</div>
+                <div class="profile-card-name">{{ selectedAgent.name || selectedAgent.username }}</div>
                 <div class="profile-card-meta">
-                  <span v-if="selectedAgent.name" class="profile-card-handle">@{{ selectedAgent.name }}</span>
+                  <span class="profile-card-handle">@{{ selectedAgent.username }}</span>
                   <span class="profile-card-profession">{{ selectedAgent.profession || $t('step2.unknownProfession') }}</span>
                 </div>
               </div>
@@ -241,6 +277,38 @@
             </div>
           </div>
 
+          <!-- Negotiation Adversary Info Card -->
+          <div v-if="chatTarget === 'negotiation'" class="negotiation-info-card">
+            <div class="info-card-header">
+              <div class="info-card-avatar">⚖️</div>
+              <div class="info-card-info">
+                <div class="info-card-name">{{ cabinetAdverseLabel }}</div>
+                <div class="info-card-subtitle">Négociation de crise en temps réel (Médiation "à chaud")</div>
+              </div>
+            </div>
+            <div class="info-card-body">
+              <p>Mettez à l'épreuve les limites de l'adversaire juridique. Menaces d'exposition publique, concessions réglementaires (Loi 25), ou offres d'indemnisation financière... Saurez-vous éviter le procès ?</p>
+              <div class="negotiation-badge-row">
+                <span class="neg-badge neg-badge--finance">💰 Financier</span>
+                <span class="neg-badge neg-badge--reputation">📣 Réputation</span>
+                <span class="neg-badge neg-badge--law25">🔒 Loi 25</span>
+              </div>
+            </div>
+          </div>
+
+
+          <!-- Chat Export Bar -->
+          <div v-if="chatHistory.length > 0" class="chat-export-bar">
+            <button class="export-chat-btn" @click="exportChat">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>{{ $t('step5.exportChat') }}</span>
+            </button>
+          </div>
+
           <!-- Chat Messages -->
           <div class="chat-messages" ref="chatMessages">
             <div v-if="chatHistory.length === 0" class="chat-empty">
@@ -249,7 +317,10 @@
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                 </svg>
               </div>
-              <p class="empty-text">
+              <p class="empty-text" v-if="chatTarget === 'negotiation'">
+                Le procès s'annonce mal ? Utilisez ce chat pour tester des offres de médiation de crise. Menaces, offres de rachat, concessions sur la Loi 25... Découvrez exactement quel argument financier ou réputationnel fera enfin craquer l'avocat adverse virtuel avant d'affronter le vrai.
+              </p>
+              <p class="empty-text" v-else>
                 {{ chatTarget === 'report_agent' ? $t('step5.chatEmptyReportAgent') : $t('step5.chatEmptyAgent') }}
               </p>
             </div>
@@ -261,12 +332,12 @@
             >
               <div class="message-avatar">
                 <span v-if="msg.role === 'user'">U</span>
-                <span v-else>{{ msg.role === 'assistant' && chatTarget === 'report_agent' ? 'R' : (selectedAgent?.username?.[0] || 'A') }}</span>
+                <span v-else>{{ msg.role === 'assistant' && chatTarget === 'report_agent' ? 'R' : (chatTarget === 'negotiation' ? (isCivil ? 'Dm' : 'Adv') : ((selectedAgent?.name || selectedAgent?.username || 'A')[0])) }}</span>
               </div>
               <div class="message-content">
                 <div class="message-header">
                   <span class="sender-name">
-                    {{ msg.role === 'user' ? 'You' : (chatTarget === 'report_agent' ? 'Report Agent' : (selectedAgent?.username || 'Agent')) }}
+                    {{ msg.role === 'user' ? 'You' : (chatTarget === 'report_agent' ? 'Report Agent' : (chatTarget === 'negotiation' ? adversaryLabel : (selectedAgent?.name || selectedAgent?.username || 'Agent'))) }}
                   </span>
                   <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
                 </div>
@@ -275,7 +346,7 @@
             </div>
             <div v-if="isSending" class="chat-message assistant">
               <div class="message-avatar">
-                <span>{{ chatTarget === 'report_agent' ? 'R' : (selectedAgent?.username?.[0] || 'A') }}</span>
+                <span>{{ chatTarget === 'report_agent' ? 'R' : (chatTarget === 'negotiation' ? (isCivil ? 'Dm' : 'Adv') : ((selectedAgent?.name || selectedAgent?.username || 'A')[0])) }}</span>
               </div>
               <div class="message-content">
                 <div class="typing-indicator">
@@ -292,7 +363,7 @@
             <textarea 
               v-model="chatInput"
               class="chat-input"
-              :placeholder="$t('step5.chatInputPlaceholder')"
+              :placeholder="chatTarget === 'negotiation' ? 'Proposer un compromis, formuler une menace...' : $t('step5.chatInputPlaceholder')"
               @keydown.enter.exact.prevent="sendMessage"
               :disabled="isSending || (!selectedAgent && chatTarget === 'agent')"
               rows="1"
@@ -405,6 +476,15 @@
             </div>
           </div>
         </div>
+
+        <!-- Cognitive Mode -->
+        <div v-if="activeTab === 'cognitive' && simulationId" class="cognitive-container">
+          <CognitiveStateVisualizer 
+            :simulationId="simulationId" 
+            :active="activeTab === 'cognitive'" 
+            :isLegal="projectData?.simulation_mode === 'legal'" 
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -412,15 +492,19 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { chatWithReport, getReport, getAgentLog } from '../api/report'
-import { interviewAgents, getSimulationProfilesRealtime } from '../api/simulation'
+import { chatWithReport, getReport, getAgentLog, negotiateWithOpponent } from '../api/report'
+import { interviewAgents, getSimulationProfilesRealtime, getLegalResults } from '../api/simulation'
+import CognitiveStateVisualizer from './CognitiveStateVisualizer.vue'
 
+const router = useRouter()
 const { t } = useI18n()
 
 const props = defineProps({
   reportId: String,
-  simulationId: String
+  simulationId: String,
+  projectData: Object
 })
 
 const emit = defineEmits(['add-log', 'update-status'])
@@ -448,12 +532,111 @@ const surveyQuestion = ref('')
 const surveyResults = ref([])
 const isSurveying = ref(false)
 
-// Report Data
 const reportOutline = ref(null)
 const generatedSections = ref({})
 const collapsedSections = ref(new Set())
 const currentSectionIndex = ref(null)
 const profiles = ref([])
+
+// Legal Results State
+const legalResults = ref(null)
+
+const clientSide = computed(() => {
+  return props.projectData?.client_side || 'defense'
+})
+
+const isCivil = computed(() => {
+  if (props.projectData?.simulation_mode !== 'legal') return false
+  return legalResults.value?.litigation_type === 'civil'
+})
+
+const adversaryLabel = computed(() => {
+  if (clientSide.value === 'plaintiff') {
+    return 'Avocat de la Défense'
+  }
+  return isCivil.value ? 'Avocat du Demandeur' : 'Cabinet Adverse'
+})
+
+const cabinetAdverseLabel = computed(() => {
+  if (clientSide.value === 'plaintiff') {
+    return 'Avocat de la Défense & Défendeur'
+  }
+  return isCivil.value ? 'Avocat du Demandeur' : 'Cabinet Adverse & Procureur'
+})
+
+const winRateDisplay = computed(() => {
+  if (!legalResults.value) return null
+  const rate = legalResults.value.win_rate ?? 50
+  if (clientSide.value === 'plaintiff') {
+    return Math.round(100 - rate)
+  }
+  return Math.round(rate)
+})
+
+const winLabel = computed(() => {
+  if (legalResults.value?.run_mode === 'oasis') {
+    return "Taux d'adhésion public"
+  }
+  if (clientSide.value === 'plaintiff') {
+    return isCivil.value ? 'Chances de Succès (Demande)' : 'Chances de Condamnation'
+  }
+  return isCivil.value ? 'Chances de Rejet' : 'Chances de Relaxe'
+})
+
+const positiveCount = computed(() => {
+  if (!legalResults.value) return 0
+  if (clientSide.value === 'plaintiff') {
+    return legalResults.value.iterations - legalResults.value.defense_wins
+  }
+  return legalResults.value.defense_wins
+})
+
+const positiveLabel = computed(() => {
+  if (legalResults.value?.run_mode === 'oasis') {
+    return 'Interactions Favorables'
+  }
+  if (clientSide.value === 'plaintiff') {
+    return isCivil.value ? 'Succès de la Demande' : 'Condamnations'
+  }
+  return isCivil.value ? 'Rejets de la Demande' : 'Relaxes / Acquittements'
+})
+
+const negativeCount = computed(() => {
+  if (!legalResults.value) return 0
+  if (clientSide.value === 'plaintiff') {
+    return legalResults.value.defense_wins
+  }
+  return legalResults.value.iterations - legalResults.value.defense_wins
+})
+
+const negativeLabel = computed(() => {
+  if (legalResults.value?.run_mode === 'oasis') {
+    return 'Interactions Défavorables'
+  }
+  if (clientSide.value === 'plaintiff') {
+    return isCivil.value ? 'Rejets de la Demande' : 'Relaxes / Acquittements'
+  }
+  return isCivil.value ? 'Responsabilités' : 'Condamnations'
+})
+
+const winStyle = computed(() => {
+  const rate = winRateDisplay.value ?? 50
+  return {
+    background: `conic-gradient(#B58A3D ${rate}%, rgba(0,0,0,0.06) 0)`
+  }
+})
+
+const fetchLegalResults = async () => {
+  if (!props.simulationId) return
+  try {
+    const res = await getLegalResults(props.simulationId)
+    if (res.success && res.data) {
+      legalResults.value = res.data
+    }
+  } catch (err) {
+    console.error("Erreur de récupération des résultats de simulation juridique:", err)
+  }
+}
 
 // Helper Methods
 const isSectionCompleted = (sectionIndex) => {
@@ -493,6 +676,8 @@ const saveChatHistory = () => {
   
   if (chatTarget.value === 'report_agent') {
     chatHistoryCache.value['report_agent'] = [...chatHistory.value]
+  } else if (chatTarget.value === 'negotiation') {
+    chatHistoryCache.value['negotiation'] = [...chatHistory.value]
   } else if (selectedAgentIndex.value !== null) {
     chatHistoryCache.value[`agent_${selectedAgentIndex.value}`] = [...chatHistory.value]
   }
@@ -510,6 +695,20 @@ const selectReportAgentChat = () => {
   
   // 恢复 Report Agent 的对话记录
   chatHistory.value = chatHistoryCache.value['report_agent'] || []
+}
+
+const selectNegotiationChat = () => {
+  // 保存当前对话记录
+  saveChatHistory()
+  
+  activeTab.value = 'chat'
+  chatTarget.value = 'negotiation'
+  selectedAgent.value = null
+  selectedAgentIndex.value = null
+  showAgentDropdown.value = false
+  
+  // 恢复 Negotiation 的对话记录
+  chatHistory.value = chatHistoryCache.value['negotiation'] || []
 }
 
 const selectSurveyTab = () => {
@@ -661,6 +860,8 @@ const sendMessage = async () => {
   try {
     if (chatTarget.value === 'report_agent') {
       await sendToReportAgent(message)
+    } else if (chatTarget.value === 'negotiation') {
+      await sendToNegotiation(message)
     } else {
       await sendToAgent(message)
     }
@@ -771,6 +972,41 @@ const sendToAgent = async (message) => {
   } else {
     throw new Error(res.error || t('step5.requestFailed'))
   }
+}
+
+const sendToNegotiation = async (message) => {
+  addLog(t('log.sendToNegotiation', { message: message.substring(0, 50) }) || `Proposition de négociation envoyée : ${message.substring(0, 50)}...`)
+  
+  const historyForApi = chatHistory.value
+    .filter(msg => msg.role !== 'user' || msg.content !== message)
+    .slice(-10)
+    .map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }))
+  
+  const res = await negotiateWithOpponent({
+    simulation_id: props.simulationId,
+    message: message,
+    chat_history: historyForApi
+  })
+  
+  if (res.success && res.data) {
+    chatHistory.value.push({
+      role: 'assistant',
+      content: res.data.response || res.data.answer || 'Aucune réponse de la partie adverse.',
+      timestamp: new Date().toISOString()
+    })
+    addLog('Réponse de l\'avocat adverse reçue.')
+  } else {
+    throw new Error(res.error || 'La négociation a échoué.')
+  }
+}
+
+const exportChat = () => {
+  document.body.classList.add('printing-chat')
+  window.print()
+  document.body.classList.remove('printing-chat')
 }
 
 const scrollToBottom = () => {
@@ -941,6 +1177,7 @@ onMounted(() => {
   addLog(t('log.step5Init'))
   loadReportData()
   loadProfiles()
+  fetchLegalResults()
   document.addEventListener('click', handleClickOutside)
 })
 
@@ -957,6 +1194,7 @@ watch(() => props.reportId, (newId) => {
 watch(() => props.simulationId, (newId) => {
   if (newId) {
     loadProfiles()
+    fetchLegalResults()
   }
 }, { immediate: true })
 </script>
@@ -1478,6 +1716,38 @@ watch(() => props.simulationId, (newId) => {
   flex-shrink: 0;
 }
 
+/* Chat Export Bar */
+.chat-export-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 16px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.export-chat-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #10B981;
+  background: transparent;
+  border: 1px solid #10B981;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.export-chat-btn:hover {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.export-chat-btn svg {
+  flex-shrink: 0;
+}
+
 /* Chat Container */
 .chat-container {
   flex: 1;
@@ -1841,6 +2111,22 @@ watch(() => props.simulationId, (newId) => {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid #F3F4F6;
+}
+
+.dropdown-section-title {
+  padding: 8px 16px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #F9FAFB;
+  border-bottom: 1px solid #F3F4F6;
+  border-top: 1px solid #F3F4F6;
+}
+
+.dropdown-section-title:first-of-type {
+  border-top: none;
 }
 
 .dropdown-item {
@@ -2574,6 +2860,185 @@ watch(() => props.simulationId, (newId) => {
   border-top: 1px solid #E5E7EB;
   margin: 24px 0;
 }
+
+/* Negotiation Info Card styling */
+.negotiation-info-card {
+  background: linear-gradient(135deg, #1C0A10 0%, #0D1627 100%);
+  border: 1px solid #3B1B25;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.info-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.info-card-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #E0315C;
+  color: #FFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.info-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #FFF;
+}
+
+.info-card-subtitle {
+  font-size: 11px;
+  color: #E0315C;
+}
+
+.info-card-body p {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #94A3B8;
+  margin: 0 0 12px 0;
+}
+
+.negotiation-badge-row {
+  display: flex;
+  gap: 8px;
+}
+
+.neg-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.neg-badge--finance {
+  background: rgba(224, 180, 49, 0.1);
+  color: #E0B431;
+  border: 1px solid rgba(224, 180, 49, 0.2);
+}
+
+.neg-badge--reputation {
+  background: rgba(224, 49, 92, 0.1);
+  color: #E0315C;
+  border: 1px solid rgba(224, 49, 92, 0.2);
+}
+
+.neg-badge--law25 {
+  background: rgba(49, 140, 224, 0.1);
+  color: #318CE0;
+  border: 1px solid rgba(49, 140, 224, 0.2);
+}
+
+/* Win Dashboard for Legal Report */
+.win-dashboard {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+  background: #F8FAFC;
+  padding: 24px 30px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  margin-bottom: 35px;
+}
+
+.win-circle {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.win-circle::after {
+  content: '';
+  position: absolute;
+  width: 124px;
+  height: 124px;
+  background: #FFFFFF;
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.win-rate {
+  position: relative;
+  z-index: 1;
+  font-size: 34px;
+  font-weight: 800;
+  color: #B58A3D;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.win-label {
+  position: relative;
+  z-index: 1;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #64748B;
+  margin-top: 2px;
+  text-align: center;
+}
+
+.win-stats-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.stat-detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.text-win {
+  color: #10B981;
+}
+
+.text-loss {
+  color: #EF4444;
+}
+
+.text-gold {
+  color: #B58A3D;
+}
+
+/* Cognitive Container styling */
+.cognitive-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 24px;
+}
 </style>
 
 <style>
@@ -2582,3 +3047,4 @@ html[lang="en"] .report-header-block .main-title {
   font-size: 28px;
 }
 </style>
+

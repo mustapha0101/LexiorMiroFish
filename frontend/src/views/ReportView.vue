@@ -3,7 +3,15 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">MIROFISH</div>
+        <button class="back-history-btn" @click="router.push('/')" title="Retour à l'historique">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div class="brand" @click="router.push('/')">
+          <img src="/logo.png" class="brand-logo" alt="Lexior" />
+          <span class="brand-name">LEXIOR <span class="brand-sub">SIMULATOR</span></span>
+        </div>
       </div>
       
       <div class="header-center">
@@ -55,6 +63,7 @@
           :reportId="currentReportId"
           :simulationId="simulationId"
           :systemLogs="systemLogs"
+          :projectData="projectData"
           @add-log="addLog"
           @update-status="updateStatus"
         />
@@ -90,6 +99,7 @@ const viewMode = ref('workbench')
 const currentReportId = ref(route.params.reportId)
 const simulationId = ref(null)
 const projectData = ref(null)
+const simGraphId = ref(null)
 const graphData = ref(null)
 const graphLoading = ref(false)
 const systemLogs = ref([])
@@ -158,18 +168,26 @@ const loadReportData = async () => {
         if (simRes.success && simRes.data) {
           const simData = simRes.data
 
+          // 保存 simulation graph_id
+          if (simData.graph_id) {
+            simGraphId.value = simData.graph_id
+          }
+
           // 获取 project 信息
           if (simData.project_id) {
             const projRes = await getProject(simData.project_id)
             if (projRes.success && projRes.data) {
               projectData.value = projRes.data
               addLog(t('log.projectLoadSuccess', { id: projRes.data.project_id }))
-
-              // 获取 graph 数据
-              if (projRes.data.graph_id) {
-                await loadGraph(projRes.data.graph_id)
-              }
             }
+          }
+
+          // 获取 graph 数据 (优先使用 simulation graph_id, 备用 project graph_id)
+          const targetGraphId = simGraphId.value || projectData.value?.graph_id
+          if (targetGraphId) {
+            await loadGraph(targetGraphId)
+          } else {
+            addLog(t('log.noGraphIdFound') || 'Aucun identifiant de graphe trouvé.')
           }
         }
       }
@@ -198,8 +216,9 @@ const loadGraph = async (graphId) => {
 }
 
 const refreshGraph = () => {
-  if (projectData.value?.graph_id) {
-    loadGraph(projectData.value.graph_id)
+  const targetGraphId = simGraphId.value || projectData.value?.graph_id
+  if (targetGraphId) {
+    loadGraph(targetGraphId)
   }
 }
 
@@ -224,20 +243,71 @@ onMounted(() => {
   flex-direction: column;
   background: #FFF;
   overflow: hidden;
-  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
 }
 
 /* Header */
 .app-header {
   height: 60px;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid #1A2333;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: #FFF;
+  background: #0B1220;
   z-index: 100;
   position: relative;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.back-history-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #0F1E36;
+  border: 1px solid #1E293B;
+  border-radius: 6px;
+  color: #94A3B8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 12px;
+}
+
+.back-history-btn:hover {
+  background: #C5A880;
+  color: #0B1220;
+  border-color: #C5A880;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.brand-logo {
+  height: 24px;
+  width: auto;
+}
+
+.brand-name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  color: #FFFFFF;
+}
+
+.brand-sub {
+  color: #C5A880;
+  font-weight: 500;
 }
 
 .header-center {
@@ -246,17 +316,9 @@ onMounted(() => {
   transform: translateX(-50%);
 }
 
-.brand {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 800;
-  font-size: 18px;
-  letter-spacing: 1px;
-  cursor: pointer;
-}
-
 .view-switcher {
   display: flex;
-  background: #F5F5F5;
+  background: #0F1E36;
   padding: 4px;
   border-radius: 6px;
   gap: 4px;
@@ -268,16 +330,15 @@ onMounted(() => {
   padding: 6px 16px;
   font-size: 12px;
   font-weight: 600;
-  color: #666;
+  color: #94A3B8;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .switch-btn.active {
-  background: #FFF;
-  color: #000;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background: #C5A880;
+  color: #0B1220;
 }
 
 .header-right {
@@ -296,18 +357,18 @@ onMounted(() => {
 .step-num {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  color: #999;
+  color: #94A3B8;
 }
 
 .step-name {
   font-weight: 700;
-  color: #000;
+  color: #FFFFFF;
 }
 
 .step-divider {
   width: 1px;
   height: 14px;
-  background-color: #E0E0E0;
+  background-color: #1E293B;
 }
 
 .status-indicator {
@@ -349,5 +410,51 @@ onMounted(() => {
 
 .panel-wrapper.left {
   border-right: 1px solid #EAEAEA;
+}
+</style>
+
+<style>
+@media print {
+  /* Hide non-report UI elements */
+  .app-header,
+  .panel-wrapper.left,
+  .right-panel,
+  .action-buttons-group,
+  .collapse-icon {
+    display: none !important;
+  }
+
+  /* Reset layout constraints for printing */
+  html, 
+  body, 
+  #app, 
+  .main-view, 
+  .content-area, 
+  .panel-wrapper, 
+  .panel-wrapper.right,
+  .report-panel, 
+  .main-split-layout, 
+  .left-panel.report-style, 
+  .report-content-wrapper {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Ensure page breaks nicely */
+  .report-section-item {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 24px !important;
+  }
 }
 </style>

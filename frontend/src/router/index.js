@@ -5,12 +5,18 @@ import SimulationView from '../views/SimulationView.vue'
 import SimulationRunView from '../views/SimulationRunView.vue'
 import ReportView from '../views/ReportView.vue'
 import InteractionView from '../views/InteractionView.vue'
+import LegalSimulationView from '../views/LegalSimulationView.vue'
 
 const routes = [
   {
     path: '/',
     name: 'Home',
     component: Home
+  },
+  {
+    path: '/legal-simulator',
+    name: 'LegalSimulator',
+    component: LegalSimulationView
   },
   {
     path: '/process/:projectId',

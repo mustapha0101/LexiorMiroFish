@@ -185,3 +185,102 @@ export const getSimulationHistory = (limit = 20) => {
   return service.get('/api/simulation/history', { params: { limit } })
 }
 
+/**
+ * 获取模拟中所有 Agent 的认知状态
+ * @param {string} simulationId
+ */
+export const getSimulationCognitiveStates = (simulationId) => {
+  return service.get(`/api/simulation/${simulationId}/cognitive-states`)
+}
+
+/**
+ * Exécute une preuve PIE en direct (banc d'essai)
+ * @param {Object} data - { type: 'hysteresis' | 'inertia' | 'attention' }
+ */
+export const runPieBenchmark = (data) => {
+  return service.post('/api/simulation/benchmark/run', data)
+}
+
+/**
+ * Crée une simulation de preuve PIE en direct (banc d'essai)
+ * @param {Object} data - { type: 'hysteresis' | 'inertia' | 'attention' }
+ */
+export const createPieBenchmark = (data) => {
+  return service.post('/api/simulation/benchmark/create', data)
+}
+
+/**
+ * Récupère les résultats détaillés de la simulation de Monte-Carlo juridique
+ * @param {string} simulationId
+ */
+export const getLegalResults = (simulationId) => {
+  return service.get(`/api/simulation/${simulationId}/legal-results`)
+}
+
+/**
+ * Injecte un stimulus (nouveau fait, témoignage surprise, précédent) dans la simulation active
+ * @param {string} simulationId
+ * @param {string} stimulus
+ */
+export const injectStimulus = (simulationId, stimulus) => {
+  return service.post(`/api/simulation/${simulationId}/inject`, { stimulus })
+}
+
+/**
+ * Met à jour le profil cognitif et comportemental d'un acteur
+ * @param {string} simulationId
+ * @param {Object} data - Profil et paramètres de simulation
+ */
+export const updateSimulationProfile = (simulationId, data) => {
+  return service.post(`/api/simulation/${simulationId}/profiles/update`, data)
+}
+
+/**
+ * Supprimer une simulation
+ * @param {Object} data - { simulation_id }
+ */
+export const deleteSimulation = (data) => {
+  return service.post('/api/simulation/delete', data)
+}
+
+/**
+ * Chatter en direct avec l'Avocat ou le Procureur pendant le procès
+ * @param {Object} data - { simulation_id, character, message, chat_history }
+ */
+export const liveChatWithCharacter = (data) => {
+  return service.post('/api/simulation/live-chat', data)
+}
+
+/**
+ * Exécute l'analyse tactique (Radar d'Anticipation Tactique)
+ * @param {Object} data - { project_id, client_side }
+ */
+export const runSensitivityAnalysis = (data) => {
+  return service.post('/api/simulation/sensitivity-analysis', data)
+}
+
+/**
+ * Génère un projet de requête formel basé sur un vecteur choisi
+ * @param {Object} data - { project_id, client_side, node_name, vector_name, request_type }
+ */
+export const generateLegalRequest = (data) => {
+  return service.post('/api/simulation/generate-request', data)
+}
+
+/**
+ * Enregistre la requête sélectionnée pour la simulation
+ * @param {String} simulationId
+ * @param {Object} data - { node_name, vector_name, text, client_side }
+ */
+export const selectDraft = (simulationId, data) => {
+  return service.post(`/api/simulation/${simulationId}/select-draft`, data)
+}
+
+/**
+ * Récupère l'analyse radar et le draft sélectionné
+ * @param {String} simulationId
+ */
+export const getRadarAnalysis = (simulationId) => {
+  return service.get(`/api/simulation/${simulationId}/radar-analysis`)
+}
+

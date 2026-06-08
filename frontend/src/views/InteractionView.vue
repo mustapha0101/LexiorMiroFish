@@ -3,7 +3,15 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">MIROFISH</div>
+        <button class="back-history-btn" @click="router.push('/')" title="Retour à l'historique">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div class="brand" @click="router.push('/')">
+          <img src="/logo.png" class="brand-logo" alt="Lexior" />
+          <span class="brand-name">LEXIOR <span class="brand-sub">SIMULATOR</span></span>
+        </div>
       </div>
       
       <div class="header-center">
@@ -55,6 +63,7 @@
           :reportId="currentReportId"
           :simulationId="simulationId"
           :systemLogs="systemLogs"
+          :projectData="projectData"
           @add-log="addLog"
           @update-status="updateStatus"
         />
@@ -90,6 +99,7 @@ const viewMode = ref('workbench')
 const currentReportId = ref(route.params.reportId)
 const simulationId = ref(null)
 const projectData = ref(null)
+const simGraphId = ref(null)
 const graphData = ref(null)
 const graphLoading = ref(false)
 const systemLogs = ref([])
@@ -159,18 +169,26 @@ const loadReportData = async () => {
         if (simRes.success && simRes.data) {
           const simData = simRes.data
 
+          // 保存 simulation graph_id
+          if (simData.graph_id) {
+            simGraphId.value = simData.graph_id
+          }
+
           // 获取 project 信息
           if (simData.project_id) {
             const projRes = await getProject(simData.project_id)
             if (projRes.success && projRes.data) {
               projectData.value = projRes.data
               addLog(t('log.projectLoadSuccess', { id: projRes.data.project_id }))
-
-              // 获取 graph 数据
-              if (projRes.data.graph_id) {
-                await loadGraph(projRes.data.graph_id)
-              }
             }
+          }
+
+          // 获取 graph 数据 (优先使用 simulation graph_id, 备用 project graph_id)
+          const targetGraphId = simGraphId.value || projectData.value?.graph_id
+          if (targetGraphId) {
+            await loadGraph(targetGraphId)
+          } else {
+            addLog(t('log.noGraphIdFound') || 'Aucun identifiant de graphe trouvé.')
           }
         }
       }
@@ -199,8 +217,9 @@ const loadGraph = async (graphId) => {
 }
 
 const refreshGraph = () => {
-  if (projectData.value?.graph_id) {
-    loadGraph(projectData.value.graph_id)
+  const targetGraphId = simGraphId.value || projectData.value?.graph_id
+  if (targetGraphId) {
+    loadGraph(targetGraphId)
   }
 }
 
@@ -225,18 +244,18 @@ onMounted(() => {
   flex-direction: column;
   background: #FFF;
   overflow: hidden;
-  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
 }
 
 /* Header */
 .app-header {
   height: 60px;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid #1A2333;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: #FFF;
+  background: #0B1220;
   z-index: 100;
   position: relative;
 }
@@ -247,17 +266,60 @@ onMounted(() => {
   transform: translateX(-50%);
 }
 
-.brand {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 800;
-  font-size: 18px;
-  letter-spacing: 1px;
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.back-history-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #0F1E36;
+  border: 1px solid #1E293B;
+  border-radius: 6px;
+  color: #94A3B8;
   cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 12px;
+}
+
+.back-history-btn:hover {
+  background: #C5A880;
+  color: #0B1220;
+  border-color: #C5A880;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.brand-logo {
+  height: 24px;
+  width: auto;
+}
+
+.brand-name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  color: #FFFFFF;
+}
+
+.brand-sub {
+  color: #C5A880;
+  font-weight: 500;
 }
 
 .view-switcher {
   display: flex;
-  background: #F5F5F5;
+  background: #0F1E36;
   padding: 4px;
   border-radius: 6px;
   gap: 4px;
@@ -269,16 +331,15 @@ onMounted(() => {
   padding: 6px 16px;
   font-size: 12px;
   font-weight: 600;
-  color: #666;
+  color: #94A3B8;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .switch-btn.active {
-  background: #FFF;
-  color: #000;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background: #C5A880;
+  color: #0B1220;
 }
 
 .header-right {
@@ -297,18 +358,18 @@ onMounted(() => {
 .step-num {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  color: #999;
+  color: #94A3B8;
 }
 
 .step-name {
   font-weight: 700;
-  color: #000;
+  color: #FFFFFF;
 }
 
 .step-divider {
   width: 1px;
   height: 14px;
-  background-color: #E0E0E0;
+  background-color: #1E293B;
 }
 
 .status-indicator {
@@ -316,7 +377,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #666;
+  color: #94A3B8;
   font-weight: 500;
 }
 
@@ -351,5 +412,126 @@ onMounted(() => {
 
 .panel-wrapper.left {
   border-right: 1px solid #EAEAEA;
+}
+</style>
+
+<style>
+@media print {
+  /* Print overrides when printing-chat class is active on body */
+  body.printing-chat {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+  }
+
+  body.printing-chat .app-header,
+  body.printing-chat .panel-wrapper.left,
+  body.printing-chat .left-panel,
+  body.printing-chat .action-bar,
+  body.printing-chat .report-agent-tools-card,
+  body.printing-chat .agent-profile-card,
+  body.printing-chat .chat-input-area,
+  body.printing-chat .chat-export-bar {
+    display: none !important;
+  }
+
+  body.printing-chat,
+  body.printing-chat .main-view,
+  body.printing-chat .content-area,
+  body.printing-chat .panel-wrapper.right,
+  body.printing-chat .interaction-panel,
+  body.printing-chat .main-split-layout,
+  body.printing-chat .right-panel,
+  body.printing-chat .chat-container,
+  body.printing-chat .chat-messages {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Make printed chat layout look gorgeous */
+  body.printing-chat .chat-messages {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    padding: 20px !important;
+  }
+
+  body.printing-chat .chat-message {
+    display: flex !important;
+    flex-direction: row !important; /* Force standard left-to-right flow for readability */
+    align-items: flex-start !important;
+    gap: 16px !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    background: #F9FAFB !important;
+    border: 1px solid #E5E7EB !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+  }
+
+  body.printing-chat .chat-message.user {
+    background: #F0FDF4 !important; /* Light green tint for user messages to look distinct and stylish */
+    border-color: #DCFCE7 !important;
+  }
+
+  body.printing-chat .message-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    background: #E5E7EB !important;
+    color: #374151 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: bold !important;
+  }
+
+  body.printing-chat .chat-message.user .message-avatar {
+    background: #10B981 !important;
+    color: #FFFFFF !important;
+  }
+
+  body.printing-chat .message-content {
+    max-width: 100% !important;
+    width: calc(100% - 52px) !important;
+    align-items: flex-start !important; /* Standard align start for readable printing */
+  }
+
+  body.printing-chat .message-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    border-bottom: 1px solid #E5E7EB !important;
+    padding-bottom: 4px !important;
+    margin-bottom: 6px !important;
+  }
+
+  body.printing-chat .sender-name {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #1F2937 !important;
+  }
+
+  body.printing-chat .message-time {
+    font-size: 11px !important;
+    color: #6B7280 !important;
+  }
+
+  body.printing-chat .message-text {
+    padding: 0 !important;
+    background: transparent !important;
+    color: #374151 !important;
+    font-size: 13px !important;
+    line-height: 1.6 !important;
+  }
 }
 </style>

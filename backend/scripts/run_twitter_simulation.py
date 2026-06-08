@@ -626,17 +626,28 @@ class TwitterSimulationRunner:
                 await self.env.step(initial_actions)
                 print(f"  已发布 {len(initial_actions)} 条初始帖子")
         
+        # [PIE] Initialiser les composants cognitifs
+        try:
+            from run_parallel_simulation import get_agent_names_from_config
+            agent_names = get_agent_names_from_config(self.config)
+        except Exception:
+            agent_names = {}
+        last_rowid = 0
+
         # 主模拟循环
         print("\n开始模拟循环...")
         start_time = datetime.now()
         
         for round_num in range(total_rounds):
             # 计算当前模拟时间
-            simulated_minutes = round_num * minutes_per_round
+            # Pour les cas judiciaires (legal), on commence la journée à 9h du matin (heure active des agents)
+            is_legal = self.config.get("simulation_type") == "legal"
+            start_hour = 9 if is_legal else 0
+            simulated_minutes = (start_hour * 60) + round_num * minutes_per_round
             simulated_hour = (simulated_minutes // 60) % 24
             simulated_day = simulated_minutes // (60 * 24) + 1
             
-            # 获取本轮激活的Agent
+            # 获取本轮激活 of the agent
             active_agents = self._get_active_agents_for_round(
                 self.env, simulated_hour, round_num
             )
@@ -644,6 +655,13 @@ class TwitterSimulationRunner:
             if not active_agents:
                 continue
             
+            # [PIE] Injection cognitive dynamique
+            try:
+                from app.services.cognitive_helper import inject_cognitive_prompts
+                inject_cognitive_prompts(active_agents, self.config, agent_names)
+            except Exception as ce_err:
+                print(f"Erreur d'injection cognitive: {ce_err}")
+
             # 构建动作
             actions = {
                 agent: LLMAction()
@@ -652,6 +670,13 @@ class TwitterSimulationRunner:
             
             # 执行动作
             await self.env.step(actions)
+            
+            # [PIE] Mise à jour cognitive
+            try:
+                from app.services.cognitive_helper import fetch_and_update_cognitive_states
+                last_rowid = await fetch_and_update_cognitive_states(db_path, last_rowid, self.config, round_num + 1, agent_names)
+            except Exception as ce_err:
+                print(f"Erreur de mise à jour cognitive: {ce_err}")
             
             # 打印进度
             if (round_num + 1) % 10 == 0 or round_num == 0:

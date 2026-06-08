@@ -26,150 +26,150 @@ def _to_pascal_case(name: str) -> str:
     return result if result else 'Unknown'
 
 
-# 本体生成的系统提示词
-ONTOLOGY_SYSTEM_PROMPT = """你是一个专业的知识图谱本体设计专家。你的任务是分析给定的文本内容和模拟需求，设计适合**社交媒体舆论模拟**的实体类型和关系类型。
+# Prompt système pour la génération de l'ontologie
+ONTOLOGY_SYSTEM_PROMPT = """Tu es un expert en conception d'ontologies pour les graphes de connaissances. Ta tâche est d'analyser le contenu textuel et les besoins de la simulation fournis, puis de concevoir des types d'entités et de relations adaptés pour une **simulation d'opinion sur les réseaux sociaux**.
 
-**重要：你必须输出有效的JSON格式数据，不要输出任何其他内容。**
+**IMPORTANT : Tu dois renvoyer UNIQUEMENT des données au format JSON valide. Aucun autre texte n'est autorisé.**
 
-## 核心任务背景
+## Contexte Principal
 
-我们正在构建一个**社交媒体舆论模拟系统**。在这个系统中：
-- 每个实体都是一个可以在社交媒体上发声、互动、传播信息的"账号"或"主体"
-- 实体之间会相互影响、转发、评论、回应
-- 我们需要模拟舆论事件中各方的反应和信息传播路径
+Nous développons un **système de simulation d'opinion sur les réseaux sociaux**. Dans ce système :
+- Chaque entité est un "compte" ou "sujet" capable de s'exprimer, d'interagir et de propager des informations sur les réseaux sociaux.
+- Les entités s'influencent mutuellement, partagent, commentent et répondent.
+- Nous devons simuler les réactions et les parcours de diffusion de l'information de diverses parties lors d'un événement d'opinion publique.
 
-因此，**实体必须是现实中真实存在的、可以在社媒上发声和互动的主体**：
+Par conséquent, **les entités doivent être des acteurs réels capables de publier et d'interagir sur les réseaux sociaux** :
 
-**可以是**：
-- 具体的个人（公众人物、当事人、意见领袖、专家学者、普通人）
-- 公司、企业（包括其官方账号）
-- 组织机构（大学、协会、NGO、工会等）
-- 政府部门、监管机构
-- 媒体机构（报纸、电视台、自媒体、网站）
-- 社交媒体平台本身
-- 特定群体代表（如校友会、粉丝团、维权群体等）
+**CE QUI EST AUTORISÉ** :
+- Individus spécifiques (personnalités publiques, personnes impliquées, leaders d'opinion, experts, gens ordinaires)
+- Entreprises, sociétés (y compris leurs comptes officiels)
+- Organisations (universités, associations, ONG, syndicats, etc.)
+- Départements gouvernementaux, agences de régulation
+- Médias (journaux, chaînes TV, médias indépendants, sites web)
+- Les plateformes de réseaux sociaux elles-mêmes
+- Des représentants de groupes spécifiques (ex. association d'anciens élèves, fan clubs)
 
-**不可以是**：
-- 抽象概念（如"舆论"、"情绪"、"趋势"）
-- 主题/话题（如"学术诚信"、"教育改革"）
-- 观点/态度（如"支持方"、"反对方"）
+**CE QUI N'EST PAS AUTORISÉ** :
+- Concepts abstraits (ex. "Opinion publique", "Émotion", "Tendance")
+- Sujets/Thèmes (ex. "Intégrité académique", "Réforme éducative")
+- Opinions/Attitudes (ex. "Partisans", "Opposants")
 
-## 输出格式
+## Format de Sortie
 
-请输出JSON格式，包含以下结构：
+Veuillez générer un format JSON comprenant la structure suivante :
 
 ```json
 {
     "entity_types": [
         {
-            "name": "实体类型名称（英文，PascalCase）",
-            "description": "简短描述（英文，不超过100字符）",
+            "name": "NomDuTypeD'Entité (Anglais, PascalCase)",
+            "description": "Courte description (dans la langue requise, max 100 caractères)",
             "attributes": [
                 {
-                    "name": "属性名（英文，snake_case）",
+                    "name": "NomDeL'Attribut (Anglais, snake_case)",
                     "type": "text",
-                    "description": "属性描述"
+                    "description": "Description de l'attribut"
                 }
             ],
-            "examples": ["示例实体1", "示例实体2"]
+            "examples": ["ExempleEntité1", "ExempleEntité2"]
         }
     ],
     "edge_types": [
         {
-            "name": "关系类型名称（英文，UPPER_SNAKE_CASE）",
-            "description": "简短描述（英文，不超过100字符）",
+            "name": "NOM_DU_TYPE_DE_RELATION (Anglais, UPPER_SNAKE_CASE)",
+            "description": "Courte description (dans la langue requise, max 100 caractères)",
             "source_targets": [
-                {"source": "源实体类型", "target": "目标实体类型"}
+                {"source": "TypeDEntitéSource", "target": "TypeDEntitéCible"}
             ],
             "attributes": []
         }
     ],
-    "analysis_summary": "对文本内容的简要分析说明"
+    "analysis_summary": "Explication brève et analyse du texte"
 }
 ```
 
-## 设计指南（极其重要！）
+## Lignes Directrices (EXCELLENTEMENT IMPORTANTES !)
 
-### 1. 实体类型设计 - 必须严格遵守
+### 1. Conception des types d'entités - Strictement obligatoire
 
-**数量要求：必须正好10个实体类型**
+**Quantité requise : Doit être EXACTEMENT 10 types d'entités**
 
-**层次结构要求（必须同时包含具体类型和兜底类型）**：
+**Structure hiérarchique obligatoire (inclut des types spécifiques et des types de secours généraux)** :
 
-你的10个实体类型必须包含以下层次：
+Les 10 types d'entités doivent contenir la hiérarchie suivante :
 
-A. **兜底类型（必须包含，放在列表最后2个）**：
-   - `Person`: 任何自然人个体的兜底类型。当一个人不属于其他更具体的人物类型时，归入此类。
-   - `Organization`: 任何组织机构的兜底类型。当一个组织不属于其他更具体的组织类型时，归入此类。
+A. **Types de Secours (OBLIGATOIRES, positionnés comme les 2 derniers de la liste)** :
+   - `Person` : Le type de secours pour tout individu naturel. Lorsqu'une personne ne correspond à aucun autre type plus spécifique, elle est assignée ici.
+   - `Organization` : Le type de secours pour toute institution. Lorsqu'une organisation ne correspond à aucun autre type plus spécifique, elle est assignée ici.
 
-B. **具体类型（8个，根据文本内容设计）**：
-   - 针对文本中出现的主要角色，设计更具体的类型
-   - 例如：如果文本涉及学术事件，可以有 `Student`, `Professor`, `University`
-   - 例如：如果文本涉及商业事件，可以有 `Company`, `CEO`, `Employee`
+B. **Types Spécifiques (8 types, axés sur le texte fourni)** :
+   - Concevez des types plus spécifiques pour les principaux acteurs mentionnés dans le texte.
+   - Par exemple : Si le texte porte sur le monde académique, inclure `Student`, `Professor`, `University`.
+   - Par exemple : Si le texte porte sur les affaires, inclure `Company`, `CEO`, `Employee`.
 
-**为什么需要兜底类型**：
-- 文本中会出现各种人物，如"中小学教师"、"路人甲"、"某位网友"
-- 如果没有专门的类型匹配，他们应该被归入 `Person`
-- 同理，小型组织、临时团体等应该归入 `Organization`
+**Pourquoi utiliser des types de secours ?** :
+- Le texte peut inclure des personnages marginaux comme "un enseignant du primaire", "le passant A", "un certain internaute".
+- Sans un type spécifique, ils doivent se rabattre sur `Person`.
+- De même, les petites structures ou groupes temporaires se rabattent sur `Organization`.
 
-**具体类型的设计原则**：
-- 从文本中识别出高频出现或关键的角色类型
-- 每个具体类型应该有明确的边界，避免重叠
-- description 必须清晰说明这个类型和兜底类型的区别
+**Principes de conception pour les types spécifiques** :
+- Identifier les personnages fréquents ou cruciaux.
+- Chaque type spécifique doit avoir des frontières claires pour éviter les recoupements.
+- La description doit clairement différencier le type de secours et le type spécifique.
 
-### 2. 关系类型设计
+### 2. Conception des types de relations (Edges)
 
-- 数量：6-10个
-- 关系应该反映社媒互动中的真实联系
-- 确保关系的 source_targets 涵盖你定义的实体类型
+- Quantité : 6 à 10 types.
+- Les relations doivent refléter des interactions réelles sur les réseaux sociaux.
+- Assurez-vous que source_targets couvrent les types d'entités définis.
 
-### 3. 属性设计
+### 3. Conception des attributs
 
-- 每个实体类型1-3个关键属性
-- **注意**：属性名不能使用 `name`、`uuid`、`group_id`、`created_at`、`summary`（这些是系统保留字）
-- 推荐使用：`full_name`, `title`, `role`, `position`, `location`, `description` 等
+- 1 à 3 attributs clés par type d'entité.
+- **Attention** : Les noms d'attributs NE PEUVENT PAS être `name`, `uuid`, `group_id`, `created_at`, `summary` (mots réservés du système).
+- Recommandations : `full_name`, `title`, `role`, `position`, `location`, `description`.
 
-## 实体类型参考
+## Référence pour les Types d'Entités
 
-**个人类（具体）**：
-- Student: 学生
-- Professor: 教授/学者
-- Journalist: 记者
-- Celebrity: 明星/网红
-- Executive: 高管
-- Official: 政府官员
-- Lawyer: 律师
-- Doctor: 医生
+**Individus (Spécifiques)** :
+- Student: Étudiant
+- Professor: Professeur/Universitaire
+- Journalist: Journaliste
+- Celebrity: Célébrité/Influenceur
+- Executive: Cadre/Dirigeant
+- Official: Représentant gouvernemental
+- Lawyer: Avocat
+- Doctor: Médecin
 
-**个人类（兜底）**：
-- Person: 任何自然人（不属于上述具体类型时使用）
+**Individus (Secours)** :
+- Person: Tout individu ne correspondant pas aux cas ci-dessus.
 
-**组织类（具体）**：
-- University: 高校
-- Company: 公司企业
-- GovernmentAgency: 政府机构
-- MediaOutlet: 媒体机构
-- Hospital: 医院
-- School: 中小学
-- NGO: 非政府组织
+**Organisations (Spécifiques)** :
+- University: Université
+- Company: Entreprise/Société
+- GovernmentAgency: Agence gouvernementale
+- MediaOutlet: Agence de presse/Média
+- Hospital: Hôpital
+- School: École/Établissement
+- NGO: Organisation Non-Gouvernementale
 
-**组织类（兜底）**：
-- Organization: 任何组织机构（不属于上述具体类型时使用）
+**Organisations (Secours)** :
+- Organization: Toute organisation ne correspondant pas aux cas ci-dessus.
 
-## 关系类型参考
+## Référence pour les Types de Relations
 
-- WORKS_FOR: 工作于
-- STUDIES_AT: 就读于
-- AFFILIATED_WITH: 隶属于
-- REPRESENTS: 代表
-- REGULATES: 监管
-- REPORTS_ON: 报道
-- COMMENTS_ON: 评论
-- RESPONDS_TO: 回应
-- SUPPORTS: 支持
-- OPPOSES: 反对
-- COLLABORATES_WITH: 合作
-- COMPETES_WITH: 竞争
+- WORKS_FOR: Travaille pour
+- STUDIES_AT: Étudie à
+- AFFILIATED_WITH: Affilié à
+- REPRESENTS: Représente
+- REGULATES: Réglemente
+- REPORTS_ON: Couvre/Rapporte sur
+- COMMENTS_ON: Commente
+- RESPONDS_TO: Répond à
+- SUPPORTS: Soutient
+- OPPOSES: S'oppose à
+- COLLABORATES_WITH: Collabore avec
+- COMPETES_WITH: Est en concurrence avec
 """
 
 
@@ -217,7 +217,7 @@ class OntologyGenerator:
         result = self.llm_client.chat_json(
             messages=messages,
             temperature=0.3,
-            max_tokens=4096
+            max_tokens=8192
         )
         
         # 验证和后处理
@@ -225,8 +225,8 @@ class OntologyGenerator:
         
         return result
     
-    # 传给 LLM 的文本最大长度（5万字）
-    MAX_TEXT_LENGTH_FOR_LLM = 50000
+    # 传给 LLM 的文本最大长度（缩减到 5000 字母以保证本地大模型近乎瞬间完成，如同云端演示例）
+    MAX_TEXT_LENGTH_FOR_LLM = 5000
     
     def _build_user_message(
         self,
@@ -288,14 +288,16 @@ class OntologyGenerator:
         # 验证实体类型
         # 记录原始名称到 PascalCase 的映射，用于后续修正 edge 的 source_targets 引用
         entity_name_map = {}
+        valid_entities = []
         for entity in result["entity_types"]:
-            # 强制将 entity name 转为 PascalCase（Zep API 要求）
-            if "name" in entity:
-                original_name = entity["name"]
-                entity["name"] = _to_pascal_case(original_name)
-                if entity["name"] != original_name:
-                    logger.warning(f"Entity type name '{original_name}' auto-converted to '{entity['name']}'")
-                entity_name_map[original_name] = entity["name"]
+            if not isinstance(entity, dict) or not entity.get("name") or not isinstance(entity["name"], str) or not entity["name"].strip():
+                logger.warning(f"Removing invalid entity definition from ontology: {entity}")
+                continue
+            original_name = entity["name"]
+            entity["name"] = _to_pascal_case(original_name)
+            if entity["name"] != original_name:
+                logger.warning(f"Entity type name '{original_name}' auto-converted to '{entity['name']}'")
+            entity_name_map[original_name] = entity["name"]
             if "attributes" not in entity:
                 entity["attributes"] = []
             if "examples" not in entity:
@@ -303,15 +305,19 @@ class OntologyGenerator:
             # 确保description不超过100字符
             if len(entity.get("description", "")) > 100:
                 entity["description"] = entity["description"][:97] + "..."
+            valid_entities.append(entity)
+        result["entity_types"] = valid_entities
         
         # 验证关系类型
+        valid_edges = []
         for edge in result["edge_types"]:
-            # 强制将 edge name 转为 SCREAMING_SNAKE_CASE（Zep API 要求）
-            if "name" in edge:
-                original_name = edge["name"]
-                edge["name"] = original_name.upper()
-                if edge["name"] != original_name:
-                    logger.warning(f"Edge type name '{original_name}' auto-converted to '{edge['name']}'")
+            if not isinstance(edge, dict) or not edge.get("name") or not isinstance(edge["name"], str) or not edge["name"].strip():
+                logger.warning(f"Removing invalid edge definition from ontology: {edge}")
+                continue
+            original_name = edge["name"]
+            edge["name"] = original_name.upper()
+            if edge["name"] != original_name:
+                logger.warning(f"Edge type name '{original_name}' auto-converted to '{edge['name']}'")
             # 修正 source_targets 中的实体名称引用，与转换后的 PascalCase 保持一致
             for st in edge.get("source_targets", []):
                 if st.get("source") in entity_name_map:
@@ -324,6 +330,8 @@ class OntologyGenerator:
                 edge["attributes"] = []
             if len(edge.get("description", "")) > 100:
                 edge["description"] = edge["description"][:97] + "..."
+            valid_edges.append(edge)
+        result["edge_types"] = valid_edges
         
         # Zep API 限制：最多 10 个自定义实体类型，最多 10 个自定义边类型
         MAX_ENTITY_TYPES = 10

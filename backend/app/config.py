@@ -6,14 +6,17 @@
 import os
 from dotenv import load_dotenv
 
-# 加载项目根目录的 .env 文件
-# 路径: MiroFish/.env (相对于 backend/app/config.py)
+# 尝试按优先级加载 .env 文件：
+# 1. backend/.env (首选)
+# 2. MiroFish/.env (根目录后备)
+backend_env = os.path.join(os.path.dirname(__file__), '../../backend/.env')
 project_root_env = os.path.join(os.path.dirname(__file__), '../../.env')
 
-if os.path.exists(project_root_env):
+if os.path.exists(backend_env):
+    load_dotenv(backend_env, override=True)
+elif os.path.exists(project_root_env):
     load_dotenv(project_root_env, override=True)
 else:
-    # 如果根目录没有 .env，尝试加载环境变量（用于生产环境）
     load_dotenv(override=True)
 
 
@@ -69,7 +72,6 @@ class Config:
         errors: list[str] = []
         if not cls.LLM_API_KEY:
             errors.append("LLM_API_KEY 未配置")
-        if not cls.ZEP_API_KEY:
-            errors.append("ZEP_API_KEY 未配置")
+        # ZEP_API_KEY is no longer strictly required as we migrated to sovereign Kuzu GraphDB
         return errors
 

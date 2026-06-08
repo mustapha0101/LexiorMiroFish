@@ -1173,8 +1173,10 @@ async def run_twitter_simulation(
     initial_posts = event_config.get("initial_posts", [])
     
     # 记录 round 0 开始（初始事件阶段）
+    is_legal = config.get("simulation_type") == "legal"
+    start_hour = 9 if is_legal else 0
     if action_logger:
-        action_logger.log_round_start(0, 0)  # round 0, simulated_hour 0
+        action_logger.log_round_start(0, start_hour)
     
     initial_action_count = 0
     if initial_posts:
@@ -1232,7 +1234,10 @@ async def run_twitter_simulation(
                 main_logger.info(f"收到退出信号，在第 {round_num + 1} 轮停止模拟")
             break
         
-        simulated_minutes = round_num * minutes_per_round
+        # Pour les cas judiciaires (legal), on commence la journée à 9h du matin (heure active des agents)
+        is_legal = config.get("simulation_type") == "legal"
+        start_hour = 9 if is_legal else 0
+        simulated_minutes = (start_hour * 60) + round_num * minutes_per_round
         simulated_hour = (simulated_minutes // 60) % 24
         simulated_day = simulated_minutes // (60 * 24) + 1
         
@@ -1250,6 +1255,13 @@ async def run_twitter_simulation(
                 action_logger.log_round_end(round_num + 1, 0)
             continue
         
+        # [PIE] Injection cognitive dynamique
+        try:
+            from app.services.cognitive_helper import inject_cognitive_prompts
+            inject_cognitive_prompts(active_agents, config, agent_names)
+        except Exception as ce_err:
+            log_info(f"Erreur d'injection cognitive: {ce_err}")
+        
         actions = {agent: LLMAction() for _, agent in active_agents}
         await result.env.step(actions)
         
@@ -1257,6 +1269,13 @@ async def run_twitter_simulation(
         actual_actions, last_rowid = fetch_new_actions_from_db(
             db_path, last_rowid, agent_names
         )
+        
+        # [PIE] Mise à jour cognitive post-action
+        try:
+            from app.services.cognitive_helper import update_cognitive_states
+            await update_cognitive_states(actual_actions, config, round_num + 1)
+        except Exception as ce_err:
+            log_info(f"Erreur de mise à jour cognitive: {ce_err}")
         
         round_action_count = 0
         for action_data in actual_actions:
@@ -1364,8 +1383,10 @@ async def run_reddit_simulation(
     initial_posts = event_config.get("initial_posts", [])
     
     # 记录 round 0 开始（初始事件阶段）
+    is_legal = config.get("simulation_type") == "legal"
+    start_hour = 9 if is_legal else 0
     if action_logger:
-        action_logger.log_round_start(0, 0)  # round 0, simulated_hour 0
+        action_logger.log_round_start(0, start_hour)
     
     initial_action_count = 0
     if initial_posts:
@@ -1431,7 +1452,10 @@ async def run_reddit_simulation(
                 main_logger.info(f"收到退出信号，在第 {round_num + 1} 轮停止模拟")
             break
         
-        simulated_minutes = round_num * minutes_per_round
+        # Pour les cas judiciaires (legal), on commence la journée à 9h du matin (heure active des agents)
+        is_legal = config.get("simulation_type") == "legal"
+        start_hour = 9 if is_legal else 0
+        simulated_minutes = (start_hour * 60) + round_num * minutes_per_round
         simulated_hour = (simulated_minutes // 60) % 24
         simulated_day = simulated_minutes // (60 * 24) + 1
         
@@ -1449,13 +1473,27 @@ async def run_reddit_simulation(
                 action_logger.log_round_end(round_num + 1, 0)
             continue
         
+        # [PIE] Injection cognitive dynamique
+        try:
+            from app.services.cognitive_helper import inject_cognitive_prompts
+            inject_cognitive_prompts(active_agents, config, agent_names)
+        except Exception as ce_err:
+            log_info(f"Erreur d'injection cognitive: {ce_err}")
+        
         actions = {agent: LLMAction() for _, agent in active_agents}
         await result.env.step(actions)
         
-        # 从数据库获取实际执行的动作并记录
+        # 从数据库获取实际执行 de l'action et d'autres infos
         actual_actions, last_rowid = fetch_new_actions_from_db(
             db_path, last_rowid, agent_names
         )
+        
+        # [PIE] Mise à jour cognitive post-action
+        try:
+            from app.services.cognitive_helper import update_cognitive_states
+            await update_cognitive_states(actual_actions, config, round_num + 1)
+        except Exception as ce_err:
+            log_info(f"Erreur de mise à jour cognitive: {ce_err}")
         
         round_action_count = 0
         for action_data in actual_actions:

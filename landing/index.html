@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' *; connect-src 'self' * ws: wss:;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEXIOR SIMULATOR | Le Premier Simulateur de Comportement Judiciaire</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+    <style>
+        /* Modern Premium Reset & Design System */
+        :root {
+            --bg-obsidian: #FAF8F5; /* Premium warm ivory background */
+            --bg-navy-dark: #F4F1EA; /* Rich parchment tone */
+            --bg-navy-light: #EAE6DC; /* Soft warm champagne sand */
+            --border-glass: rgba(128, 96, 13, 0.15); /* Warm antique gold border */
+            --border-glass-hover: rgba(128, 96, 13, 0.4);
+            --gold-primary: #80600D; /* Luxurious deep gold for high contrast on light */
+            --gold-light: #B58A18; /* Mid-tone champagne gold */
+            --gold-dark: #594205; /* Deep rich gold */
+            --glow-color: rgba(128, 96, 13, 0.03);
+            
+            --text-primary: #0B132B; /* Elegant Deep Midnight/Royal Navy */
+            --text-secondary: #4A5568; /* Soft warm charcoal for readability */
+            --text-dark: #0B132B;
+            
+            --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-obsidian);
+            color: var(--text-primary);
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Typography */
+        h1, h2, h3 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-primary); /* Ensure headings default to deep navy */
+        }
+
+        h1 em, h2 em, h3 em {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-style: italic;
+            font-weight: 400;
+            color: var(--gold-primary);
+        }
+
+        p {
+            font-weight: 300;
+            color: var(--text-secondary);
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Ambient glows background */
+        .ambient-glow-top {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 600px;
+            background: radial-gradient(circle, rgba(128, 96, 13, 0.04) 0%, rgba(250, 248, 245, 0.8) 50%, transparent 100%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .ambient-glow-mid {
+            position: absolute;
+            top: 45%;
+            right: -10%;
+            width: 50%;
+            height: 800px;
+            background: radial-gradient(circle, rgba(128, 96, 13, 0.02) 0%, rgba(244, 241, 234, 0.6) 60%, transparent 100%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Navigation Header */
+        header {
+            width: 100%;
+            padding: 1.5rem 0;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            background-color: #0A1118; /* Always dark header background */
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .brand-name {
+            background: linear-gradient(to right, #F9E596, #D4AF37) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+        }
+
+        header .btn-outline {
+            color: #D4AF37 !important;
+            border-color: rgba(212, 175, 55, 0.3) !important;
+        }
+
+        header .btn-outline:hover {
+            border-color: #D4AF37 !important;
+            background: rgba(212, 175, 55, 0.1) !important;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            width: 100%;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+
+        .logo-img {
+            height: 48px;
+            border-radius: 8px;
+            border: 1.5px solid rgba(212, 175, 55, 0.3); /* Ensure logo border is bright on dark header */
+            transition: var(--transition-smooth);
+        }
+
+        .logo-container:hover .logo-img {
+            border-color: #D4AF37;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.35);
+            transform: scale(1.03);
+        }
+
+        .brand-name {
+            font-size: 1.6rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--gold-light), var(--gold-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }
+
+        /* Buttons & CTAs */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.95rem 2.2rem;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 4px; /* Sharp corners for executive feel */
+            transition: var(--transition-smooth);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            gap: 8px;
+        }
+
+        .btn-gold {
+            background: var(--gold-primary);
+            color: #FAF8F5; /* Crisp warm white/ivory text */
+            border: 1px solid var(--gold-primary);
+            box-shadow: 0 4px 15px rgba(128, 96, 13, 0.15);
+        }
+
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 22px rgba(128, 96, 13, 0.25);
+            background: #967212;
+            border-color: #967212;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid rgba(11, 19, 43, 0.2);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--text-primary);
+            background: rgba(11, 19, 43, 0.03);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(11, 19, 43, 0.05);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 7rem 0 5rem 0;
+            position: relative;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .hero-content {
+            text-align: left;
+        }
+
+        .hero-tagline {
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--gold-primary);
+            border: 1px solid rgba(128, 96, 13, 0.25);
+            padding: 0.4rem 1rem;
+            border-radius: 50px;
+            background-color: rgba(128, 96, 13, 0.08); /* Sophisticated warm gold pill on light bg */
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 {
+            font-size: 3.6rem;
+            line-height: 1.15;
+            color: var(--text-primary); /* Dark title for high contrast */
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 span {
+            background: linear-gradient(135deg, var(--gold-light) 30%, var(--gold-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p.subtitle {
+            font-size: 1.15rem;
+            line-height: 1.7;
+            margin-bottom: 2.5rem;
+            color: var(--text-secondary);
+        }
+
+        .hero-cta {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        /* Trust Bar */
+        .trust-section {
+            padding: 2.5rem 0;
+            border-top: 1px dashed rgba(128, 96, 13, 0.25);
+            border-bottom: 1px dashed rgba(128, 96, 13, 0.25);
+            background: rgba(244, 241, 234, 0.7); /* Soft, professional ivory-parchment background */
+            text-align: center;
+            margin-top: 4rem;
+            margin-bottom: 4rem;
+        }
+
+        .trust-badges {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            flex-wrap: wrap;
+        }
+
+        .trust-badge {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            opacity: 0.9;
+            transition: all 0.3s ease;
+            background: #FFFFFF;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            border: 1px solid rgba(128, 96, 13, 0.15);
+            box-shadow: 0 4px 15px rgba(128, 96, 13, 0.02);
+        }
+
+        .trust-badge:hover {
+            opacity: 1;
+            border-color: var(--gold-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(128, 96, 13, 0.08);
+        }
+
+        .trust-badge span {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        /* Ethics Note in Solution Box */
+        .ethics-note {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(128, 96, 13, 0.2);
+            font-size: 0.95rem;
+            color: var(--gold-primary); /* Deep gold for better legibility */
+            font-weight: 400;
+        }
+
+        .ethics-note::before {
+            content: '◈';
+            display: block;
+            margin-bottom: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--gold-primary);
+        }
+
+        /* Use Cases Section */
+        .use-cases {
+            padding: 6rem 0;
+            border-bottom: 1px solid rgba(128, 96, 13, 0.1);
+            background: radial-gradient(circle at center, rgba(128, 96, 13, 0.05) 0%, transparent 70%);
+        }
+
+        .use-case-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2.5rem;
+        }
+
+        .use-case-card {
+            background: #FFFFFF;
+            padding: 2.5rem;
+            border-radius: 4px;
+            border-top: 3px solid var(--gold-primary);
+            transition: var(--transition-smooth);
+            box-shadow: 0 8px 25px rgba(128, 96, 13, 0.03);
+            border-left: 1px solid rgba(128, 96, 13, 0.08);
+            border-right: 1px solid rgba(128, 96, 13, 0.08);
+            border-bottom: 1px solid rgba(128, 96, 13, 0.08);
+        }
+
+        .use-case-card:hover {
+            transform: translateY(-5px);
+            background: #FFFFFF;
+            box-shadow: 0 15px 35px rgba(128, 96, 13, 0.12);
+        }
+
+        .use-case-card h4 {
+            color: var(--text-primary);
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            font-family: 'Playfair Display', serif;
+        }
+
+        /* Footer CTA Group */
+        .cta-group {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Lightbox Modal */
+        .lightbox-modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(5, 8, 12, 0.95);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .lightbox-modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .lightbox-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 85%;
+            border-radius: 8px;
+            border: 2px solid var(--border-glass);
+            box-shadow: 0 0 50px rgba(212, 175, 55, 0.15);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .lightbox-modal.active .lightbox-content {
+            transform: scale(1);
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 30px;
+            right: 40px;
+            color: #f1f5f9;
+            font-size: 40px;
+            font-weight: 300;
+            transition: 0.3s;
+            cursor: pointer;
+            z-index: 10000;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .lightbox-close:hover {
+            color: var(--gold-primary);
+            background: rgba(212, 175, 55, 0.1);
+            border-color: var(--gold-primary);
+        }
+
+        .lightbox-caption {
+            position: absolute;
+            bottom: 30px;
+            text-align: center;
+            color: #F1F5F9; /* High-contrast white text on dark modal overlay */
+            font-size: 1.1rem;
+            font-family: 'Playfair Display', serif;
+            letter-spacing: 0.5px;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        /* Hero Mockup (The suits office hologram illustration) */
+        .hero-mockup {
+            position: relative;
+            display: flex;
+            justify-content: center;
+        }
+
+        .mockup-wrapper {
+            position: relative;
+            border-radius: 4px; /* Sharp and architectural */
+            padding: 12px;
+            background: #FFFFFF;
+            border: 1px solid rgba(128, 96, 13, 0.2);
+            box-shadow: 0 25px 50px rgba(11, 19, 43, 0.08), 0 0 30px rgba(128, 96, 13, 0.03);
+            transition: var(--transition-smooth);
+        }
+
+        .mockup-wrapper:hover {
+            transform: translateY(-5px) scale(1.01);
+            box-shadow: 0 25px 50px rgba(11, 19, 43, 0.18), 0 0 30px rgba(128, 96, 13, 0.12);
+        }
+
+        .mockup-image {
+            width: 100%;
+            height: auto;
+            border-radius: 2px;
+            display: block;
+        }
+
+        .mockup-label {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(5, 8, 12, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 6px;
+            padding: 0.6rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #00F2FE;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00F2FE;
+            animation: pulse-glow 2s infinite;
+        }
+
+        @keyframes pulse-glow {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0, 242, 254, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 242, 254, 0); }
+        }
+
+        .mockup-label span {
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #F1F5F9; /* High-contrast text on dark badge */
+        }
+
+        /* Problem & Solution Grid */
+        .split-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            padding: 5rem 0;
+            border-top: 1px solid rgba(128, 96, 13, 0.1);
+            border-bottom: 1px solid rgba(128, 96, 13, 0.1);
+        }
+
+        .glass-box {
+            padding: 3rem;
+            border-radius: 4px;
+            background: #FFFFFF; /* High-quality solid white for contrast on warm ivory */
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(128, 96, 13, 0.03);
+        }
+
+        .problem-box {
+            border: 1px solid rgba(239, 68, 68, 0.18);
+        }
+
+        .problem-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background-color: #ef4444;
+        }
+
+        .problem-box:hover {
+            border-color: rgba(239, 68, 68, 0.35);
+            background: #FFFFFF;
+            box-shadow: 0 15px 35px rgba(239, 68, 68, 0.08);
+        }
+
+        .solution-box {
+            border: 1px solid var(--border-glass);
+        }
+
+        .solution-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background-color: var(--gold-primary);
+        }
+
+        .solution-box:hover {
+            border-color: var(--gold-primary);
+            background: #FFFFFF;
+            box-shadow: 0 10px 30px rgba(128, 96, 13, 0.1);
+        }
+
+        .glass-box h3 {
+            font-size: 1.6rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .glass-box p {
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        /* Screenshot Showcase Section */
+        .showcase-section {
+            padding: 6rem 0;
+            position: relative;
+            background: radial-gradient(circle at bottom, rgba(244, 241, 234, 0.6) 0%, transparent 70%);
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 4rem auto;
+        }
+
+        .section-header h2 {
+            font-size: 2.8rem;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .section-header h2 span {
+            color: var(--gold-primary);
+        }
+
+        .section-header p {
+            font-size: 1.1rem;
+        }
+
+        /* Screenshots Grid */
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2.5rem;
+            margin-bottom: 4rem;
+        }
+
+        .screenshot-card {
+            background: #FFFFFF; /* Light card */
+            border: 1px solid rgba(128, 96, 13, 0.08);
+            border-radius: 4px;
+            padding: 1.5rem;
+            transition: var(--transition-smooth);
+            box-shadow: 0 8px 25px rgba(128, 96, 13, 0.03);
+        }
+
+        .screenshot-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--border-glass-hover);
+            box-shadow: 0 15px 35px rgba(128, 96, 13, 0.12);
+        }
+
+        .screenshot-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.35rem;
+            color: var(--gold-primary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .screenshot-desc {
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .screenshot-img-wrapper {
+            border-radius: 2px;
+            overflow: hidden;
+            border: 1px solid rgba(11, 19, 43, 0.08);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.06);
+            position: relative;
+        }
+
+        .screenshot-img-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent 80%, rgba(5, 8, 12, 0.05) 100%);
+            pointer-events: none;
+        }
+
+        .screenshot-img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: transform 0.6s ease;
+        }
+
+        .screenshot-card:hover .screenshot-img {
+            transform: scale(1.02);
+        }
+
+        /* Tactical Advantage (Features) */
+        .features {
+            padding: 6rem 0;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2.5rem;
+        }
+
+        .feature-card {
+            background: #FFFFFF;
+            padding: 3rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-glass);
+            transition: var(--transition-smooth);
+            position: relative;
+            box-shadow: 0 8px 25px rgba(128, 96, 13, 0.03);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--gold-primary);
+            box-shadow: 0 15px 35px rgba(128, 96, 13, 0.12);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            display: inline-block;
+        }
+
+        .feature-card h3 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .feature-card p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* 3-Step Process section */
+        .steps {
+            padding: 7rem 0;
+            background: linear-gradient(180deg, var(--bg-obsidian) 0%, var(--bg-navy-dark) 50%, var(--bg-obsidian) 100%);
+        }
+
+        .step-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3rem;
+            margin-top: 2rem;
+        }
+
+        .step-item {
+            position: relative;
+            background: #FFFFFF;
+            border-radius: 4px;
+            padding: 2.5rem;
+            border: 1px solid rgba(128, 96, 13, 0.08);
+            transition: var(--transition-smooth);
+            box-shadow: 0 8px 25px rgba(128, 96, 13, 0.03);
+        }
+
+        .step-item:hover {
+            background: #FFFFFF;
+            border-color: var(--gold-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(128, 96, 13, 0.12);
+        }
+
+        .step-number {
+            font-family: 'Playfair Display', serif;
+            font-size: 4.5rem;
+            font-weight: 700;
+            background: linear-gradient(to bottom, rgba(128, 96, 13, 0.4) 0%, rgba(128, 96, 13, 0) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .step-item h3 {
+            font-size: 1.35rem;
+            color: var(--gold-dark);
+            margin-bottom: 1rem;
+        }
+
+        .step-item p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Footer Section */
+        footer {
+            padding: 7rem 0 3rem 0;
+            border-top: 1px solid rgba(212, 175, 55, 0.15);
+            text-align: center;
+            background: #0B1220; /* Explicitly dark */
+            position: relative;
+            color: #F1F5F9;
+        }
+
+        footer h2 {
+            font-size: 2.6rem;
+            color: #FFFFFF !important;
+            margin-bottom: 1.5rem;
+        }
+
+        footer p.footer-sub {
+            font-size: 1.15rem;
+            max-width: 600px;
+            margin: 0 auto 3rem auto;
+            color: #94A3B8 !important;
+        }
+
+        footer .btn-outline {
+            color: #D4AF37 !important;
+            border-color: rgba(212, 175, 55, 0.3) !important;
+        }
+
+        footer .btn-outline:hover {
+            border-color: #D4AF37 !important;
+            background: rgba(212, 175, 55, 0.1) !important;
+        }
+
+        .copyright {
+            margin-top: 6rem;
+            font-size: 0.85rem;
+            color: rgba(148, 163, 184, 0.4);
+            letter-spacing: 0.5px;
+            line-height: 1.8;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .hero-grid {
+                grid-template-columns: 1fr;
+                gap: 3rem;
+                text-align: center;
+            }
+            .hero-content {
+                text-align: center;
+            }
+            .hero-cta {
+                justify-content: center;
+            }
+            .split-section {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+            .screenshot-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 2rem;
+            }
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            .step-list {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+            .cta-group {
+                gap: 1.25rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .brand-name {
+                font-size: 1.2rem;
+                letter-spacing: 1px;
+            }
+            .screenshot-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            .cta-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .cta-group .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Subtle glows for premium atmosphere -->
+    <div class="ambient-glow-top"></div>
+    <div class="ambient-glow-mid"></div>
+
+    <header>
+        <div class="container">
+            <a href="#" class="logo-container">
+                <img src="logo.png" alt="Lexior Logo" class="logo-img">
+                <h1 class="brand-name">Lexior Simulator</h1>
+            </a>
+            <a href="#demo" class="btn btn-outline">Espace Partenaire</a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-grid">
+                <div class="hero-content">
+                    <div class="hero-tagline">Neuro-Symbolique & Analyse Cognitive</div>
+                    <h1>Calculez votre victoire,<br><em>ne la supposez pas.</em></h1>
+                    <p class="subtitle">Les IA traditionnelles sont programmées pour être lisses et polies. Vos adversaires au tribunal, non. Testez vos plaidoiries face à des jumeaux numériques dotés d'ego, de rancune et de convictions. Découvrez le premier "simulateur de vol" pour avocats stratèges.</p>
+                    <div class="hero-cta">
+                        <a href="#demo" class="btn btn-gold">Démarrer une Simulation</a>
+                        <a href="#interface" class="btn btn-outline">Voir l'Interface</a>
+                    </div>
+                </div>
+                
+                <div class="hero-mockup">
+                    <div class="mockup-wrapper">
+                        <img src="harvey_specter_office.png" alt="Cabinet de simulation virtuel et hologramme 3D" class="mockup-image">
+                        <div class="mockup-label">
+                            <div class="pulse-dot"></div>
+                            <span>Simulateur Cognitif Actif</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trust Section -->
+    <section class="trust-section">
+        <div class="container">
+            <p style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-secondary); margin-bottom: 2rem;">Conçu pour l'excellence et la conformité institutionnelle</p>
+            <div class="trust-badges">
+                <div class="trust-badge">
+                    <span style="color: var(--gold-primary); font-size: 1.5rem;">🛡️</span>
+                    <span>Gouvernance IA Responsable</span>
+                </div>
+                <div class="trust-badge">
+                    <span style="color: var(--gold-primary); font-size: 1.5rem;">⚖️</span>
+                    <span>Conformité Loi 25</span>
+                </div>
+                <div class="trust-badge">
+                    <span style="color: var(--gold-primary); font-size: 1.5rem;">🔒</span>
+                    <span>Chiffrement AES-256</span>
+                </div>
+                <div class="trust-badge">
+                    <span style="color: var(--gold-primary); font-size: 1.5rem;">🖥️</span>
+                    <span>Architecture Local-First</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Split: Problem & Solution -->
+    <section class="container split-section">
+        <div class="glass-box problem-box">
+            <h3 style="color: #ef4444;"><span>⚖️</span> Le Problème : Plaider à l'aveugle</h3>
+            <p>Vous avez un dossier en béton, mais l'issue d'un procès dépend souvent de la psychologie : un juge formaliste, ou un adversaire piqué au vif qui refuse un règlement rationnel. La recherche juridique classique analyse le passé, mais ne vous prépare pas au choc frontal de la salle d'audience ni à l'imprévisibilité humaine.</p>
+        </div>
+        <div class="glass-box solution-box">
+            <h3 style="color: var(--gold-primary);"><span>🧠</span> La Solution : L'Ingénierie Cognitive</h3>
+            <p>Propulsé par le moteur neuro-symbolique PIE, Lexior Simulator modélise l'hystérésis et la psychologie du conflit. Affrontez un adversaire virtuel qui mémorise vos attaques, s'enferme dans des postures défensives, et qui ne craque que face à un risque calculé ou une surprise narrative.</p>
+            <div class="ethics-note">
+                <strong>Copilote, pas Pilote Automatique :</strong> Lexior ne remplace pas votre instinct, il l'aiguise. Notre moteur ne génère pas de conseils juridiques à l'aveugle : il cartographie vos preuves réelles (zéro hallucination) pour stress-tester <em>votre</em> stratégie.
+            </div>
+        </div>
+    </section>
+
+    <!-- Use Cases Section -->
+    <section class="use-cases">
+        <div class="container">
+            <div class="section-header">
+                <h2>Des simulations pour <em>chaque enjeu critique</em></h2>
+                <p>Une technologie adaptable aux dossiers complexes où l'imprévisibilité humaine représente votre plus grand risque.</p>
+            </div>
+            <div class="use-case-grid">
+                <div class="use-case-card">
+                    <h4>Litige Commercial & Injonctions</h4>
+                    <p>Testez la solidité de votre dossier face à un juge virtuel formaliste avant de déposer une requête d'injonction coûteuse. Identifiez les failles factuelles avant que la défense ne les exploite.</p>
+                </div>
+                <div class="use-case-card">
+                    <h4>Médiation & Négociation (M&A)</h4>
+                    <p>Simulez les réactions d'un actionnaire hostile ou d'une partie adverse têtue pour trouver le point de bascule psychologique menant à une entente hors cour lucrative.</p>
+                </div>
+                <div class="use-case-card">
+                    <h4>Droit du Travail & Syndical</h4>
+                    <p>Modélisez l'inertie, les revendications et les limites de tolérance d'une partie syndicale pour anticiper les impasses lors du renouvellement de conventions ou de griefs majeurs.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Showcase Gallery Section -->
+    <section id="interface" class="showcase-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>L'Interface de <em>Simulation</em></h2>
+                <p>Découvrez la puissance de nos outils de stress-test et d'analyse comportementale à travers des captures d'écran réelles du cockpit de l'avocat.</p>
+            </div>
+
+            <div class="screenshot-grid">
+                <!-- Screenshot 1: Ingestion -->
+                <div class="screenshot-card">
+                    <div class="screenshot-title">📁 Ingestion & Construction GraphRAG</div>
+                    <div class="screenshot-desc">Importez vos pièces et laissez l'IA générer l'ontologie et le graphe de connaissances relationnel souverain.</div>
+                    <div class="screenshot-img-wrapper">
+                        <img src="screenshot_7.png" alt="Ontologie et construction GraphRAG" class="screenshot-img">
+                    </div>
+                </div>
+
+                <!-- Screenshot 2: Procès Actif -->
+                <div class="screenshot-card">
+                    <div class="screenshot-title">⚡ Procès Actif & Simulation</div>
+                    <div class="screenshot-desc">Suivez la transcription du procès en temps réel et le graphe de connaissances dynamique qui suit chaque fait.</div>
+                    <div class="screenshot-img-wrapper">
+                        <img src="screenshot_2.png" alt="Salle d'audience virtuelle et simulation active" class="screenshot-img">
+                    </div>
+                </div>
+
+                <!-- Screenshot 3: Négociation -->
+                <div class="screenshot-card">
+                    <div class="screenshot-title">💬 Négociation & Stratégie en Direct</div>
+                    <div class="screenshot-desc">Entrez en interaction profonde avec la partie adverse. Proposez des règlements ou injectez des stimuli tactiques.</div>
+                    <div class="screenshot-img-wrapper">
+                        <img src="screenshot_5.png" alt="Négociation et stratégie en direct" class="screenshot-img">
+                    </div>
+                </div>
+
+                <!-- Screenshot 4: États Cognitifs -->
+                <div class="screenshot-card">
+                    <div class="screenshot-title">📊 Biais du Juge & États Cognitifs</div>
+                    <div class="screenshot-desc">Décodez les tensions internes et la sensibilité psychologique du tribunal (Procédure vs Équité).</div>
+                    <div class="screenshot-img-wrapper">
+                        <img src="screenshot_3.png" alt="Visualisation dynamique des états cognitifs du juge" class="screenshot-img">
+                    </div>
+                </div>
+
+                <!-- Screenshot 5: Timeline -->
+                <div class="screenshot-card">
+                    <div class="screenshot-title">📝 Timeline des Événements</div>
+                    <div class="screenshot-desc">Analysez la chronologie des rounds et observez l'historique complet de l'évolution de la persuasion.</div>
+                    <div class="screenshot-img-wrapper">
+                        <img src="screenshot_6.png" alt="Timeline des événements et stimuli" class="screenshot-img">
+                    </div>
+                </div>
+
+                <!-- Screenshot 6: Rapport de recommendations -->
+                <div class="screenshot-card">
+                    <div class="screenshot-title">📄 Rapport & Recommandations</div>
+                    <div class="screenshot-desc">Obtenez une feuille de route claire pour l'avocat : rappel des faits, analyse Monte-Carlo et arguments gagnants.</div>
+                    <div class="screenshot-img-wrapper">
+                        <img src="screenshot_8.png" alt="Rapport de simulation et recommandations tactiques" class="screenshot-img">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="demo" class="features container">
+        <div class="section-header">
+            <h2>L'Avantage <em>Tactique</em></h2>
+            <p>Maximisez votre préparation grâce à notre architecture cognitive exclusive conçue pour les avocats de litige.</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <span class="feature-icon">⚖️</span>
+                <h3>Digital Twins & Stress-Test</h3>
+                <p>Confrontez vos arguments à un Juge virtuel impartial et une Défense intraitable. Observez l'évolution de leurs biais cognitifs (Procédure vs Équité, Offensive vs Prudence) en temps réel au fil des plaidoiries.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">💬</span>
+                <h3>Interaction & Pivot Tactique</h3>
+                <p>Le procès tourne mal ? Ouvrez un chat privé "Post-Audience" avec la partie adverse virtuelle. Injectez une preuve surprise, attaquez son ego, et trouvez le point de bascule exact pour forcer un règlement à l'amiable.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">📊</span>
+                <h3>Évaluation du Risque Financier</h3>
+                <p>Ne mobilisez plus des dizaines d'heures facturables sur des impasses stratégiques. Faites tourner des simulations Monte-Carlo pour identifier mathématiquement vos chances de succès avant d'engager les frais de vos clients.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🔒</span>
+                <h3>Souveraineté & Loi 25 (Local-First)</h3>
+                <p>Conçu pour les standards institutionnels stricts. Grâce à notre intégration GraphRAG locale, vos pièces à conviction ne quittent jamais votre infrastructure. Une souveraineté totale pour vos litiges hautement confidentiels.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3-Step Process -->
+    <section class="steps">
+        <div class="container">
+            <div class="section-header">
+                <h2>Maîtrisez l'incertitude <em>en 3 étapes</em></h2>
+                <p>Une méthodologie scientifique rigoureuse pour passer du doute à la certitude statistique.</p>
+            </div>
+            
+            <div class="step-list">
+                <div class="step-item">
+                    <span class="step-number">01</span>
+                    <h3>Ingestion & Graphe</h3>
+                    <p>Téléversez vos contrats, affidavits et audits. Lexior construit instantanément le graphe relationnel complet des faits, ancrant la simulation dans la vérité matérielle de votre dossier (zéro hallucination).</p>
+                </div>
+                <div class="step-item">
+                    <span class="step-number">02</span>
+                    <h3>Profilage Psychologique</h3>
+                    <p>Paramétrez l'inertie cognitive du tribunal et l'ego de votre adversaire. Préparez le terrain pour une confrontation d'une fidélité déontologique absolue.</p>
+                </div>
+                <div class="step-item">
+                    <span class="step-number">03</span>
+                    <h3>Affrontement & Résolution</h3>
+                    <p>Lancez l'audience Monte-Carlo pour identifier vos failles, puis basculez en interaction profonde pour négocier avec les jumeaux numériques et trouver l'argument décisif.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <h2>Ne laissez plus la psychologie dicter vos dossiers.</h2>
+            <p class="footer-sub">Optimisez vos issues judiciaires et protégez les intérêts financiers de vos clients grâce à la simulation cognitive appliquée.</p>
+            
+            <div class="cta-group">
+                <a href="#" class="btn btn-gold" style="font-size: 1rem; padding: 1.25rem 3rem;">Demander un Accès Pilote Privé</a>
+                <a href="#" class="btn btn-outline" style="font-size: 1rem; padding: 1.25rem 2rem;">📥 Télécharger l'Étude de Cas (PDF)</a>
+            </div>
+
+            <p class="copyright">© 2026 Lexior Simulator — Une suite professionnelle Intelliwork.<br>L'intelligence cognitive au service de la souveraineté technologique.</p>
+        </div>
+    </footer>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox-modal">
+        <span class="lightbox-close">&times;</span>
+        <img class="lightbox-content" id="lightbox-img">
+        <div id="lightbox-caption" class="lightbox-caption"></div>
+    </div>
+
+    <!-- Lightbox script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImg = document.getElementById('lightbox-img');
+            const lightboxCaption = document.getElementById('lightbox-caption');
+            const closeBtn = document.querySelector('.lightbox-close');
+
+            // Attach click event to screenshot cards or images
+            document.querySelectorAll('.screenshot-card').forEach(card => {
+                const img = card.querySelector('.screenshot-img');
+                const title = card.querySelector('.screenshot-title').textContent;
+                
+                card.style.cursor = 'zoom-in';
+                card.addEventListener('click', (e) => {
+                    lightboxImg.src = img.src;
+                    lightboxCaption.textContent = title;
+                    lightbox.classList.add('active');
+                    document.body.style.overflow = 'hidden'; // Disable page scrolling
+                });
+            });
+
+            // Close lightbox
+            const closeLightbox = () => {
+                lightbox.classList.remove('active');
+                document.body.style.overflow = ''; // Restore page scrolling
+                setTimeout(() => {
+                    lightboxImg.src = '';
+                }, 300);
+            };
+
+            closeBtn.addEventListener('click', closeLightbox);
+            lightbox.addEventListener('click', (e) => {
+                if (e.target === lightbox) {
+                    closeLightbox();
+                }
+            });
+
+            // Close on escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+                    closeLightbox();
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

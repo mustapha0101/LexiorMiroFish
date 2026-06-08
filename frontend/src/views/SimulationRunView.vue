@@ -3,7 +3,15 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">MIROFISH</div>
+        <button class="back-history-btn" @click="router.push('/')" title="Retour à l'historique">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div class="brand" @click="router.push('/')">
+          <img src="/logo.png" class="brand-logo" alt="Lexior" />
+          <span class="brand-name">LEXIOR <span class="brand-sub">SIMULATOR</span></span>
+        </div>
       </div>
       
       <div class="header-center">
@@ -54,10 +62,14 @@
         <Step3Simulation
           :simulationId="currentSimulationId"
           :maxRounds="maxRounds"
+          :runMode="runMode"
+          :clientSide="clientSide"
+          :selectedDraft="selectedDraft"
           :minutesPerRound="minutesPerRound"
           :projectData="projectData"
           :graphData="graphData"
           :systemLogs="systemLogs"
+          :isResume="isResume"
           @go-back="handleGoBack"
           @next-step="handleNextStep"
           @add-log="addLog"
@@ -94,8 +106,13 @@ const viewMode = ref('split')
 const currentSimulationId = ref(route.params.simulationId)
 // 直接在初始化时从 query 参数获取 maxRounds，确保子组件能立即获取到值
 const maxRounds = ref(route.query.maxRounds ? parseInt(route.query.maxRounds) : null)
+const runMode = ref(route.query.runMode || 'courtroom')
+const clientSide = ref(route.query.clientSide || 'defense')
+const selectedDraft = ref(route.query.selectedDraft || null)
 const minutesPerRound = ref(30) // 默认每轮30分钟
+const isResume = ref(route.query.resume === 'true')
 const projectData = ref(null)
+const simGraphId = ref(null)
 const graphData = ref(null)
 const graphLoading = ref(false)
 const systemLogs = ref([])
@@ -224,18 +241,33 @@ const loadSimulationData = async () => {
         addLog(t('log.timeConfigFetchFailed', { minutes: minutesPerRound.value }))
       }
       
+      // 保存 simulation graph_id
+      if (simData.graph_id) {
+        simGraphId.value = simData.graph_id
+      }
+
+      // Restaurer la requête sélectionnée (selectedDraft) et le camp
+      if (simData.selected_draft) {
+        selectedDraft.value = simData.selected_draft.text
+        clientSide.value = simData.selected_draft.client_side || clientSide.value
+        addLog(`[Radar Tactique] Requête sélectionnée chargée : ${simData.selected_draft.node_name} - ${simData.selected_draft.vector_name}`)
+      }
+      
       // 获取 project 信息
       if (simData.project_id) {
         const projRes = await getProject(simData.project_id)
         if (projRes.success && projRes.data) {
           projectData.value = projRes.data
           addLog(t('log.projectLoadSuccess', { id: projRes.data.project_id }))
-          
-          // 获取 graph 数据
-          if (projRes.data.graph_id) {
-            await loadGraph(projRes.data.graph_id)
-          }
         }
+      }
+      
+      // 获取 graph 数据 (优先使用 simulation graph_id, 备用 project graph_id)
+      const targetGraphId = simGraphId.value || projectData.value?.graph_id
+      if (targetGraphId) {
+        await loadGraph(targetGraphId)
+      } else {
+        addLog(t('log.noGraphIdFound') || 'Aucun identifiant de graphe trouvé.')
       }
     } else {
       addLog(t('log.loadSimDataFailed', { error: simRes.error || t('common.unknownError') }))
@@ -268,8 +300,9 @@ const loadGraph = async (graphId) => {
 }
 
 const refreshGraph = () => {
-  if (projectData.value?.graph_id) {
-    loadGraph(projectData.value.graph_id)
+  const targetGraphId = simGraphId.value || projectData.value?.graph_id
+  if (targetGraphId) {
+    loadGraph(targetGraphId)
   }
 }
 
@@ -322,20 +355,46 @@ onUnmounted(() => {
   flex-direction: column;
   background: #FFF;
   overflow: hidden;
-  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
 }
 
 /* Header */
 .app-header {
   height: 60px;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid #1A2333;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: #FFF;
+  background: #0B1220;
   z-index: 100;
   position: relative;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.back-history-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #0F1E36;
+  border: 1px solid #1E293B;
+  border-radius: 6px;
+  color: #94A3B8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 12px;
+}
+
+.back-history-btn:hover {
+  background: #C5A880;
+  color: #0B1220;
+  border-color: #C5A880;
 }
 
 .header-center {
@@ -345,16 +404,33 @@ onUnmounted(() => {
 }
 
 .brand {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 800;
-  font-size: 18px;
-  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
+}
+
+.brand-logo {
+  height: 24px;
+  width: auto;
+}
+
+.brand-name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  color: #FFFFFF;
+}
+
+.brand-sub {
+  color: #C5A880;
+  font-weight: 500;
 }
 
 .view-switcher {
   display: flex;
-  background: #F5F5F5;
+  background: #0F1E36;
   padding: 4px;
   border-radius: 6px;
   gap: 4px;
@@ -366,16 +442,15 @@ onUnmounted(() => {
   padding: 6px 16px;
   font-size: 12px;
   font-weight: 600;
-  color: #666;
+  color: #94A3B8;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .switch-btn.active {
-  background: #FFF;
-  color: #000;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background: #C5A880;
+  color: #0B1220;
 }
 
 .header-right {
@@ -394,7 +469,7 @@ onUnmounted(() => {
 .step-num {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  color: #999;
+  color: #94A3B8;
 }
 
 .step-name {

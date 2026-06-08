@@ -46,8 +46,10 @@ class Project:
     
     # 配置
     simulation_requirement: Optional[str] = None
+    simulation_mode: Optional[str] = "social"
     chunk_size: int = 500
     chunk_overlap: int = 50
+    client_side: str = "defense"
     
     # 错误信息
     error: Optional[str] = None
@@ -67,8 +69,10 @@ class Project:
             "graph_id": self.graph_id,
             "graph_build_task_id": self.graph_build_task_id,
             "simulation_requirement": self.simulation_requirement,
+            "simulation_mode": self.simulation_mode,
             "chunk_size": self.chunk_size,
             "chunk_overlap": self.chunk_overlap,
+            "client_side": self.client_side,
             "error": self.error
         }
     
@@ -92,8 +96,10 @@ class Project:
             graph_id=data.get('graph_id'),
             graph_build_task_id=data.get('graph_build_task_id'),
             simulation_requirement=data.get('simulation_requirement'),
+            simulation_mode=data.get('simulation_mode', 'social'),
             chunk_size=data.get('chunk_size', 500),
             chunk_overlap=data.get('chunk_overlap', 50),
+            client_side=data.get('client_side', 'defense'),
             error=data.get('error')
         )
 
@@ -130,19 +136,21 @@ class ProjectManager:
         return os.path.join(cls._get_project_dir(project_id), 'extracted_text.txt')
     
     @classmethod
-    def create_project(cls, name: str = "Unnamed Project") -> Project:
+    def create_project(cls, name: str = "Unnamed Project", project_id: Optional[str] = None) -> Project:
         """
         创建新项目
         
         Args:
             name: 项目名称
+            project_id: 可选的自定义项目ID
             
         Returns:
             新创建的Project对象
         """
         cls._ensure_projects_dir()
         
-        project_id = f"proj_{uuid.uuid4().hex[:12]}"
+        if not project_id:
+            project_id = f"proj_{uuid.uuid4().hex[:12]}"
         now = datetime.now().isoformat()
         
         project = Project(

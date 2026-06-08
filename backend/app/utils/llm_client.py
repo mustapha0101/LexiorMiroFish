@@ -99,5 +99,18 @@ class LLMClient:
         try:
             return json.loads(cleaned_response)
         except json.JSONDecodeError:
+            # Fallback to brace matching
+            first_brace = cleaned_response.find('{')
+            last_brace = cleaned_response.rfind('}')
+            if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+                json_str = cleaned_response[first_brace:last_brace + 1]
+                try:
+                    return json.loads(json_str)
+                except json.JSONDecodeError:
+                    cleaned_json_str = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', json_str)
+                    try:
+                        return json.loads(cleaned_json_str)
+                    except json.JSONDecodeError:
+                        pass
             raise ValueError(f"LLM返回的JSON格式无效: {cleaned_response}")
 

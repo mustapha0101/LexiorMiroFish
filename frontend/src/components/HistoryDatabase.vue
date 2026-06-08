@@ -1,116 +1,222 @@
 <template>
   <div 
-    class="history-database"
-    :class="{ 'no-projects': projects.length === 0 && !loading }"
+    class="history-database-premium"
+    :class="{ 'no-projects': filteredProjects.length === 0 && !loading }"
     ref="historyContainer"
   >
-    <!-- 背景装饰：技术网格线（只在有项目时显示） -->
-    <div v-if="projects.length > 0 || loading" class="tech-grid-bg">
+    <!-- Background grid decoration -->
+    <div class="tech-grid-bg">
       <div class="grid-pattern"></div>
       <div class="gradient-overlay"></div>
     </div>
 
-    <!-- 标题区域 -->
+    <!-- Title Header -->
     <div class="section-header">
       <div class="section-line"></div>
       <span class="section-title">{{ $t('history.title') }}</span>
       <div class="section-line"></div>
     </div>
 
-    <!-- 卡片容器（只在有项目时显示） -->
-    <div v-if="projects.length > 0" class="cards-container" :class="{ expanded: isExpanded }" :style="containerStyle">
-      <div 
-        v-for="(project, index) in projects" 
-        :key="project.simulation_id"
-        class="project-card"
-        :class="{ expanded: isExpanded, hovering: hoveringCard === index }"
-        :style="getCardStyle(index)"
-        @mouseenter="hoveringCard = index"
-        @mouseleave="hoveringCard = null"
-        @click="navigateToProject(project)"
-      >
-        <!-- 卡片头部：simulation_id 和 功能可用状态 -->
-        <div class="card-header">
-          <span class="card-id">{{ formatSimulationId(project.simulation_id) }}</span>
-          <div class="card-status-icons">
-            <span 
-              class="status-icon" 
-              :class="{ available: project.project_id, unavailable: !project.project_id }"
-              :title="$t('history.graphBuild')"
-            >◇</span>
-            <span 
-              class="status-icon available" 
-              :title="$t('history.envSetup')"
-            >◈</span>
-            <span 
-              class="status-icon" 
-              :class="{ available: project.report_id, unavailable: !project.report_id }"
-              :title="$t('history.analysisReport')"
-            >◆</span>
-          </div>
-        </div>
+    <!-- Search & Filter Controls Panel -->
+    <div class="search-filter-panel">
+      <!-- Search Input -->
+      <div class="search-wrapper">
+        <span class="search-icon">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </span>
+        <input 
+          type="text" 
+          v-model="searchQuery" 
+          :placeholder="$t('history.searchPlaceholder')"
+          class="search-input"
+        />
+        <button v-if="searchQuery" @click="searchQuery = ''" class="clear-search-btn">×</button>
+      </div>
 
-        <!-- 文件列表区域 -->
-        <div class="card-files-wrapper">
-          <!-- 角落装饰 - 取景框风格 -->
-          <div class="corner-mark top-left-only"></div>
-          
-          <!-- 文件列表 -->
-          <div class="files-list" v-if="project.files && project.files.length > 0">
-            <div 
-              v-for="(file, fileIndex) in project.files.slice(0, 3)" 
-              :key="fileIndex"
-              class="file-item"
+      <!-- Filters Section -->
+      <div class="filters-row">
+        <!-- Status Filters -->
+        <div class="filter-group">
+          <span class="filter-label">{{ $t('history.filterStatus') }}</span>
+          <div class="filter-options">
+            <button 
+              v-for="statusOpt in statusOptions" 
+              :key="statusOpt.value"
+              class="filter-tab-btn"
+              :class="{ active: currentStatusFilter === statusOpt.value }"
+              @click="currentStatusFilter = statusOpt.value"
             >
-              <span class="file-tag" :class="getFileType(file.filename)">{{ getFileTypeLabel(file.filename) }}</span>
-              <span class="file-name">{{ truncateFilename(file.filename, 20) }}</span>
-            </div>
-            <!-- 如果有更多文件，显示提示 -->
-            <div v-if="project.files.length > 3" class="files-more">
-              {{ $t('history.moreFiles', { count: project.files.length - 3 }) }}
-            </div>
-          </div>
-          <!-- 无文件时的占位 -->
-          <div class="files-empty" v-else>
-            <span class="empty-file-icon">◇</span>
-            <span class="empty-file-text">{{ $t('history.noFiles') }}</span>
+              {{ statusOpt.label }}
+            </button>
           </div>
         </div>
 
-        <!-- 卡片标题（使用模拟需求的前20字作为标题） -->
-        <h3 class="card-title">{{ getSimulationTitle(project.simulation_requirement) }}</h3>
-
-        <!-- 卡片描述（模拟需求完整展示） -->
-        <p class="card-desc">{{ truncateText(project.simulation_requirement, 55) }}</p>
-
-        <!-- 卡片底部 -->
-        <div class="card-footer">
-          <div class="card-datetime">
-            <span class="card-date">{{ formatDate(project.created_at) }}</span>
-            <span class="card-time">{{ formatTime(project.created_at) }}</span>
+        <!-- Mode Filters -->
+        <div class="filter-group">
+          <span class="filter-label">{{ $t('history.filterMode') }}</span>
+          <div class="filter-options">
+            <button 
+              v-for="modeOpt in modeOptions" 
+              :key="modeOpt.value"
+              class="filter-tab-btn"
+              :class="{ active: currentModeFilter === modeOpt.value }"
+              @click="currentModeFilter = modeOpt.value"
+            >
+              {{ modeOpt.label }}
+            </button>
           </div>
-          <span class="card-progress" :class="getProgressClass(project)">
-            <span class="status-dot">●</span> {{ formatRounds(project) }}
-          </span>
         </div>
-        
-        <!-- 底部装饰线 (hover时展开) -->
-        <div class="card-bottom-line"></div>
       </div>
     </div>
 
-    <!-- 加载状态 -->
+    <!-- Grid Container -->
+    <div v-if="filteredProjects.length > 0" class="premium-cards-grid">
+      <div 
+        v-for="project in filteredProjects" 
+        :key="project.simulation_id"
+        class="premium-project-card"
+        @click="navigateToProject(project)"
+      >
+        <!-- Card Header -->
+        <div class="premium-card-header">
+          <span class="premium-card-id">{{ formatSimulationId(project.simulation_id) }}</span>
+          
+          <div class="badges-group">
+            <!-- Mode badge -->
+            <span class="mode-tag" :class="project.run_mode || 'courtroom'">
+              {{ getModeLabel(project) }}
+            </span>
+            <!-- Status dot badge -->
+            <span class="progress-tag" :class="getProgressClass(project)">
+              <span class="status-dot">●</span> {{ getStatusLabel(project) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Files indicator -->
+        <div class="premium-files-strip" v-if="project.files && project.files.length > 0">
+          <div 
+            v-for="(file, fileIndex) in project.files.slice(0, 3)" 
+            :key="fileIndex"
+            class="premium-file-pill"
+            :title="file.filename"
+          >
+            <span class="file-pill-tag" :class="getFileType(file.filename)">{{ getFileTypeLabel(file.filename) }}</span>
+            <span class="file-pill-name">{{ truncateFilename(file.filename, 14) }}</span>
+          </div>
+          <div v-if="project.files.length > 3" class="premium-file-pill-more">
+            +{{ project.files.length - 3 }}
+          </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="premium-card-body">
+          <h3 class="premium-card-title">{{ getSimulationTitle(project.simulation_requirement) }}</h3>
+          <p class="premium-card-desc">{{ project.simulation_requirement }}</p>
+        </div>
+
+        <!-- Divider line -->
+        <div class="premium-card-divider"></div>
+
+        <!-- Card Footer -->
+        <div class="premium-card-footer">
+          <!-- Left side info -->
+          <div class="footer-meta">
+            <span class="rounds-text">{{ formatRounds(project) }}</span>
+            <span class="date-text" v-if="project.created_at">{{ formatDate(project.created_at) }}</span>
+          </div>
+
+          <!-- Direct action buttons -->
+          <div class="footer-actions">
+            <!-- Resume Action -->
+            <button 
+              v-if="canResume(project)"
+              class="action-icon-btn resume"
+              @click.stop="promptResume(project)"
+              :title="$t('history.btnResume')"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+            </button>
+
+            <!-- Rerun Action -->
+            <button 
+              v-if="canRerun(project)"
+              class="action-icon-btn rerun"
+              @click.stop="promptRerun(project)"
+              :title="$t('history.btnRerun')"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+              </svg>
+            </button>
+
+            <!-- View active simulation running -->
+            <button 
+              v-if="isRunning(project)"
+              class="action-icon-btn follow"
+              @click.stop="goToActiveSimulation(project)"
+              title="Suivre la simulation"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+
+            <!-- Report Action -->
+            <button 
+              v-if="project.report_id"
+              class="action-icon-btn report"
+              @click.stop="goToReportDirect(project.report_id)"
+              :title="$t('history.analysisReport')"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </button>
+
+            <span class="action-separator"></span>
+
+            <!-- Delete Action -->
+            <button 
+              class="action-icon-btn delete"
+              @click.stop="promptDelete(project)"
+              :title="$t('history.btnDelete')"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="!loading" class="empty-state">
+      <span class="empty-icon">◇</span>
+      <span>Aucune simulation trouvée</span>
+    </div>
+
+    <!-- Loading State -->
     <div v-if="loading" class="loading-state">
       <span class="loading-spinner"></span>
       <span class="loading-text">{{ $t('history.loadingText') }}</span>
     </div>
 
-    <!-- 历史回放详情弹窗 -->
+    <!-- History Replay Details Modal (keeps the exact same view logic) -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="selectedProject" class="modal-overlay" @click.self="closeModal">
           <div class="modal-content">
-            <!-- 弹窗头部 -->
+            <!-- Modal Header -->
             <div class="modal-header">
               <div class="modal-title-section">
                 <span class="modal-id">{{ formatSimulationId(selectedProject.simulation_id) }}</span>
@@ -122,15 +228,15 @@
               <button class="modal-close" @click="closeModal">×</button>
             </div>
 
-            <!-- 弹窗内容 -->
+            <!-- Modal Body -->
             <div class="modal-body">
-              <!-- 模拟需求 -->
+              <!-- Requirement -->
               <div class="modal-section">
                 <div class="modal-label">{{ $t('history.simRequirement') }}</div>
                 <div class="modal-requirement">{{ selectedProject.simulation_requirement || $t('common.none') }}</div>
               </div>
 
-              <!-- 文件列表 -->
+              <!-- Files -->
               <div class="modal-section">
                 <div class="modal-label">{{ $t('history.relatedFiles') }}</div>
                 <div class="modal-files" v-if="selectedProject.files && selectedProject.files.length > 0">
@@ -143,14 +249,14 @@
               </div>
             </div>
 
-            <!-- 推演回放分割线 -->
+            <!-- Replay Section Divider -->
             <div class="modal-divider">
               <span class="divider-line"></span>
               <span class="divider-text">{{ $t('history.replayTitle') }}</span>
               <span class="divider-line"></span>
             </div>
 
-            <!-- 导航按钮 -->
+            <!-- Navigation Actions -->
             <div class="modal-actions">
               <button 
                 class="modal-btn btn-project" 
@@ -179,9 +285,27 @@
                 <span class="btn-text">{{ $t('history.step4Button') }}</span>
               </button>
             </div>
-            <!-- 不可回放提示 -->
+            <!-- Playback hint -->
             <div class="modal-playback-hint">
               <span class="hint-text">{{ $t('history.replayHint') }}</span>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Custom Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="confirmDialog.show" class="modal-overlay" @click.self="closeConfirm">
+          <div class="confirm-modal-content">
+            <h4 class="confirm-title">{{ confirmDialog.title }}</h4>
+            <p class="confirm-desc">{{ confirmDialog.message }}</p>
+            <div class="confirm-actions">
+              <button class="confirm-btn cancel" @click="closeConfirm">{{ $t('common.cancel') }}</button>
+              <button class="confirm-btn confirm" :class="confirmDialog.type" @click="handleConfirm">
+                {{ $t('common.confirm') }}
+              </button>
             </div>
           </div>
         </div>
@@ -191,123 +315,283 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, onActivated, watch, nextTick } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { getSimulationHistory } from '../api/simulation'
+import { getSimulationHistory, deleteSimulation } from '../api/simulation'
 
 const router = useRouter()
-const route = useRoute()
 const { t } = useI18n()
 
-// 状态
+// Data states
 const projects = ref([])
 const loading = ref(true)
-const isExpanded = ref(false)
-const hoveringCard = ref(null)
-const historyContainer = ref(null)
-const selectedProject = ref(null)  // 当前选中的项目（用于弹窗）
-let observer = null
-let isAnimating = false  // 动画锁，防止闪烁
-let expandDebounceTimer = null  // 防抖定时器
-let pendingState = null  // 记录待执行的目标状态
+const selectedProject = ref(null)
 
-// 卡片布局配置 - 调整为更宽的比例
-const CARDS_PER_ROW = 4
-const CARD_WIDTH = 280  
-const CARD_HEIGHT = 280 
-const CARD_GAP = 24
+// Search & Filter states
+const searchQuery = ref('')
+const currentStatusFilter = ref('all')
+const currentModeFilter = ref('all')
 
-// 动态计算容器高度样式
-const containerStyle = computed(() => {
-  if (!isExpanded.value) {
-    // 折叠态：固定高度
-    return { minHeight: '420px' }
-  }
-  
-  // 展开态：根据卡片数量动态计算高度
-  const total = projects.value.length
-  if (total === 0) {
-    return { minHeight: '280px' }
-  }
-  
-  const rows = Math.ceil(total / CARDS_PER_ROW)
-  // 计算实际需要的高度：行数 * 卡片高度 + (行数-1) * 间距 + 少量底部间距
-  const expandedHeight = rows * CARD_HEIGHT + (rows - 1) * CARD_GAP + 10
-  
-  return { minHeight: `${expandedHeight}px` }
+// Confirmation Dialog State
+const confirmDialog = ref({
+  show: false,
+  title: '',
+  message: '',
+  type: '', // 'delete' | 'rerun'
+  project: null
 })
 
-// 获取卡片样式
-const getCardStyle = (index) => {
-  const total = projects.value.length
-  
-  if (isExpanded.value) {
-    // 展开态：网格布局
-    const transition = 'transform 700ms cubic-bezier(0.23, 1, 0.32, 1), opacity 700ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s ease, border-color 0.3s ease'
+// Translation helpers
+const statusOptions = computed(() => [
+  { value: 'all', label: t('history.all') },
+  { value: 'running', label: t('common.running') },
+  { value: 'paused', label: 'En pause' },
+  { value: 'completed', label: t('common.completed') },
+  { value: 'failed', label: t('common.failed') }
+])
 
-    const col = index % CARDS_PER_ROW
-    const row = Math.floor(index / CARDS_PER_ROW)
-    
-    // 计算当前行的卡片数量，确保每行居中
-    const currentRowStart = row * CARDS_PER_ROW
-    const currentRowCards = Math.min(CARDS_PER_ROW, total - currentRowStart)
-    
-    const rowWidth = currentRowCards * CARD_WIDTH + (currentRowCards - 1) * CARD_GAP
-    
-    const startX = -(rowWidth / 2) + (CARD_WIDTH / 2)
-    const colInRow = index % CARDS_PER_ROW
-    const x = startX + colInRow * (CARD_WIDTH + CARD_GAP)
-    
-    // 向下展开，增加与标题的间距
-    const y = 20 + row * (CARD_HEIGHT + CARD_GAP)
+const modeOptions = computed(() => [
+  { value: 'all', label: t('history.all') },
+  { value: 'courtroom', label: 'Judiciaire' },
+  { value: 'social', label: 'Réseau Social' },
+  { value: 'benchmark', label: "Banc d'Essai" }
+])
 
-    return {
-      transform: `translate(${x}px, ${y}px) rotate(0deg) scale(1)`,
-      zIndex: 100 + index,
-      opacity: 1,
-      transition: transition
+// Load historical items
+const loadHistory = async () => {
+  try {
+    loading.value = true
+    const response = await getSimulationHistory(30)
+    if (response.success) {
+      projects.value = response.data || []
     }
-  } else {
-    // 折叠态：扇形堆叠
-    const transition = 'transform 700ms cubic-bezier(0.23, 1, 0.32, 1), opacity 700ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s ease, border-color 0.3s ease'
-
-    const centerIndex = (total - 1) / 2
-    const offset = index - centerIndex
-    
-    const x = offset * 35
-    // 调整起始位置，靠近标题但保持适当间距
-    const y = 25 + Math.abs(offset) * 8
-    const r = offset * 3
-    const s = 0.95 - Math.abs(offset) * 0.05
-    
-    return {
-      transform: `translate(${x}px, ${y}px) rotate(${r}deg) scale(${s})`,
-      zIndex: 10 + index,
-      opacity: 1,
-      transition: transition
-    }
+  } catch (error) {
+    console.error('Failed to load history:', error)
+    projects.value = []
+  } finally {
+    loading.value = false
   }
 }
 
-// 根据轮数进度获取样式类
+// Watch filters to reload if needed, or simply filter client-side
+const filteredProjects = computed(() => {
+  return projects.value.filter(project => {
+    // 1. Text Search
+    if (searchQuery.value.trim()) {
+      const q = searchQuery.value.toLowerCase()
+      const matchesId = project.simulation_id.toLowerCase().includes(q)
+      const matchesRequirement = (project.simulation_requirement || '').toLowerCase().includes(q)
+      if (!matchesId && !matchesRequirement) return false
+    }
+
+    // 2. Status Filter
+    if (currentStatusFilter.value !== 'all') {
+      const status = (project.runner_status || project.status || '').toLowerCase()
+      if (currentStatusFilter.value === 'running') {
+        if (status !== 'running' && status !== 'starting') return false
+      } else if (currentStatusFilter.value === 'paused') {
+        if (status !== 'paused') return false
+      } else if (currentStatusFilter.value === 'completed') {
+        if (status !== 'completed') return false
+      } else if (currentStatusFilter.value === 'failed') {
+        if (status !== 'failed' && status !== 'stopped') return false
+      }
+    }
+
+    // 3. Mode Filter
+    if (currentModeFilter.value !== 'all') {
+      const isBenchmark = project.simulation_id.startsWith('sim_proof_')
+      if (currentModeFilter.value === 'benchmark') {
+        if (!isBenchmark) return false
+      } else if (currentModeFilter.value === 'courtroom') {
+        if (isBenchmark || project.run_mode !== 'courtroom') return false
+      } else if (currentModeFilter.value === 'social') {
+        if (isBenchmark || (project.run_mode !== 'social' && project.run_mode !== 'oasis')) return false
+      }
+    }
+
+    return true
+  })
+})
+
+// Progress class helper
 const getProgressClass = (simulation) => {
   const current = simulation.current_round || 0
   const total = simulation.total_rounds || 0
+  const status = (simulation.runner_status || simulation.status || '').toLowerCase()
   
-  if (total === 0 || current === 0) {
-    // 未开始
-    return 'not-started'
-  } else if (current >= total) {
-    // 已完成
-    return 'completed'
-  } else {
-    // 进行中
+  if (status === 'running' || status === 'starting') {
     return 'in-progress'
+  } else if (status === 'paused') {
+    return 'paused'
+  } else if (status === 'completed' || current >= total && total > 0) {
+    return 'completed'
+  } else if (status === 'failed' || status === 'stopped') {
+    return 'failed'
+  }
+  return 'not-started'
+}
+
+// Get status label helper
+const getStatusLabel = (project) => {
+  const status = (project.runner_status || project.status || '').toLowerCase()
+  if (status === 'running' || status === 'starting') return t('common.running')
+  if (status === 'paused') return 'En pause'
+  if (status === 'completed') return t('common.completed')
+  if (status === 'failed') return t('common.failed')
+  if (status === 'stopped') return 'Arrêté'
+  return t('common.pending')
+}
+
+// Get mode label helper
+const getModeLabel = (project) => {
+  if (project.simulation_id.startsWith('sim_proof_')) return "Banc d'Essai"
+  if (project.run_mode === 'social' || project.run_mode === 'oasis') return "Réseau Social"
+  return "Judiciaire"
+}
+
+// Helpers for direct action conditions
+const canResume = (project) => {
+  const status = (project.runner_status || project.status || '').toLowerCase()
+  return (status === 'paused' || status === 'stopped' || status === 'failed')
+}
+
+const canRerun = (project) => {
+  const status = (project.runner_status || project.status || '').toLowerCase()
+  return (status === 'completed' || status === 'stopped' || status === 'failed' || status === 'paused' || status === 'idle')
+}
+
+const isRunning = (project) => {
+  const status = (project.runner_status || project.status || '').toLowerCase()
+  return (status === 'running' || status === 'starting')
+}
+
+// Actions handlers
+const promptResume = (project) => {
+  goToActiveSimulation(project, true)
+}
+
+const promptRerun = (project) => {
+  confirmDialog.value = {
+    show: true,
+    title: t('history.confirmTitle'),
+    message: t('history.confirmRerun'),
+    type: 'rerun',
+    project
   }
 }
 
-// 格式化日期（只显示日期部分）
+const promptDelete = (project) => {
+  confirmDialog.value = {
+    show: true,
+    title: t('history.confirmTitle'),
+    message: t('history.confirmDelete'),
+    type: 'delete',
+    project
+  }
+}
+
+const closeConfirm = () => {
+  confirmDialog.value.show = false
+  confirmDialog.value.project = null
+}
+
+const handleConfirm = async () => {
+  const project = confirmDialog.value.project
+  const type = confirmDialog.value.type
+  closeConfirm()
+  
+  if (!project) return
+  
+  if (type === 'delete') {
+    try {
+      loading.value = true
+      const res = await deleteSimulation({ simulation_id: project.simulation_id })
+      if (res.success) {
+        await loadHistory()
+      } else {
+        alert(res.error || t('history.deleteError'))
+      }
+    } catch (err) {
+      console.error(err)
+      alert(t('history.deleteError'))
+    } finally {
+      loading.value = false
+    }
+  } else if (type === 'rerun') {
+    // Navigate to step 3 in rerun mode
+    router.push({
+      name: 'SimulationRun',
+      params: { simulationId: project.simulation_id },
+      query: { 
+        runMode: project.run_mode || 'courtroom',
+        maxRounds: project.total_rounds || null,
+        force: 'true' 
+      }
+    })
+  }
+}
+
+const goToActiveSimulation = (project, resume = false) => {
+  router.push({
+    name: 'SimulationRun',
+    params: { simulationId: project.simulation_id },
+    query: { 
+      runMode: project.run_mode || 'courtroom',
+      maxRounds: project.total_rounds || null,
+      resume: resume ? 'true' : 'false'
+    }
+  })
+}
+
+// Navigation methods for detail modal
+const navigateToProject = (simulation) => {
+  selectedProject.value = simulation
+}
+
+const closeModal = () => {
+  selectedProject.value = null
+}
+
+const goToProject = () => {
+  if (selectedProject.value?.project_id) {
+    router.push({
+      name: 'Process',
+      params: { projectId: selectedProject.value.project_id }
+    })
+    closeModal()
+  }
+}
+
+const goToSimulation = () => {
+  if (selectedProject.value?.simulation_id) {
+    router.push({
+      name: 'Simulation',
+      params: { simulationId: selectedProject.value.simulation_id }
+    })
+    closeModal()
+  }
+}
+
+const goToReport = () => {
+  if (selectedProject.value?.report_id) {
+    router.push({
+      name: 'Report',
+      params: { reportId: selectedProject.value.report_id }
+    })
+    closeModal()
+  }
+}
+
+const goToReportDirect = (reportId) => {
+  router.push({
+    name: 'Report',
+    params: { reportId }
+  })
+}
+
+// Format utilities
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   try {
@@ -318,7 +602,6 @@ const formatDate = (dateStr) => {
   }
 }
 
-// 格式化时间（显示时:分）
 const formatTime = (dateStr) => {
   if (!dateStr) return ''
   try {
@@ -331,27 +614,28 @@ const formatTime = (dateStr) => {
   }
 }
 
-// 截断文本
 const truncateText = (text, maxLength) => {
   if (!text) return ''
   return text.length > maxLength ? text.slice(0, maxLength) + '...' : text
 }
 
-// 从模拟需求生成标题（取前20字）
 const getSimulationTitle = (requirement) => {
   if (!requirement) return t('history.untitledSimulation')
-  const title = requirement.slice(0, 20)
-  return requirement.length > 20 ? title + '...' : title
+  const title = requirement.slice(0, 32)
+  return requirement.length > 32 ? title + '...' : title
 }
 
-// 格式化 simulation_id 显示（截取前6位）
 const formatSimulationId = (simulationId) => {
   if (!simulationId) return 'SIM_UNKNOWN'
+  if (simulationId.startsWith('sim_proof_')) {
+    const parts = simulationId.split('_')
+    const type = parts[2] || 'proof'
+    return `PIE_${type.toUpperCase()}`
+  }
   const prefix = simulationId.replace('sim_', '').slice(0, 6)
   return `SIM_${prefix.toUpperCase()}`
 }
 
-// 格式化轮数显示（当前轮/总轮数）
 const formatRounds = (simulation) => {
   const current = simulation.current_round || 0
   const total = simulation.total_rounds || 0
@@ -359,7 +643,6 @@ const formatRounds = (simulation) => {
   return t('history.roundsProgress', { current, total })
 }
 
-// 获取文件类型（用于样式）
 const getFileType = (filename) => {
   if (!filename) return 'other'
   const ext = filename.split('.').pop()?.toLowerCase()
@@ -375,14 +658,12 @@ const getFileType = (filename) => {
   return typeMap[ext] || 'other'
 }
 
-// 获取文件类型标签文本
 const getFileTypeLabel = (filename) => {
   if (!filename) return 'FILE'
   const ext = filename.split('.').pop()?.toUpperCase()
   return ext || 'FILE'
 }
 
-// 截断文件名（保留扩展名）
 const truncateFilename = (filename, maxLength) => {
   if (!filename) return t('history.unknownFile')
   if (filename.length <= maxLength) return filename
@@ -393,201 +674,28 @@ const truncateFilename = (filename, maxLength) => {
   return truncatedName + ext
 }
 
-// 打开项目详情弹窗
-const navigateToProject = (simulation) => {
-  selectedProject.value = simulation
-}
-
-// 关闭弹窗
-const closeModal = () => {
-  selectedProject.value = null
-}
-
-// 导航到图谱构建页面（Project）
-const goToProject = () => {
-  if (selectedProject.value?.project_id) {
-    router.push({
-      name: 'Process',
-      params: { projectId: selectedProject.value.project_id }
-    })
-    closeModal()
-  }
-}
-
-// 导航到环境配置页面（Simulation）
-const goToSimulation = () => {
-  if (selectedProject.value?.simulation_id) {
-    router.push({
-      name: 'Simulation',
-      params: { simulationId: selectedProject.value.simulation_id }
-    })
-    closeModal()
-  }
-}
-
-// 导航到分析报告页面（Report）
-const goToReport = () => {
-  if (selectedProject.value?.report_id) {
-    router.push({
-      name: 'Report',
-      params: { reportId: selectedProject.value.report_id }
-    })
-    closeModal()
-  }
-}
-
-// 加载历史项目
-const loadHistory = async () => {
-  try {
-    loading.value = true
-    const response = await getSimulationHistory(20)
-    if (response.success) {
-      projects.value = response.data || []
-    }
-  } catch (error) {
-    console.error('加载历史项目失败:', error)
-    projects.value = []
-  } finally {
-    loading.value = false
-  }
-}
-
-// 初始化 IntersectionObserver
-const initObserver = () => {
-  if (observer) {
-    observer.disconnect()
-  }
-  
-  observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        const shouldExpand = entry.isIntersecting
-        
-        // 更新待执行的目标状态（无论是否在动画中都要记录最新的目标状态）
-        pendingState = shouldExpand
-        
-        // 清除之前的防抖定时器（新的滚动意图会覆盖旧的）
-        if (expandDebounceTimer) {
-          clearTimeout(expandDebounceTimer)
-          expandDebounceTimer = null
-        }
-        
-        // 如果正在动画中，只记录状态，等动画结束后处理
-        if (isAnimating) return
-        
-        // 如果目标状态与当前状态相同，不需要处理
-        if (shouldExpand === isExpanded.value) {
-          pendingState = null
-          return
-        }
-        
-        // 使用防抖延迟状态切换，防止快速闪烁
-        // 展开时延迟较短(50ms)，收起时延迟较长(200ms)以增加稳定性
-        const delay = shouldExpand ? 50 : 200
-        
-        expandDebounceTimer = setTimeout(() => {
-          // 检查是否正在动画
-          if (isAnimating) return
-          
-          // 检查待执行状态是否仍需要执行（可能已被后续滚动覆盖）
-          if (pendingState === null || pendingState === isExpanded.value) return
-          
-          // 设置动画锁
-          isAnimating = true
-          isExpanded.value = pendingState
-          pendingState = null
-          
-          // 动画完成后解除锁定，并检查是否有待处理的状态变化
-          setTimeout(() => {
-            isAnimating = false
-            
-            // 动画结束后，检查是否有新的待执行状态
-            if (pendingState !== null && pendingState !== isExpanded.value) {
-              // 延迟一小段时间再执行，避免太快切换
-              expandDebounceTimer = setTimeout(() => {
-                if (pendingState !== null && pendingState !== isExpanded.value) {
-                  isAnimating = true
-                  isExpanded.value = pendingState
-                  pendingState = null
-                  setTimeout(() => {
-                    isAnimating = false
-                  }, 750)
-                }
-              }, 100)
-            }
-          }, 750)
-        }, delay)
-      })
-    },
-    {
-      // 使用多个阈值，使检测更平滑
-      threshold: [0.4, 0.6, 0.8],
-      // 调整 rootMargin，视口底部向上收缩，需要滚动更多才触发展开
-      rootMargin: '0px 0px -150px 0px'
-    }
-  )
-  
-  // 开始观察
-  if (historyContainer.value) {
-    observer.observe(historyContainer.value)
-  }
-}
-
-// 监听路由变化，当返回首页时重新加载数据
-watch(() => route.path, (newPath) => {
-  if (newPath === '/') {
-    loadHistory()
-  }
-})
-
-onMounted(async () => {
-  // 确保 DOM 渲染完成后再加载数据
-  await nextTick()
-  await loadHistory()
-  
-  // 等待 DOM 渲染后初始化观察器
-  setTimeout(() => {
-    initObserver()
-  }, 100)
-})
-
-// 如果使用 keep-alive，在组件激活时重新加载数据
-onActivated(() => {
+onMounted(() => {
   loadHistory()
-})
-
-onUnmounted(() => {
-  // 清理 Intersection Observer
-  if (observer) {
-    observer.disconnect()
-    observer = null
-  }
-  // 清理防抖定时器
-  if (expandDebounceTimer) {
-    clearTimeout(expandDebounceTimer)
-    expandDebounceTimer = null
-  }
 })
 </script>
 
 <style scoped>
-/* 容器 */
-.history-database {
+/* Main Container styling (Light Slate premium theme - Less dark) */
+.history-database-premium {
   position: relative;
   width: 100%;
-  min-height: 280px;
-  margin-top: 40px;
-  padding: 35px 0 40px;
+  min-height: 380px;
+  margin-top: 50px;
+  padding: 40px 24px 60px;
+  background: radial-gradient(circle at top, #F8FAFC 0%, #E2E8F0 100%);
+  border: 1px solid #CBD5E1;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
   overflow: visible;
+  z-index: 10;
 }
 
-/* 无项目时简化显示 */
-.history-database.no-projects {
-  min-height: auto;
-  padding: 40px 0 20px;
-}
-
-/* 技术网格背景 */
+/* Background overlay lines */
 .tech-grid-bg {
   position: absolute;
   top: 0;
@@ -596,9 +704,9 @@ onUnmounted(() => {
   bottom: 0;
   overflow: hidden;
   pointer-events: none;
+  border-radius: 12px;
 }
 
-/* 使用CSS背景图案创建固定间距的正方形网格 */
 .grid-pattern {
   position: absolute;
   top: 0;
@@ -606,10 +714,9 @@ onUnmounted(() => {
   right: 0;
   bottom: 0;
   background-image: 
-    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
-  background-size: 50px 50px;
-  /* 从左上角开始定位，高度变化时只在底部扩展，不影响已有网格位置 */
+    linear-gradient(to right, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
   background-position: top left;
 }
 
@@ -620,647 +727,673 @@ onUnmounted(() => {
   right: 0;
   bottom: 0;
   background: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.9) 0%, transparent 15%, transparent 85%, rgba(255, 255, 255, 0.9) 100%),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.8) 0%, transparent 20%, transparent 80%, rgba(255, 255, 255, 0.8) 100%);
-  pointer-events: none;
+    linear-gradient(to bottom, rgba(248, 250, 252, 0.1) 0%, rgba(226, 232, 240, 0.6) 100%);
 }
 
-/* 标题区域 */
+/* Section Header */
 .section-header {
   position: relative;
-  z-index: 100;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 24px;
-  margin-bottom: 24px;
-  font-family: 'JetBrains Mono', 'SF Mono', monospace;
-  padding: 0 40px;
+  margin-bottom: 30px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .section-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #E5E7EB, transparent);
-  max-width: 300px;
+  background: linear-gradient(90deg, transparent, rgba(197, 168, 128, 0.4), transparent);
+  max-width: 250px;
 }
 
 .section-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #8C6D3B; /* Bronze/gold */
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(197, 168, 128, 0.1);
+}
+
+/* Search & Filter Controls Panel styling */
+.search-filter-panel {
+  position: relative;
+  z-index: 5;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 35px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+}
+
+.search-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 42px;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  color: #0F172A;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #C5A880;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(197, 168, 128, 0.15);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 14px;
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.clear-search-btn:hover {
+  color: #0F172A;
+}
+
+/* Filters Row */
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-grow: 1;
+}
+
+.filter-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #8C6D3B;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.filter-options {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filter-tab-btn {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+  color: #475569;
+  padding: 6px 12px;
   font-size: 0.8rem;
   font-weight: 500;
-  color: #9CA3AF;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-}
-
-/* 卡片容器 */
-.cards-container {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 0 40px;
-  transition: min-height 700ms cubic-bezier(0.23, 1, 0.32, 1);
-  /* min-height 由 JS 动态计算，根据卡片数量自适应 */
-}
-
-/* 项目卡片 */
-.project-card {
-  position: absolute;
-  width: 280px;
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
-  border-radius: 0;
-  padding: 14px;
   cursor: pointer;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 700ms cubic-bezier(0.23, 1, 0.32, 1), opacity 700ms cubic-bezier(0.23, 1, 0.32, 1);
+  transition: all 0.2s ease;
 }
 
-.project-card:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.4);
-  z-index: 1000 !important;
+.filter-tab-btn:hover {
+  background: #FFFFFF;
+  color: #0F172A;
+  border-color: #CBD5E1;
 }
 
-.project-card.hovering {
-  z-index: 1000 !important;
+.filter-tab-btn.active {
+  background: #9A7B56;
+  border-color: #9A7B56;
+  color: #FFFFFF;
+  font-weight: 600;
 }
 
-/* 卡片头部 */
-.card-header {
+/* Premium Responsive Grid */
+.premium-cards-grid {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+/* Premium Project Card (Sleek light premium card) */
+.premium-project-card {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.04);
+  position: relative;
+}
+
+.premium-project-card:hover {
+  transform: translateY(-4px);
+  background: #FFFFFF;
+  border-color: rgba(197, 168, 128, 0.6);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+/* Card Header */
+.premium-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #F3F4F6;
-  font-family: 'JetBrains Mono', 'SF Mono', monospace;
-  font-size: 0.7rem;
 }
 
-.card-id {
-  color: #6B7280;
-  letter-spacing: 0.5px;
-  font-weight: 500;
-}
-
-/* 功能状态图标组 */
-.card-status-icons {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.status-icon {
+.premium-card-id {
+  font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
-  transition: all 0.2s ease;
-  cursor: default;
+  font-weight: 700;
+  color: #8C6D3B;
 }
 
-.status-icon.available {
-  opacity: 1;
-}
-
-/* 不同功能的颜色 */
-.status-icon:nth-child(1).available { color: #3B82F6; } /* 图谱构建 - 蓝色 */
-.status-icon:nth-child(2).available { color: #F59E0B; } /* 环境搭建 - 橙色 */
-.status-icon:nth-child(3).available { color: #10B981; } /* 分析报告 - 绿色 */
-
-.status-icon.unavailable {
-  color: #D1D5DB;
-  opacity: 0.5;
-}
-
-/* 轮数进度显示 */
-.card-progress {
+.badges-group {
   display: flex;
   align-items: center;
-  gap: 6px;
-  letter-spacing: 0.5px;
-  font-weight: 600;
-  font-size: 0.65rem;
+  gap: 8px;
 }
 
-.status-dot {
-  font-size: 0.5rem;
-}
-
-/* 进度状态颜色 */
-.card-progress.completed { color: #10B981; }    /* 已完成 - 绿色 */
-.card-progress.in-progress { color: #F59E0B; }  /* 进行中 - 橙色 */
-.card-progress.not-started { color: #9CA3AF; }  /* 未开始 - 灰色 */
-.card-status.pending { color: #9CA3AF; }
-
-/* 文件列表区域 */
-.card-files-wrapper {
-  position: relative;
-  width: 100%;
-  min-height: 48px;
-  max-height: 110px;
-  margin-bottom: 12px;
-  padding: 8px 10px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%);
-  border-radius: 4px;
-  border: 1px solid #e8eaed;
-  overflow: hidden;
-}
-
-.files-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-/* 更多文件提示 */
-.files-more {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3px 6px;
+.mode-tag {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.6rem;
-  color: #6B7280;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 3px;
-  letter-spacing: 0.3px;
-}
-
-.file-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 6px;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 3px;
-  transition: all 0.2s ease;
-}
-
-.file-item:hover {
-  background: rgba(255, 255, 255, 1);
-  transform: translateX(2px);
-  border-color: #e5e7eb;
-}
-
-/* 简约文件标签样式 */
-.file-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 2px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.55rem;
-  font-weight: 600;
-  line-height: 1;
-  text-transform: uppercase;
-  letter-spacing: 0.2px;
-  flex-shrink: 0;
-  min-width: 28px;
-}
-
-/* 低饱和度配色方案 - Morandi色系 */
-.file-tag.pdf { background: #f2e6e6; color: #a65a5a; }
-.file-tag.doc { background: #e6eff5; color: #5a7ea6; }
-.file-tag.xls { background: #e6f2e8; color: #5aa668; }
-.file-tag.ppt { background: #f5efe6; color: #a6815a; }
-.file-tag.txt { background: #f0f0f0; color: #757575; }
-.file-tag.code { background: #eae6f2; color: #815aa6; }
-.file-tag.img { background: #e6f2f2; color: #5aa6a6; }
-.file-tag.zip { background: #f2f0e6; color: #a69b5a; }
-.file-tag.other { background: #f3f4f6; color: #6b7280; }
-
-.file-name {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.7rem;
-  color: #4b5563;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: 0.1px;
-}
-
-/* 无文件时的占位 */
-.files-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 48px;
-  color: #9CA3AF;
-}
-
-.empty-file-icon {
-  font-size: 1rem;
-  opacity: 0.5;
-}
-
-.empty-file-text {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.5px;
-}
-
-/* 悬停时文件区域效果 */
-.project-card:hover .card-files-wrapper {
-  border-color: #d1d5db;
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-}
-
-/* 角落装饰 */
-.corner-mark.top-left-only {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  width: 8px;
-  height: 8px;
-  border-top: 1.5px solid rgba(0, 0, 0, 0.4);
-  border-left: 1.5px solid rgba(0, 0, 0, 0.4);
-  pointer-events: none;
-  z-index: 10;
-}
-
-/* 卡片标题 */
-.card-title {
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-size: 0.9rem;
   font-weight: 700;
-  color: #111827;
-  margin: 0 0 6px 0;
-  line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color 0.3s ease;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
 }
 
-.project-card:hover .card-title {
+.mode-tag.courtroom {
+  background: rgba(59, 130, 246, 0.1);
   color: #2563EB;
 }
 
-/* 卡片描述 */
-.card-desc {
+.mode-tag.social, .mode-tag.oasis {
+  background: rgba(139, 92, 246, 0.1);
+  color: #7C3AED;
+}
+
+.mode-tag.benchmark {
+  background: rgba(236, 72, 153, 0.1);
+  color: #DB2777;
+}
+
+.progress-tag {
   font-family: 'Inter', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress-tag .status-dot {
+  font-size: 0.5rem;
+}
+
+.progress-tag.completed { color: #059669; }
+.progress-tag.in-progress { color: #D97706; }
+.progress-tag.paused { color: #2563EB; }
+.progress-tag.failed { color: #DC2626; }
+.progress-tag.not-started { color: #475569; }
+
+/* Files Pill Strip */
+.premium-files-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 6px 8px;
+  background: #F1F5F9;
+  border-radius: 4px;
+  border: 1px solid #E2E8F0;
+}
+
+.premium-file-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  color: #475569;
+  max-width: 140px;
+}
+
+.file-pill-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  font-weight: 700;
+  padding: 1px 3px;
+  border-radius: 2px;
+  line-height: 1;
+}
+
+.file-pill-tag.pdf { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
+.file-pill-tag.doc { background: rgba(59, 130, 246, 0.1); color: #3B82F6; }
+.file-pill-tag.xls { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+.file-pill-tag.txt { background: rgba(107, 114, 128, 0.1); color: #6B7280; }
+.file-pill-tag.other { background: rgba(107, 114, 128, 0.05); color: #6B7280; }
+
+.file-pill-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.premium-file-pill-more {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+}
+
+/* Card Body */
+.premium-card-body {
+  flex-grow: 1;
+  margin-bottom: 16px;
+}
+
+.premium-card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0F172A;
+  margin: 0 0 6px 0;
+  line-height: 1.4;
+}
+
+.premium-card-desc {
   font-size: 0.75rem;
-  color: #6B7280;
-  margin: 0 0 16px 0;
+  color: #475569;
+  margin: 0;
   line-height: 1.5;
-  height: 34px;
+  height: 45px;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
 
-/* 卡片底部 */
-.card-footer {
-  position: relative;
+.premium-card-divider {
+  height: 1px;
+  background: #E2E8F0;
+  margin-bottom: 14px;
+}
+
+/* Card Footer */
+.premium-card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 12px;
-  border-top: 1px solid #F3F4F6;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  color: #9CA3AF;
-  font-weight: 500;
 }
 
-/* 日期时间组合 */
-.card-datetime {
+.footer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rounds-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #8C6D3B;
+}
+
+.date-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: #64748B;
+}
+
+.footer-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* 底部轮数进度显示 */
-.card-footer .card-progress {
+.action-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  color: #475569;
   display: flex;
   align-items: center;
-  gap: 6px;
-  letter-spacing: 0.5px;
-  font-weight: 600;
-  font-size: 0.65rem;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.card-footer .status-dot {
-  font-size: 0.5rem;
+.action-icon-btn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
 }
 
-/* 进度状态颜色 - 底部 */
-.card-footer .card-progress.completed { color: #10B981; }
-.card-footer .card-progress.in-progress { color: #F59E0B; }
-.card-footer .card-progress.not-started { color: #9CA3AF; }
-
-/* 底部装饰线 */
-.card-bottom-line {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  width: 0;
-  background-color: #000;
-  transition: width 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-  z-index: 20;
+.action-icon-btn.resume {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #059669;
 }
 
-.project-card:hover .card-bottom-line {
-  width: 100%;
+.action-icon-btn.resume:hover {
+  background: #10B981;
+  color: #FFFFFF;
+  border-color: #10B981;
 }
 
-/* 空状态 */
+.action-icon-btn.rerun {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #D97706;
+}
+
+.action-icon-btn.rerun:hover {
+  background: #F59E0B;
+  color: #FFFFFF;
+  border-color: #F59E0B;
+}
+
+.action-icon-btn.follow {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #2563EB;
+  animation: pulse-border 1.5s infinite;
+}
+
+.action-icon-btn.follow:hover {
+  background: #3B82F6;
+  color: #FFFFFF;
+  border-color: #3B82F6;
+}
+
+.action-icon-btn.report {
+  background: rgba(197, 168, 128, 0.15);
+  border-color: rgba(197, 168, 128, 0.3);
+  color: #8C6D3B;
+}
+
+.action-icon-btn.report:hover {
+  background: #C5A880;
+  color: #FFFFFF;
+  border-color: #C5A880;
+}
+
+.action-separator {
+  width: 1px;
+  height: 16px;
+  background: #E2E8F0;
+}
+
+.action-icon-btn.delete {
+  background: rgba(239, 68, 68, 0.05);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #EF4444;
+}
+
+.action-icon-btn.delete:hover {
+  background: #EF4444;
+  color: #FFFFFF;
+  border-color: #EF4444;
+}
+
+@keyframes pulse-border {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+/* Empty/Loading States */
 .empty-state, .loading-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  padding: 48px;
-  color: #9CA3AF;
+  padding: 60px 40px;
+  color: #64748B;
+  position: relative;
+  z-index: 5;
 }
 
 .empty-icon {
   font-size: 2rem;
-  opacity: 0.5;
+  color: #8C6D3B;
+  opacity: 0.8;
 }
 
 .loading-spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid #E5E7EB;
-  border-top-color: #6B7280;
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(15, 23, 42, 0.05);
+  border-top-color: #C5A880;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-/* 响应式 */
-@media (max-width: 1200px) {
-  .project-card {
-    width: 240px;
-  }
-}
-
-@media (max-width: 768px) {
-  .cards-container {
-    padding: 0 20px;
-  }
-  .project-card {
-    width: 200px;
-  }
-}
-
-/* ===== 历史回放详情弹窗样式 ===== */
+/* Modal details overlay */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  backdrop-filter: blur(4px);
 }
 
 .modal-content {
   background: #FFFFFF;
+  border: 1px solid #E2E8F0;
   width: 560px;
   max-width: 90vw;
-  max-height: 85vh;
-  overflow-y: auto;
-  border: 1px solid #E5E7EB;
   border-radius: 8px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+  overflow-y: auto;
+  max-height: 85vh;
 }
 
-/* 动画过渡 */
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-
-.modal-enter-active .modal-content {
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.modal-leave-active .modal-content {
-  transition: all 0.2s ease-in;
-}
-
-.modal-enter-from .modal-content {
-  transform: scale(0.95) translateY(10px);
-  opacity: 0;
-}
-
-.modal-leave-to .modal-content {
-  transform: scale(0.95) translateY(10px);
-  opacity: 0;
-}
-
-/* 弹窗头部 */
+/* Modal details header */
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 32px;
-  border-bottom: 1px solid #F3F4F6;
-  background: #FFFFFF;
+  padding: 16px 24px;
+  border-bottom: 1px solid #E2E8F0;
+  background: #F8FAFC;
 }
 
 .modal-title-section {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .modal-id {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #111827;
-  letter-spacing: 0.5px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #8C6D3B;
 }
 
 .modal-progress {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 3px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: #F9FAFB;
+  gap: 4px;
 }
 
-.modal-progress.completed { color: #10B981; background: rgba(16, 185, 129, 0.1); }
-.modal-progress.in-progress { color: #F59E0B; background: rgba(245, 158, 11, 0.1); }
-.modal-progress.not-started { color: #9CA3AF; background: #F3F4F6; }
+.modal-progress.completed { background: rgba(16, 185, 129, 0.15); color: #059669; }
+.modal-progress.in-progress { background: rgba(245, 158, 11, 0.15); color: #D97706; }
+.modal-progress.paused { background: rgba(59, 130, 246, 0.15); color: #2563EB; }
+.modal-progress.failed { background: rgba(239, 68, 68, 0.15); color: #DC2626; }
+.modal-progress.not-started { background: rgba(148, 163, 184, 0.1); color: #475569; }
 
 .modal-create-time {
+  font-size: 0.7rem;
+  color: #64748B;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  color: #9CA3AF;
-  letter-spacing: 0.3px;
 }
 
 .modal-close {
-  width: 32px;
-  height: 32px;
-  border: none;
   background: transparent;
+  border: none;
+  color: #94A3B8;
   font-size: 1.5rem;
-  color: #9CA3AF;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  border-radius: 6px;
 }
 
 .modal-close:hover {
-  background: #F3F4F6;
-  color: #111827;
+  color: #0F172A;
 }
 
-/* 弹窗内容 */
+/* Modal Body */
 .modal-body {
-  padding: 24px 32px;
+  padding: 20px 24px;
 }
 
 .modal-section {
-  margin-bottom: 24px;
-}
-
-.modal-section:last-child {
-  margin-bottom: 0;
+  margin-bottom: 20px;
 }
 
 .modal-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
-  color: #6B7280;
+  color: #8C6D3B;
   text-transform: uppercase;
   letter-spacing: 1px;
-  margin-bottom: 10px;
-  font-weight: 500;
+  margin-bottom: 8px;
 }
 
 .modal-requirement {
-  font-size: 0.95rem;
-  color: #374151;
+  font-size: 0.85rem;
+  color: #1E293B;
   line-height: 1.6;
-  padding: 16px;
-  background: #F9FAFB;
-  border: 1px solid #F3F4F6;
-  border-radius: 8px;
+  background: #F8FAFC;
+  padding: 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
 }
 
 .modal-files {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-height: 200px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-/* 自定义滚动条样式 */
-.modal-files::-webkit-scrollbar {
-  width: 4px;
-}
-
-.modal-files::-webkit-scrollbar-track {
-  background: #F3F4F6;
-  border-radius: 2px;
-}
-
-.modal-files::-webkit-scrollbar-thumb {
-  background: #D1D5DB;
-  border-radius: 2px;
-}
-
-.modal-files::-webkit-scrollbar-thumb:hover {
-  background: #9CA3AF;
+  gap: 8px;
 }
 
 .modal-file-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  gap: 10px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+  padding: 8px 12px;
 }
 
-.modal-file-item:hover {
-  border-color: #D1D5DB;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+.file-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
 }
+
+.file-tag.pdf { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
+.file-tag.doc { background: rgba(59, 130, 246, 0.1); color: #3B82F6; }
+.file-tag.xls { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+.file-tag.txt { background: rgba(107, 114, 128, 0.15); color: #475569; }
 
 .modal-file-name {
-  font-size: 0.85rem;
-  color: #4B5563;
-  flex: 1;
+  font-size: 0.8rem;
+  color: #475569;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .modal-empty {
-  font-size: 0.85rem;
-  color: #9CA3AF;
-  padding: 16px;
-  background: #F9FAFB;
-  border: 1px dashed #E5E7EB;
-  border-radius: 6px;
-  text-align: center;
+  font-size: 0.8rem;
+  color: #94A3B8;
+  font-style: italic;
 }
 
-/* 推演回放分割线 */
+/* Modal Divider */
 .modal-divider {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 10px 32px 0;
-  background: #FFFFFF;
+  padding: 0 24px;
 }
 
 .divider-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #E5E7EB, transparent);
+  background: #E2E8F0;
 }
 
 .divider-text {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  color: #9CA3AF;
+  font-size: 0.65rem;
+  color: #94A3B8;
   letter-spacing: 2px;
   text-transform: uppercase;
-  white-space: nowrap;
 }
 
-/* 导航按钮 */
+/* Modal Actions buttons */
 .modal-actions {
   display: flex;
-  gap: 16px;
-  padding: 20px 32px;
-  background: #FFFFFF;
+  gap: 12px;
+  padding: 20px 24px;
 }
 
 .modal-btn {
@@ -1268,75 +1401,152 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 16px;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  background: #FFFFFF;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
 }
 
 .modal-btn:hover:not(:disabled) {
-  border-color: #000000;
+  border-color: #C5A880;
+  background: #FFFFFF;
   transform: translateY(-2px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
 }
 
 .modal-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.3;
   cursor: not-allowed;
-  background: #F9FAFB;
 }
 
 .btn-step {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  font-weight: 500;
-  color: #9CA3AF;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  font-size: 0.55rem;
+  color: #64748B;
 }
 
 .btn-icon {
-  font-size: 1.4rem;
-  line-height: 1;
-  transition: color 0.2s ease;
+  font-size: 1.2rem;
 }
 
 .btn-text {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Inter', sans-serif;
   font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.5px;
-  color: #4B5563;
+  color: #1E293B;
 }
 
-.modal-btn.btn-project .btn-icon { color: #3B82F6; }
-.modal-btn.btn-simulation .btn-icon { color: #F59E0B; }
-.modal-btn.btn-report .btn-icon { color: #10B981; }
+.modal-btn.btn-project .btn-icon { color: #2563EB; }
+.modal-btn.btn-simulation .btn-icon { color: #D97706; }
+.modal-btn.btn-report .btn-icon { color: #059669; }
 
-.modal-btn:hover:not(:disabled) .btn-text {
-  color: #111827;
-}
-
-/* 不可回放提示 */
 .modal-playback-hint {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 32px 20px;
-  background: #FFFFFF;
+  padding: 0 24px 16px;
+  text-align: center;
 }
 
 .hint-text {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  color: #9CA3AF;
-  letter-spacing: 0.3px;
+  font-size: 0.65rem;
+  color: #64748B;
+  line-height: 1.4;
+}
+
+/* Custom Confirm Modal styling */
+.confirm-modal-content {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 24px;
+  width: 420px;
+  max-width: 90vw;
+  box-shadow: 0 25px 50px rgba(15, 23, 42, 0.12);
   text-align: center;
+  animation: scale-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes scale-up {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.confirm-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 12px;
+}
+
+.confirm-desc {
+  font-size: 0.85rem;
+  color: #475569;
   line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.confirm-btn {
+  padding: 8px 20px;
+  border-radius: 5px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.confirm-btn.cancel {
+  background: transparent;
+  border-color: #CBD5E1;
+  color: #475569;
+}
+
+.confirm-btn.cancel:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #CBD5E1;
+}
+
+.confirm-btn.confirm {
+  background: #C5A880;
+  color: #FFFFFF;
+}
+
+.confirm-btn.confirm:hover {
+  background: #D5B890;
+}
+
+.confirm-btn.confirm.delete {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+.confirm-btn.confirm.delete:hover {
+  background: #DC2626;
+}
+
+/* Modal Animations */
+.modal-enter-active, .modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-from, .modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-active .modal-content, .modal-enter-active .confirm-modal-content {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-enter-from .modal-content, .modal-enter-from .confirm-modal-content {
+  transform: scale(0.95);
+  opacity: 0;
 }
 </style>

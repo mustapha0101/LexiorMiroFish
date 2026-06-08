@@ -2,7 +2,10 @@
   <div class="process-page">
     <!-- 顶部导航栏 -->
     <nav class="navbar">
-      <div class="nav-brand" @click="goHome">MIROFISH</div>
+      <div class="nav-brand" @click="goHome">
+        <img src="/logo.png" class="brand-logo" alt="Lexior" />
+        <span class="brand-name">LEXIOR <span class="brand-sub">SIMULATOR</span></span>
+      </div>
       
       <!-- 中间步骤指示器 -->
       <div class="nav-center">
@@ -940,31 +943,98 @@ const renderGraph = () => {
   
   console.log('Nodes:', nodes.length, 'Edges:', edges.length)
   
-  // 颜色映射
+  // 颜色映射 - High-tech, sleek colors
   const types = [...new Set(nodes.map(n => n.type))]
   const colorScale = d3.scaleOrdinal()
     .domain(types)
-    .range(['#FF6B35', '#004E89', '#7B2D8E', '#1A936F', '#C5283D', '#E9724C', '#2D3436', '#6C5CE7'])
+    .range(['#3b82f6', '#10b981', '#a855f7', '#f59e0b', '#ef4444', '#14b8a6', '#64748b', '#ec4899'])
+  
+  // Calculate node degree for dynamic sizing
+  const degrees = {}
+  nodes.forEach(n => { degrees[n.id] = 0 })
+  edges.forEach(e => {
+    if (degrees[e.source] !== undefined) degrees[e.source]++
+    if (degrees[e.target] !== undefined) degrees[e.target]++
+  })
+  
+  const getRadius = d => 11 + Math.min(9, (degrees[d.id] || 0) * 1.8)
+
+  // Configure SVG Defs for modern aesthetics (Glow filters and markers)
+  const defs = svg.append('defs')
+  
+  // Glow filter
+  const filter = defs.append('filter')
+    .attr('id', 'neon-glow')
+    .attr('x', '-30%')
+    .attr('y', '-30%')
+    .attr('width', '160%')
+    .attr('height', '160%')
+    
+  filter.append('feGaussianBlur')
+    .attr('stdDeviation', '4')
+    .attr('result', 'blur')
+  
+  const feMerge = filter.append('feMerge')
+  feMerge.append('feMergeNode').attr('in', 'blur')
+  feMerge.append('feMergeNode').attr('in', 'SourceGraphic')
+  
+  // Drop shadow for nodes
+  const shadow = defs.append('filter')
+    .attr('id', 'node-shadow')
+    .attr('x', '-20%')
+    .attr('y', '-20%')
+    .attr('width', '140%')
+    .attr('height', '140%')
+  shadow.append('feDropShadow')
+    .attr('dx', '0')
+    .attr('dy', '4')
+    .attr('stdDeviation', '4')
+    .attr('flood-opacity', '0.15')
+    .attr('flood-color', '#0B1220')
+
+  // Relationship direction arrowheads
+  defs.append('marker')
+    .attr('id', 'arrowhead')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 26) // Compensate for node radius
+    .attr('refY', 0)
+    .attr('orient', 'auto')
+    .attr('markerWidth', 7)
+    .attr('markerHeight', 7)
+    .attr('xoverflow', 'visible')
+    .append('svg:path')
+    .attr('d', 'M 0,-4 L 8,0 L 0,4')
+    .attr('fill', '#94a3b8')
+    .style('stroke', 'none')
   
   // 力导向布局
   const simulation = d3.forceSimulation(nodes)
-    .force('link', d3.forceLink(edges).id(d => d.id).distance(100).strength(0.5))
-    .force('charge', d3.forceManyBody().strength(-300))
+    .force('link', d3.forceLink(edges).id(d => d.id).distance(120).strength(0.4))
+    .force('charge', d3.forceManyBody().strength(-350))
     .force('center', d3.forceCenter(width / 2, height / 2))
-    .force('collision', d3.forceCollide().radius(40))
-    .force('x', d3.forceX(width / 2).strength(0.05))
-    .force('y', d3.forceY(height / 2).strength(0.05))
+    .force('collision', d3.forceCollide().radius(d => getRadius(d) + 30))
+    .force('x', d3.forceX(width / 2).strength(0.06))
+    .force('y', d3.forceY(height / 2).strength(0.06))
   
   // 添加缩放功能
   const g = svg.append('g')
   
   svg.call(d3.zoom()
     .extent([[0, 0], [width, height]])
-    .scaleExtent([0.2, 4])
+    .scaleExtent([0.15, 3])
     .on('zoom', (event) => {
       g.attr('transform', event.transform)
     }))
   
+  // Hover connection helper mapping
+  const linkedByIndex = {}
+  edges.forEach(d => {
+    linkedByIndex[`${d.source},${d.target}`] = true
+    linkedByIndex[`${d.target},${d.source}`] = true
+  })
+  
+  const isConnected = (a, b) => linkedByIndex[`${a},${b}`] || a === b
+
   // 绘制边（包含可点击的透明宽线）
   const linkGroup = g.append('g')
     .attr('class', 'links')
@@ -978,16 +1048,18 @@ const renderGraph = () => {
       selectEdge(d.rawData)
     })
   
-  // 可见的细线
+  // 可见的细线 - modern sleek lines
   const link = linkGroup.append('line')
-    .attr('stroke', '#ccc')
-    .attr('stroke-width', 1.5)
+    .attr('stroke', '#cbd5e1')
+    .attr('stroke-width', 1.8)
     .attr('stroke-opacity', 0.6)
+    .attr('marker-end', 'url(#arrowhead)')
+    .style('transition', 'stroke 0.25s, stroke-width 0.25s, stroke-opacity 0.25s')
   
   // 透明的宽线用于点击
   linkGroup.append('line')
     .attr('stroke', 'transparent')
-    .attr('stroke-width', 10)
+    .attr('stroke-width', 12)
   
   // 边标签
   const linkLabel = g.append('g')
@@ -996,8 +1068,10 @@ const renderGraph = () => {
     .data(edges)
     .enter()
     .append('text')
-    .attr('font-size', '9px')
-    .attr('fill', '#999')
+    .attr('font-size', '8px')
+    .attr('fill', '#64748b')
+    .attr('font-weight', '600')
+    .attr('font-family', 'Inter, sans-serif')
     .attr('text-anchor', 'middle')
     .text(d => d.type.length > 15 ? d.type.substring(0, 12) + '...' : d.type)
   
@@ -1017,21 +1091,62 @@ const renderGraph = () => {
       .on('start', dragstarted)
       .on('drag', dragged)
       .on('end', dragended))
+      
+  // Interactive Hover Neighborhood Highlight
+  node.on('mouseover', function(event, d) {
+    node.selectAll('.node-circle').transition().duration(250)
+      .style('opacity', n => isConnected(d.id, n.id) ? 1.0 : 0.15)
+    node.selectAll('.node-halo').transition().duration(250)
+      .style('opacity', n => n.id === d.id ? 0.8 : (isConnected(d.id, n.id) ? 0.3 : 0.05))
+    node.selectAll('text').transition().duration(250)
+      .style('opacity', n => isConnected(d.id, n.id) ? 1.0 : 0.2)
+      .style('font-weight', n => n.id === d.id ? '700' : 'normal')
+      
+    linkGroup.selectAll('line').transition().duration(250)
+      .style('opacity', e => (e.source.id === d.id || e.target.id === d.id) ? 1.0 : 0.1)
+      .attr('stroke', e => (e.source.id === d.id || e.target.id === d.id) ? colorScale(d.type) : '#cbd5e1')
+      .attr('stroke-width', e => (e.source.id === d.id || e.target.id === d.id) ? 2.8 : 1.8)
+  }).on('mouseout', function() {
+    node.selectAll('.node-circle').transition().duration(250).style('opacity', 1.0)
+    node.selectAll('.node-halo').transition().duration(250).style('opacity', 1.0)
+    node.selectAll('text').transition().duration(250)
+      .style('opacity', 1.0)
+      .style('font-weight', '500')
+      
+    linkGroup.selectAll('line').transition().duration(250)
+      .style('opacity', 0.6)
+      .attr('stroke', '#cbd5e1')
+      .attr('stroke-width', 1.8)
+  })
   
+  // Glowing Halo (background ring)
   node.append('circle')
-    .attr('r', 10)
+    .attr('r', d => getRadius(d) + 5)
     .attr('fill', d => colorScale(d.type))
-    .attr('stroke', '#fff')
-    .attr('stroke-width', 2)
+    .attr('fill-opacity', 0.12)
+    .attr('stroke', d => colorScale(d.type))
+    .attr('stroke-opacity', 0.25)
+    .attr('stroke-width', 1)
+    .attr('class', 'node-halo')
+    
+  // Inner Core Circle
+  node.append('circle')
+    .attr('r', getRadius)
+    .attr('fill', d => colorScale(d.type))
+    .attr('stroke', '#ffffff')
+    .attr('stroke-width', 2.5)
     .attr('class', 'node-circle')
+    .attr('filter', 'url(#node-shadow)')
   
+  // Label text with soft translucent background pill
   node.append('text')
-    .attr('dx', 14)
+    .attr('dx', d => getRadius(d) + 6)
     .attr('dy', 4)
-    .text(d => d.name?.substring(0, 12) || '')
-    .attr('font-size', '11px')
-    .attr('fill', '#333')
-    .attr('font-family', 'JetBrains Mono, monospace')
+    .text(d => d.name)
+    .attr('font-size', '10px')
+    .attr('font-weight', '500')
+    .attr('fill', '#1e293b')
+    .attr('font-family', 'JetBrains Mono, Noto Sans SC, sans-serif')
   
   // 点击空白处关闭详情面板
   svg.on('click', () => {
@@ -1115,18 +1230,37 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: 0 24px;
   height: 56px;
-  background: #000;
+  background: #0B1220;
   color: #fff;
   z-index: 10;
   position: relative;
+  border-bottom: 1px solid #1A2333;
 }
 
 .nav-brand {
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
   transition: opacity 0.2s;
+}
+
+.brand-logo {
+  height: 24px;
+  width: auto;
+}
+
+.brand-name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  color: #FFFFFF;
+}
+
+.brand-sub {
+  color: #C5A880;
+  font-weight: 500;
 }
 
 .nav-brand:hover {

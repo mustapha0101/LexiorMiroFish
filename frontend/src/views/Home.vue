@@ -2,8 +2,14 @@
   <div class="home-container">
     <!-- 顶部导航栏 -->
     <nav class="navbar">
-      <div class="nav-brand">MIROFISH</div>
+      <div class="nav-brand" @click="router.push('/')">
+        <img src="/logo.png" class="brand-logo" alt="Lexior" />
+        <span class="brand-name">LEXIOR <span class="brand-sub">SIMULATOR</span></span>
+      </div>
       <div class="nav-links">
+        <button class="legal-sandbox-btn" @click="$router.push('/legal-simulator')">
+          ⚖️ Laboratoire Juridique
+        </button>
         <LanguageSwitcher />
         <a href="https://github.com/666ghj/MiroFish" target="_blank" class="github-link">
           {{ $t('nav.visitGithub') }} <span class="arrow">↗</span>
@@ -44,7 +50,7 @@
         <div class="hero-right">
           <!-- Logo 区域 -->
           <div class="logo-container">
-            <img src="../assets/logo/MiroFish_logo_left.jpeg" alt="MiroFish Logo" class="hero-logo" />
+            <img src="/logo.png" alt="Lexior Logo" class="hero-logo" />
           </div>
           
           <button class="scroll-down-btn" @click="scrollToBottom">
@@ -189,6 +195,38 @@
               </div>
             </div>
 
+            <!-- Options de Simulation -->
+            <div class="console-section">
+              <div class="console-header">
+                <span class="console-label">{{ $t('home.simulationMode') }}</span>
+              </div>
+              <div class="mode-selector-grid">
+                <div 
+                  class="mode-card" 
+                  :class="{ active: formData.simulationMode === 'social' }"
+                  @click="formData.simulationMode = 'social'"
+                >
+                  <div class="mode-card-header">
+                    <span class="mode-icon">💬</span>
+                    <span class="mode-title">{{ $t('home.modeSocial') }}</span>
+                  </div>
+                  <p class="mode-desc">Simulation d'opinion publique et propagation d'impact sur les réseaux sociaux (Twitter / Reddit) avec l'intégration du moteur d'intégrité cognitive PIE.</p>
+                </div>
+
+                <div 
+                  class="mode-card" 
+                  :class="{ active: formData.simulationMode === 'legal' }"
+                  @click="formData.simulationMode = 'legal'"
+                >
+                  <div class="mode-card-header">
+                    <span class="mode-icon">⚖️</span>
+                    <span class="mode-title">{{ $t('home.modeLegal') }}</span>
+                  </div>
+                  <p class="mode-desc">Simulation de procès contradictoire devant le Juge sur les faits du document.</p>
+                </div>
+              </div>
+            </div>
+
             <!-- 启动按钮 -->
             <div class="console-section btn-section">
               <button 
@@ -200,6 +238,214 @@
                 <span v-else>{{ $t('home.initializing') }}</span>
                 <span class="btn-arrow">→</span>
               </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section Preuves en Direct -->
+      <section class="live-proofs-section">
+        <div class="section-header-centered">
+          <span class="header-icon-gold">⚖️</span>
+          <h2 class="section-title-large">Banc d'Essai Scientifique (PIE Engine)</h2>
+          <p class="section-subtitle">Démonstration quantitative en temps réel des innovations théoriques de l'architecture cognitive Lexior.</p>
+        </div>
+
+        <div class="proofs-grid">
+          <!-- Preuve 1 : Hystérésis & Négociation Contractuelle -->
+          <div class="proof-card">
+            <div class="proof-card-header">
+              <span class="proof-num">PREUVE 1</span>
+              <h3 class="proof-title">Asymétrie Émotionnelle & Hystérésis de Négociation</h3>
+            </div>
+            <p class="proof-desc">
+              Démontre l'asymétrie de la confiance lors d'une négociation contractuelle. Une seule clause abusive suffit à rendre l'avocat méfiant, tandis qu'il faut 5 concessions consécutives pour restaurer la coopération.
+            </p>
+            <div class="proof-body">
+              <button 
+                class="proof-btn" 
+                @click="startHysteresisProof" 
+                :disabled="runningHysteresis"
+              >
+                <span v-if="runningHysteresis" class="loading-spinner-small"></span>
+                {{ runningHysteresis ? 'Simulation en cours...' : 'Exécuter en direct' }}
+              </button>
+
+              <div v-if="hysteresisSteps.length > 0" class="live-timeline">
+                <div 
+                  v-for="(step, idx) in hysteresisSteps" 
+                  :key="idx" 
+                  class="timeline-step-item"
+                  :class="{ active: currentHysteresisStepIndex === idx }"
+                >
+                  <span class="step-round-badge">R{{ step.round }}</span>
+                  <div class="step-details">
+                    <div class="step-action-received">
+                      Action : <span class="mono">{{ step.action }}</span>
+                    </div>
+                    <div class="step-desc-text">{{ step.description }}</div>
+                    <div class="step-mood-status">
+                      Humeur : 
+                      <span class="mood-pill" :class="step.mood.toLowerCase()">
+                        {{ step.mood }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div v-if="hysteresisConclusion" class="proof-conclusion">
+                <strong>Conclusion :</strong> {{ hysteresisConclusion }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Preuve 2 : Inertie Identitaire & Décision Judiciaire -->
+          <div class="proof-card">
+            <div class="proof-card-header">
+              <span class="proof-num">PREUVE 2</span>
+              <h3 class="proof-title">Stabilité Décisionnelle Judiciaire sous Bruit (Inertie PIE)</h3>
+            </div>
+            <p class="proof-desc">
+              Compare la stabilité de conviction d'un juge (Acquittement vs Condamnation) face aux témoignages contradictoires. L'inertie jurisprudentielle PIE stabilise sa décision, tandis qu'un juge sans régulation dévie de façon instable.
+            </p>
+            <div class="proof-body">
+              <button 
+                class="proof-btn" 
+                @click="startInertiaProof" 
+                :disabled="runningInertia"
+              >
+                <span v-if="runningInertia" class="loading-spinner-small"></span>
+                {{ runningInertia ? 'Simulation en cours...' : 'Exécuter en direct' }}
+              </button>
+
+              <div v-if="inertiaHistory.length > 0" class="live-chart-container">
+                <table class="inertia-table">
+                  <thead>
+                    <tr>
+                      <th>Étape</th>
+                      <th>Stimulus</th>
+                      <th>Contrôle</th>
+                      <th>PIE (Inertie)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr 
+                      v-for="(h, idx) in inertiaHistory" 
+                      :key="idx"
+                      :class="{ active: currentInertiaStepIndex === idx }"
+                    >
+                      <td class="mono">S{{ h.step }}</td>
+                      <td class="mono" :class="h.stimulus > 0 ? 'text-pos' : 'text-neg'">
+                        {{ h.stimulus > 0 ? '+' : '' }}{{ h.stimulus }}
+                      </td>
+                      <td>
+                        <div class="bar-wrapper">
+                          <span class="mono val">{{ h.tension_control.toFixed(3) }}</span>
+                          <div class="bar-bg">
+                            <div class="bar-fill control" :style="{ width: (h.tension_control * 100) + '%' }"></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="bar-wrapper">
+                          <span class="mono val">{{ h.tension_pie.toFixed(3) }}</span>
+                          <div class="bar-bg">
+                            <div class="bar-fill pie" :style="{ width: (h.tension_pie * 100) + '%' }"></div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div v-if="inertiaConclusion" class="variance-comparison">
+                <div class="variance-item">
+                  <span class="label">Variance Contrôle (Bruit) :</span>
+                  <span class="value mono text-neg">{{ inertiaVarianceControl.toFixed(6) }}</span>
+                </div>
+                <div class="variance-item">
+                  <span class="label">Variance PIE (Stabilité) :</span>
+                  <span class="value mono text-pos">{{ inertiaVariancePie.toFixed(6) }}</span>
+                </div>
+              </div>
+              
+              <div v-if="inertiaConclusion" class="proof-conclusion">
+                <strong>Conclusion :</strong> {{ inertiaConclusion }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Preuve 3 : Budget Attentionnel -->
+          <div class="proof-card">
+            <div class="proof-card-header">
+              <span class="proof-num">PREUVE 3</span>
+              <h3 class="proof-title">Filtre Attentionnel de Dossier sous Contrainte</h3>
+            </div>
+            <p class="proof-desc">
+              Démontre comment un budget d'attention restreint (10%) force l'avocate à élaguer les détails procéduraux secondaires pour focaliser ses ressources sur les précédents fondamentaux de la Cour Suprême.
+            </p>
+            <div class="proof-body">
+              <button 
+                class="proof-btn" 
+                @click="startAttentionProof" 
+                :disabled="runningAttention"
+              >
+                <span v-if="runningAttention" class="loading-spinner-small"></span>
+                {{ runningAttention ? 'Analyse du contexte...' : 'Exécuter en direct' }}
+              </button>
+
+              <div v-if="attentionResult" class="attention-results">
+                <div class="memories-pool">
+                  <h4>Éléments dans le dossier :</h4>
+                  <ul>
+                    <li v-for="(m, idx) in attentionResult.memories" :key="idx" class="memory-pool-item">
+                      <span class="bullet">▪</span>
+                      <span class="desc">{{ m.desc }}</span>
+                      <span class="importance-badge" :class="m.importance">
+                        {{ m.importance }}
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div class="prompt-comparison">
+                  <div class="prompt-box high">
+                    <h5>Budget Élevé (50% d'attention)</h5>
+                    <div class="prompt-content-view">
+                      <div class="prompt-section-header">Éléments Transmis au LLM :</div>
+                      <div class="prompt-text">
+                        - Erreur de frappe mineure du greffe lors du dépôt...<br>
+                        - Arrêt de principe de la Cour Suprême sur la responsabilité...
+                      </div>
+                      <div class="prompt-section-header">Introspection :</div>
+                      <div class="prompt-text-highlight">
+                        "J'examine chaque pièce du dossier avec rigueur. Chaque erreur matérielle est notée."
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="prompt-box low">
+                    <h5>Budget Faible (10% d'attention)</h5>
+                    <div class="prompt-content-view">
+                      <div class="prompt-section-header">Éléments Transmis au LLM :</div>
+                      <div class="prompt-text">
+                        <span class="text-filtered">[FILTRÉ - Élagage d'attention]</span><br>
+                        - Arrêt de principe de la Cour Suprême sur la responsabilité...
+                      </div>
+                      <div class="prompt-section-header">Introspection :</div>
+                      <div class="prompt-text-highlight text-neg">
+                        "L'introspection et l'analyse des erreurs de forme sont désactivées pour préserver l'attention sur les précédents."
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="proof-conclusion">
+                  <strong>Conclusion :</strong> {{ attentionResult.conclusion }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -219,9 +465,53 @@ import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 
 const router = useRouter()
 
+const triggerVirtualUpload = (type, requirement) => {
+  const fileContent = `Benchmark case for ${type}. Context and details about the legal case.`
+  const file = new File([fileContent], `proof_${type}.txt`, { type: 'text/plain' })
+  
+  import('../store/pendingUpload.js').then(({ setPendingUpload }) => {
+    setPendingUpload([file], requirement)
+    
+    router.push({
+      name: 'Process',
+      params: { projectId: 'new' }
+    })
+  })
+}
+
+const runningHysteresis = ref(false)
+const hysteresisSteps = ref([])
+const currentHysteresisStepIndex = ref(-1)
+const hysteresisConclusion = ref('')
+
+const startHysteresisProof = () => {
+  triggerVirtualUpload('hysteresis', "Démonstration quantitative de l'hystérésis d'humeur lors de négociations contractuelles tendues face à des clauses abusives répétées.")
+}
+
+// Inertia proof state
+const runningInertia = ref(false)
+const inertiaHistory = ref([])
+const currentInertiaStepIndex = ref(-1)
+const inertiaVarianceControl = ref(0)
+const inertiaVariancePie = ref(0)
+const inertiaConclusion = ref('')
+
+const startInertiaProof = () => {
+  triggerVirtualUpload('inertia', "Comparaison de la stabilité décisionnelle d'un magistrat face aux contradictions des témoignages : Juge standard vs Juge régulé par les précédents judiciaires (PIE).")
+}
+
+// Attention proof state
+const runningAttention = ref(false)
+const attentionResult = ref(null)
+
+const startAttentionProof = () => {
+  triggerVirtualUpload('attention', "Modélisation de la focalisation de l'attention de l'avocat et de l'élagage des détails procéduraux mineurs sous contrainte de temps strict (10% de budget attentionnel).")
+}
+
 // 表单数据
 const formData = ref({
-  simulationRequirement: ''
+  simulationRequirement: '',
+  simulationMode: 'social'
 })
 
 // 文件列表
@@ -300,7 +590,7 @@ const startSimulation = () => {
   
   // 存储待上传的数据
   import('../store/pendingUpload.js').then(({ setPendingUpload }) => {
-    setPendingUpload(files.value, formData.value.simulationRequirement)
+    setPendingUpload(files.value, formData.value.simulationRequirement, formData.value.simulationMode)
     
     // 立即跳转到Process页面（使用特殊标识表示新建项目）
     router.push({
@@ -321,11 +611,11 @@ const startSimulation = () => {
   --gray-text: #666666;
   --border: #E5E5E5;
   /* 
-    使用 Space Grotesk 作为主要标题字体，JetBrains Mono 作为代码/标签字体
-    确保已在 index.html 引入这些 Google Fonts 
+    Utilisation de Playfair Display pour les titres (juridique chic) et Inter pour le texte courant.
   */
   --font-mono: 'JetBrains Mono', monospace;
-  --font-sans: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
+  --font-sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  --font-serif: 'Playfair Display', 'Lora', Georgia, serif;
   --font-cn: 'Noto Sans SC', system-ui, sans-serif;
 }
 
@@ -339,19 +629,38 @@ const startSimulation = () => {
 /* 顶部导航 */
 .navbar {
   height: 60px;
-  background: var(--black);
+  background: #0B1220;
   color: var(--white);
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 40px;
+  border-bottom: 1px solid #1A2333;
 }
 
 .nav-brand {
-  font-family: var(--font-mono);
-  font-weight: 800;
-  letter-spacing: 1px;
-  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.brand-logo {
+  height: 24px;
+  width: auto;
+}
+
+.brand-name {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: 0.5px;
+  color: #FFFFFF;
+}
+
+.brand-sub {
+  color: #C5A880;
+  font-weight: 500;
 }
 
 .nav-links {
@@ -374,6 +683,27 @@ const startSimulation = () => {
 
 .github-link:hover {
   opacity: 0.8;
+}
+
+.legal-sandbox-btn {
+  background: transparent;
+  border: 1px solid #C5A880;
+  color: #C5A880;
+  padding: 6px 12px;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legal-sandbox-btn:hover {
+  background: var(--orange);
+  color: var(--white);
 }
 
 .arrow {
@@ -425,11 +755,12 @@ const startSimulation = () => {
 }
 
 .main-title {
+  font-family: var(--font-serif);
   font-size: 4.5rem;
   line-height: 1.2;
   font-weight: 500;
   margin: 0 0 40px 0;
-  letter-spacing: -2px;
+  letter-spacing: -1px;
   color: var(--black);
 }
 
@@ -576,7 +907,8 @@ const startSimulation = () => {
 }
 
 .section-title {
-  font-size: 2rem;
+  font-family: var(--font-serif);
+  font-size: 2.2rem;
   font-weight: 520;
   margin: 0 0 15px 0;
 }
@@ -894,38 +1226,561 @@ const startSimulation = () => {
     margin-bottom: 20px;
   }
 }
+
+/* Preuves en Direct Styles */
+.live-proofs-section {
+  padding: 80px 40px;
+  background: #F8FAFC;
+  border-top: 1px solid #E2E8F0;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.section-header-centered {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.header-icon-gold {
+  font-size: 2.5rem;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.section-title-large {
+  font-family: var(--font-serif);
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #0B1220;
+  margin-bottom: 12px;
+}
+
+.section-subtitle {
+  font-size: 1.1rem;
+  color: #64748B;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.proofs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 30px;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.proof-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.025);
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.proof-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 20px -3px rgba(11,18,32,0.08);
+  border-color: #C5A880;
+}
+
+.proof-card-header {
+  margin-bottom: 16px;
+}
+
+.proof-num {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #C5A880;
+  letter-spacing: 1px;
+}
+
+.proof-title {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0B1220;
+  margin-top: 4px;
+}
+
+.proof-desc {
+  font-size: 0.9rem;
+  color: #64748B;
+  line-height: 1.5;
+  margin-bottom: 24px;
+  flex-grow: 1;
+}
+
+.proof-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.proof-btn {
+  background: #0B1220;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.proof-btn:hover {
+  background: #0F1E36;
+  box-shadow: 0 4px 12px rgba(11,18,32,0.15);
+}
+
+.proof-btn:disabled {
+  background: #94A3B8;
+  cursor: not-allowed;
+}
+
+/* Timeline live style */
+.live-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #0B1220;
+  border-radius: 8px;
+  padding: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.timeline-step-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid transparent;
+  transition: all 0.3s;
+}
+
+.timeline-step-item.active {
+  background: rgba(255, 255, 255, 0.08);
+  border-left-color: #C5A880;
+}
+
+.step-round-badge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #1E293B;
+  color: #C5A880;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-grow: 1;
+}
+
+.step-action-received {
+  font-size: 0.75rem;
+  color: #94A3B8;
+}
+
+.step-desc-text {
+  font-size: 0.85rem;
+  color: #E2E8F0;
+}
+
+.step-mood-status {
+  font-size: 0.75rem;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mood-pill {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.mood-pill.neutre {
+  background: #475569;
+  color: #E2E8F0;
+}
+
+.mood-pill.méfiance {
+  background: #B45309;
+  color: #FEF3C7;
+}
+
+.mood-pill.isolé {
+  background: #B91C1C;
+  color: #FEE2E2;
+}
+
+.mood-pill.coopératif {
+  background: #15803D;
+  color: #DCFCE7;
+}
+
+.proof-conclusion {
+  background: #FFFBEB;
+  border-left: 3px solid #F59E0B;
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #B45309;
+  line-height: 1.4;
+  margin-top: 10px;
+}
+
+/* Inertia table styling */
+.live-chart-container {
+  background: #0B1220;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.inertia-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  color: #E2E8F0;
+}
+
+.inertia-table th {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #1E293B;
+  color: #94A3B8;
+}
+
+.inertia-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.inertia-table tr.active {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.text-pos {
+  color: #10B981;
+}
+
+.text-neg {
+  color: #EF4444;
+}
+
+.bar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bar-wrapper .val {
+  min-width: 32px;
+}
+
+.bar-bg {
+  flex-grow: 1;
+  height: 6px;
+  background: #1E293B;
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+  width: 60px;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.bar-fill.control {
+  background: #EF4444;
+}
+
+.bar-fill.pie {
+  background: #10B981;
+}
+
+.variance-comparison {
+  display: flex;
+  justify-content: space-between;
+  background: #0F1E36;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.variance-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.variance-item .label {
+  font-size: 0.75rem;
+  color: #94A3B8;
+}
+
+.variance-item .value {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+/* Attention results styling */
+.attention-results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.memories-pool {
+  background: #F1F5F9;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.memories-pool h4 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1E293B;
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.memories-pool ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.memory-pool-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #334155;
+}
+
+.memory-pool-item .bullet {
+  color: #64748B;
+}
+
+.importance-badge {
+  font-size: 0.65rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.importance-badge.faible {
+  background: #E2E8F0;
+  color: #475569;
+}
+
+.importance-badge.très\ forte {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.prompt-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.prompt-box {
+  background: #0B1220;
+  border-radius: 8px;
+  padding: 16px;
+  color: #E2E8F0;
+  border-top: 3px solid;
+}
+
+.prompt-box.high {
+  border-top-color: #10B981;
+}
+
+.prompt-box.low {
+  border-top-color: #EF4444;
+}
+
+.prompt-box h5 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #FFFFFF;
+}
+
+.prompt-content-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.prompt-section-header {
+  font-size: 0.7rem;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.prompt-text {
+  font-size: 0.75rem;
+  color: #CBD5E1;
+  line-height: 1.4;
+  background: rgba(255,255,255,0.03);
+  padding: 6px;
+  border-radius: 4px;
+}
+
+.text-filtered {
+  color: #64748B;
+  font-style: italic;
+}
+
+.prompt-text-highlight {
+  font-size: 0.75rem;
+  color: #10B981;
+  font-style: italic;
+  line-height: 1.4;
+  background: rgba(16, 185, 129, 0.05);
+  padding: 6px;
+  border-radius: 4px;
+}
+
+.prompt-text-highlight.text-neg {
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+/* Mode Selector Grid & Card Styles */
+.mode-selector-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 8px;
+}
+
+.mode-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  user-select: none;
+}
+
+.mode-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.mode-card.active {
+  background: rgba(212, 175, 55, 0.06);
+  border-color: #D4AF37;
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.08);
+}
+
+.mode-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.mode-icon {
+  font-size: 1.1rem;
+}
+
+.mode-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #FFFFFF;
+  letter-spacing: 0.3px;
+  transition: color 0.2s;
+}
+
+.mode-card.active .mode-title {
+  color: #D4AF37;
+}
+
+.mode-desc {
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: #94A3B8;
+  margin: 0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 </style>
 
 <style>
 /* English locale adjustments (unscoped to target html[lang]) */
 html[lang="en"] .main-title {
   font-size: 3.5rem;
-  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Playfair Display', Georgia, serif;
   letter-spacing: -1px;
 }
 
 html[lang="en"] .hero-desc {
   text-align: left;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   letter-spacing: 0;
 }
 
 html[lang="en"] .slogan-text {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   letter-spacing: 0;
 }
 
 html[lang="en"] .tag-row {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
 }
 
 html[lang="en"] .navbar .nav-links {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
 }
 
 /* Left pane: system status + workflow */
 html[lang="en"] .status-section {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
 }
 
 html[lang="en"] .status-section .status-ready {
@@ -933,7 +1788,7 @@ html[lang="en"] .status-section .status-ready {
 }
 
 html[lang="en"] .status-section .metric-value {
-  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Playfair Display', Georgia, serif;
   font-size: 1.4rem;
 }
 

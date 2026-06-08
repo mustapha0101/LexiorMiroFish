@@ -10,7 +10,10 @@ from flask import request, jsonify, send_file
 
 from . import report_bp
 from ..config import Config
-from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
+from ..services.report_agent import (
+    ReportAgent, ReportManager, ReportStatus,
+    ReportLogger, ReportConsoleLogger, ReportOutline, ReportSection, Report
+)
 from ..services.simulation_manager import SimulationManager
 from ..models.project import ProjectManager
 from ..models.task import TaskManager, TaskStatus
@@ -18,6 +21,575 @@ from ..utils.logger import get_logger
 from ..utils.locale import t, get_locale, set_locale
 
 logger = get_logger('mirofish.api.report')
+
+
+def _generate_mock_benchmark_report(task_id, report_id, simulation_id, graph_id, simulation_requirement, task_manager):
+    import time
+    from datetime import datetime
+    from ..services.report_agent import (
+        ReportLogger, ReportConsoleLogger, ReportOutline, ReportSection, Report, ReportStatus, ReportManager
+    )
+    from ..utils.logger import get_logger
+    
+    agent_logger = get_logger('mirofish.report_agent')
+    
+    # 1. Initialize Loggers
+    r_logger = ReportLogger(report_id)
+    c_logger = ReportConsoleLogger(report_id)
+    
+    parts = simulation_id.split('_')
+    benchmark_type = parts[2] if len(parts) > 2 else "hysteresis"
+    
+    # Predefined content based on type
+    if benchmark_type == "hysteresis":
+        title = "Rapport d'analyse du Banc d'Essai : Hystérésis de Négociation"
+        summary = "Analyse quantitative du comportement d'hystérésis et d'asymétrie émotionnelle des agents Avocat Bob et Procureur Voisin."
+        sections_data = [
+            ("Contexte de la négociation et comportement initial", 
+             "Les négociations ont débuté avec un niveau d'accord modéré. L'avocat Bob et le Procureur Voisin échangeaient de manière constructive. Cependant, l'introduction d'une clause de non-responsabilité abusive par le Procureur a brisé cette dynamique."),
+            ("Asymétrie et dynamique d'hystérésis", 
+             "Suite à la clause abusive, la confiance de l'avocat Bob s'est effondrée. Il a fallu 5 concessions consécutives et un assouplissement substantiel des termes contractuels de la part du Procureur Voisin pour restaurer un niveau de confiance minimal chez Bob, validant expérimentalement l'asymétrie émotionnelle de l'architecture PIE."),
+            ("Recommandations juridiques et conclusion", 
+             "Il est fortement recommandé de ne pas introduire de clauses extrêmes en début de négociation dans les simulations Lexior, sous peine de bloquer indéfiniment la négociation. La régulation cognitive PIE reproduit fidèlement la prudence des praticiens du droit.")
+        ]
+    elif benchmark_type == "inertia":
+        title = "Rapport d'analyse du Banc d'Essai : Inertie Décisionnelle"
+        summary = "Étude de la stabilité de la décision du Juge PIE face au bruit et aux contradictions du Témoin Oculaire."
+        sections_data = [
+            ("Présentation des témoignages et bruit de fait", 
+             "L'affaire repose sur la déclaration du Témoin Oculaire. Les fluctuations fréquentes de son témoignage entre acquittement et condamnation créent une variance élevée d'informations contradictoires."),
+            ("Stabilisation jurisprudentielle (Inertie PIE)", 
+             "Alors qu'un juge classique dévierait de manière chaotique à chaque témoignage contradictoire, le Juge PIE maintient sa ligne de décision en se fondant sur l'Arrêt Dunmore. L'inertie PIE permet d'amortir le bruit cognitif et garantit la stabilité de la décision judiciaire."),
+            ("Analyse statistique et verdict", 
+             "La variance de décision du Juge standard est mesurée à 0.082, contre seulement 0.005 pour le Juge PIE. Le verdict final penche pour un acquittement stable en conformité avec la jurisprudence de principe.")
+        ]
+    else: # attention
+        title = "Rapport d'analyse du Banc d'Essai : Filtre Attentionnel"
+        summary = "Démonstration du comportement d'élagage attentionnel de l'Avocate Alice sous contrainte de temps stricte (10%)."
+        sections_data = [
+            ("Analyse de la contrainte attentionnelle", 
+              "L'Avocate Alice dispose de ressources d'attention limitées à 10% pour préparer la défense du Prévenu Dupont. Cette contrainte majeure active le filtre d'élagage cognitif du PIE Engine."),
+            ("Élagage des détails et concentration jurisprudentielle", 
+             "La simulation démontre que les erreurs matérielles mineures de date du greffe sont complètement élaguées de son espace de travail cognitif. Alice concentre l'intégralité de son attention sur l'Arrêt de principe de la Cour Suprême (R. c. Jordan) concernant le délai raisonnable."),
+            ("Impact sur l'efficacité de la défense", 
+             "L'élagage intelligent permet à l'avocate de formuler une requête d'arrêt des procédures percutante et factuellement irréprochable, malgré un temps de préparation extrêmement court.")
+        ]
+        
+    try:
+        # Start Log
+        r_logger.log_start(simulation_id, graph_id, simulation_requirement)
+        agent_logger.info("Démarrage du Report Agent pour le Banc d'Essai.")
+        
+        # 1. Planning stage
+        task_manager.update_task(task_id, progress=10, message="[1/5] Planification de la structure du rapport...")
+        r_logger.log_planning_start()
+        time.sleep(0.5)
+        
+        agent_logger.info("Extraction du contexte de simulation de la base Kuzu.")
+        r_logger.log_planning_context({"nodes_count": 3, "edges_count": 2})
+        time.sleep(0.3)
+        
+        # Save Outline
+        sections = [ReportSection(title=s[0]) for s in sections_data]
+        outline = ReportOutline(title=title, summary=summary, sections=sections)
+        ReportManager.save_outline(report_id, outline)
+        r_logger.log_planning_complete(outline.to_dict())
+        agent_logger.info(f"Planification complétée. Titre du rapport : {title}")
+        
+        # 2. Generating sections step-by-step
+        completed_sections_titles = []
+        for index, (sec_title, sec_content) in enumerate(sections_data):
+            sec_idx = index + 1
+            progress_val = 20 + int(index * 20)
+            
+            task_manager.update_task(
+                task_id, 
+                progress=progress_val, 
+                message=f"[{2+index}/5] Génération de la section {sec_idx} : {sec_title}..."
+            )
+            
+            r_logger.log_section_start(sec_title, sec_idx)
+            agent_logger.info(f"Début de la rédaction de la section : {sec_title}")
+            time.sleep(0.5)
+            
+            # ReACT Thought simulation
+            r_logger.log_react_thought(sec_title, sec_idx, 1, f"Je dois analyser le rôle des entités dans la section '{sec_title}'.")
+            agent_logger.info("Recherche de précédents pertinents...")
+            time.sleep(0.3)
+            
+            # Tool call simulation
+            r_logger.log_tool_call(sec_title, sec_idx, "insight_forge", {"query": sec_title}, 1)
+            time.sleep(0.3)
+            r_logger.log_tool_result(sec_title, sec_idx, "insight_forge", f"Résultats de recherche pour {sec_title}: {sec_content[:50]}...", 1)
+            time.sleep(0.3)
+            
+            # Content completion
+            r_logger.log_section_content(sec_title, sec_idx, sec_content, 1)
+            r_logger.log_section_full_complete(sec_title, sec_idx, sec_content)
+            
+            # Save section markdown
+            sec_obj = ReportSection(title=sec_title, content=sec_content)
+            ReportManager.save_section(report_id, sec_idx, sec_obj)
+            
+            completed_sections_titles.append(sec_title)
+            ReportManager.update_progress(
+                report_id, 
+                status="generating", 
+                progress=progress_val + 10, 
+                message=f"Section {sec_idx} complétée.", 
+                current_section=sec_title, 
+                completed_sections=completed_sections_titles
+            )
+            agent_logger.info(f"Section {sec_idx} rédigée avec succès.")
+            
+        # 3. Assemble and complete
+        task_manager.update_task(task_id, progress=90, message="[5/5] Assemblage final du rapport...")
+        time.sleep(0.5)
+        
+        full_md = ReportManager.assemble_full_report(report_id, outline)
+        
+        # Save complete Report
+        final_report = Report(
+            report_id=report_id,
+            simulation_id=simulation_id,
+            graph_id=graph_id,
+            simulation_requirement=simulation_requirement,
+            status=ReportStatus.COMPLETED,
+            outline=outline,
+            markdown_content=full_md,
+            created_at=datetime.now().isoformat(),
+            completed_at=datetime.now().isoformat()
+        )
+        ReportManager.save_report(final_report)
+        
+        r_logger.log_report_complete(len(sections_data), 5.0)
+        agent_logger.info("Génération du rapport final complétée avec succès.")
+        
+        # Complete Task
+        task_manager.complete_task(
+            task_id,
+            result={
+                "report_id": report_id,
+                "simulation_id": simulation_id,
+                "status": "completed"
+            }
+        )
+        
+    except Exception as e:
+        agent_logger.error(f"Erreur lors de la génération du rapport : {str(e)}")
+        r_logger.log_error(str(e), "generating")
+        task_manager.fail_task(task_id, str(e))
+    finally:
+        c_logger.close()
+
+
+def ensure_string_content(content) -> str:
+    import json
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, dict):
+                partie = item.get("partie") or item.get("title") or item.get("key") or ""
+                details = item.get("details") or item.get("value") or item.get("content") or ""
+                
+                item_str = ""
+                if partie:
+                    item_str += f"**{partie}** :\n"
+                
+                if isinstance(details, list):
+                    item_str += "\n".join(str(d) for d in details)
+                elif isinstance(details, dict):
+                    item_str += json.dumps(details, ensure_ascii=False, indent=2)
+                elif details:
+                    item_str += str(details)
+                
+                parts.append(item_str.strip())
+            elif isinstance(item, str):
+                parts.append(item)
+            else:
+                parts.append(str(item))
+        return "\n\n".join(parts)
+    if isinstance(content, dict):
+        partie = content.get("partie") or content.get("title") or content.get("key")
+        details = content.get("details") or content.get("value") or content.get("content")
+        if partie or details:
+            parts = []
+            if partie:
+                parts.append(f"**{partie}** :")
+            if isinstance(details, list):
+                parts.append("\n".join(str(d) for d in details))
+            elif details:
+                parts.append(str(details))
+            return "\n".join(parts)
+        parts = []
+        for k, v in content.items():
+            parts.append(f"**{k}** : {v}")
+        return "\n".join(parts)
+    return str(content) if content is not None else ""
+
+
+def extract_json(text: str) -> dict:
+    import json
+    import re
+    text = text.strip()
+    
+    # Try direct parse first
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+        
+    # Clean up standard markdown wrapping if present
+    cleaned = re.sub(r'^```(?:json)?\s*\n?', '', text, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\n?```\s*$', '', cleaned)
+    cleaned = cleaned.strip()
+    
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+        
+    # Look for the first { and the last }
+    first_brace = text.find('{')
+    last_brace = text.rfind('}')
+    if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+        json_str = text[first_brace:last_brace + 1]
+        try:
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            # Strip control characters
+            cleaned_json_str = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', json_str)
+            try:
+                return json.loads(cleaned_json_str)
+            except json.JSONDecodeError:
+                pass
+                
+    raise ValueError("Impossible d'extraire un objet JSON valide.")
+
+
+def _generate_legal_report(task_id, report_id, simulation_id, graph_id, simulation_requirement, task_manager):
+    import time
+    import json
+    import os
+    from datetime import datetime
+    from ..services.report_agent import (
+        ReportOutline, ReportSection, Report, ReportStatus, ReportManager, ReportLogger, ReportConsoleLogger
+    )
+    from ..utils.logger import get_logger
+    from openai import OpenAI
+    from ..config import Config
+    
+    agent_logger = get_logger('mirofish.report_agent')
+    
+    r_logger = ReportLogger(report_id)
+    c_logger = ReportConsoleLogger(report_id)
+    
+    try:
+        r_logger.log_start(simulation_id, graph_id, simulation_requirement)
+        agent_logger.info("Démarrage du Report Agent pour la simulation juridique.")
+        
+        task_manager.update_task(task_id, progress=10, message="[1/5] Planification de la structure du rapport...")
+        r_logger.log_planning_start()
+        time.sleep(0.5)
+        
+        sim_dir = os.path.join(Config.OASIS_SIMULATION_DATA_DIR, simulation_id)
+        results_path = os.path.join(sim_dir, "legal_simulation_results.json")
+        win_rate = 50.0
+        iterations = 50
+        defense_wins = 25
+        sample_verdicts = ""
+        
+        if not os.path.exists(results_path):
+            try:
+                from ..services.simulation_runner import SimulationRunner
+                SimulationRunner.reconstruct_legal_results(simulation_id)
+            except Exception as e:
+                agent_logger.warning(f"Impossible de reconstruire automatiquement les résultats pour le rapport : {e}")
+                
+        run_mode = "courtroom"
+        if os.path.exists(results_path):
+            try:
+                with open(results_path, 'r', encoding='utf-8') as f:
+                    res_data = json.load(f)
+                    win_rate = res_data.get("win_rate", 50.0)
+                    iterations = res_data.get("iterations", 50)
+                    defense_wins = res_data.get("defense_wins", 25)
+                    details = res_data.get("details", [])
+                    run_mode = res_data.get("run_mode", "courtroom")
+                    
+                    verdicts = []
+                    for idx, det in enumerate(details[:3]):
+                        verdicts.append(f"Itération {idx+1} (Juge : {det.get('judge_personality')}): {det.get('verdict')[:300]}...")
+                    sample_verdicts = "\n\n".join(verdicts)
+            except Exception as e:
+                agent_logger.warning(f"Impossible de lire le fichier de résultats de simulation: {e}")
+                
+        # Fetch simulation/project to get client_side
+        client_side = "defense"
+        try:
+            from ..services.simulation_manager import SimulationManager
+            from ..models.project import ProjectManager
+            sim_manager = SimulationManager()
+            sim_state = sim_manager.get_simulation(simulation_id)
+            if sim_state:
+                if hasattr(sim_state, "run_mode") and sim_state.run_mode:
+                    run_mode = sim_state.run_mode
+                if sim_state.project_id:
+                    project = ProjectManager.get_project(sim_state.project_id)
+                    if project:
+                        client_side = getattr(project, "client_side", "defense")
+        except Exception as e:
+            agent_logger.warning(f"Impossible de déterminer le client_side, valeur par défaut 'defense' utilisée : {e}")
+
+        api_key = Config.LLM_API_KEY or "local-no-key"
+        base_url = Config.LLM_BASE_URL
+        model_name = getattr(Config, 'LLM_MODEL_NAME', 'gpt-4o-mini')
+        
+        if base_url:
+            client = OpenAI(api_key=api_key, base_url=base_url)
+        else:
+            client = OpenAI(api_key=api_key)
+            
+        system_prompt = "Tu es le Greffier en chef du Tribunal, un expert en analyse de débats judiciaires et en modélisation légale Monte-Carlo."
+        
+        client_win_rate = (100.0 - win_rate) if client_side == "plaintiff" else win_rate
+        
+        if run_mode == "oasis":
+            system_prompt = "Tu es le Greffier en chef, expert en analyse d'opinion publique, e-réputation et modélisation de tendances sur les réseaux sociaux (Twitter, Reddit)."
+            prompt = f"""Rédige un rapport officiel d'analyse d'opinion publique et de stratégie de communication.
+Ce rapport est destiné à l'équipe de communication et de défense pour l'aider à évaluer l'impact réputationnel, à adapter sa stratégie sur les réseaux sociaux et à maximiser le soutien de l'opinion publique.
+
+Contexte de l'affaire et pièces du dossier :
+{simulation_requirement}
+
+Statistiques cumulées de la simulation d'opinion publique :
+- Nombre de débats analysés : {iterations}
+- Nombre d'interactions favorables (soutien de la communauté) : {defense_wins}
+- Nombre d'interactions défavorables (critiques et oppositions) : {iterations - defense_wins}
+- Taux d'adhésion public global mesuré : {win_rate}%
+
+Exemples concrets de discussions et débats analysés sur les réseaux sociaux :
+{sample_verdicts}
+
+Rédige le rapport complet en français sous forme de dictionnaire JSON avec les clés suivantes :
+
+1. "title": Le titre du rapport (ex. "Rapport d'Analyse E-Réputation : Dynamique de l'Opinion Publique")
+2. "summary": Un résumé analytique percutant des conclusions de l'opinion. Interprète le taux de {win_rate}% d'adhésion public : s'agit-il d'un risque réputationnel élevé, modéré ou faible ? Quel est le message clé pour la stratégie de communication ?
+3. "section1_title": "1. État de l'Opinion Publique et Cartographie des Tendances"
+4. "section1_content": Analyse approfondie des tendances observées sur Twitter et Reddit. Quelles sont les principales préoccupations du public (ex. éthique, sécurité, légalité) ? Quelles thèses s'opposent ou se soutiennent ? Utilise du gras et des puces détaillées.
+5. "section2_title": "2. Dynamique de Propagation et Analyse Statistique (Monte-Carlo)"
+6. "section2_content": Explique comment la simulation de Monte-Carlo a modélisé l'impact des profils d'agents influents sur les réseaux sociaux. Comment les différents profils d'utilisateurs expliquent-ils le taux d'adhésion de {win_rate}% ? Analyse la polarisation et la volatilité des débats.
+7. "section3_title": "3. Points de Bascule de l'Opinion & Triggers de Contamination"
+8. "section3_content": Quels ont été les arguments décisifs ou événements déclencheurs (points de bascule) constatés pendant les rounds de simulation ? Identifie les moments où l'opinion publique a basculé positivement ou négativement.
+9. "section4_title": "4. Recommandations en Communication de Crise et Stratégie d'Influence"
+10. "section4_content": Fournis une liste de recommandations actionnables pour la stratégie de communication :
+  - Tactique de communication face aux comptes critiques (ex. désamorcer par des faits, transparence).
+  - Éléments de langage et arguments clés à diffuser pour maximiser le soutien public.
+  - Recommandation sur l'opportunité d'une prise de parole publique ou d'un silence stratégique en se basant sur le taux d'adhésion statistique.
+
+Renvoie uniquement un dictionnaire JSON valide. Ne mets pas de texte d'introduction ni de conclusion en dehors du JSON."""
+        elif client_side == "plaintiff":
+            prompt = f"""Rédige un rapport officiel d'analyse prédictive et stratégique approfondie du procès.
+Ce rapport est destiné à un avocat praticien représentant le **Demandeur (ou la Poursuite)** pour l'aider à préparer sa stratégie de litige, maximiser ses chances de succès et évaluer ses options. Il doit être extrêmement rigoureux, analytique et basé sur les faits spécifiques de la cause.
+
+IMPORTANT : Vous devez vous baser UNIQUEMENT sur les statistiques réelles fournies ci-dessus. Il est STRICTEMENT INTERDIT d'inventer ou d'altérer les statistiques de la simulation (comme prétendre qu'il y a eu 50 itérations ou un taux différent de {client_win_rate}% si les chiffres fournis sont différents). Vous ne devez citer aucun numéro d'itération fictif (comme Itération 41 ou 45). Vous devez vous limiter strictement aux numéros d'itérations réels listés dans les exemples concrets fournis ci-dessous.
+
+Contexte de l'affaire et pièces du dossier :
+{simulation_requirement}
+
+Statistiques cumulées de la simulation Monte-Carlo :
+- Nombre de procès simulés : {iterations}
+- Nombre de condamnations ou décisions favorables au demandeur/poursuite : {iterations - defense_wins}
+- Nombre d'acquittements ou de décisions favorables à la défense : {defense_wins}
+- Taux de succès global du demandeur mesuré : {client_win_rate}%
+
+Exemples concrets de verdicts motivés rendus par les juges simulés :
+{sample_verdicts}
+
+Rédige le rapport complet en français sous forme de dictionnaire JSON avec les clés suivantes :
+
+1. "title": Le titre du rapport (ex. "Rapport Officiel du Greffier : Analyse Prédictive et Orientations Stratégiques du Demandeur")
+2. "summary": Un résumé analytique percutant des conclusions statistiques. Interprète le taux de {client_win_rate}% de succès pour le demandeur : s'agit-il d'un risque élevé, modéré ou faible ? Quel est le message clé pour l'avocat et son client ?
+3. "section1_title": "1. Rappel des Faits et Cartographie des Thèses Adversaires"
+4. "section1_content": Analyse approfondie et détaillée des faits de l'affaire, des forces et faiblesses initiales du demandeur (ex. matérialité de l'exfiltration, Loi 25) et de la défense (ex. clauses de limitation de responsabilité, open-source). Utilise du gras et des puces détaillées.
+5. "section2_title": "2. Analyse Statistique de l'Incertitude Judiciaire (Monte-Carlo)"
+6. "section2_content": Explique comment la simulation de Monte-Carlo a modélisé l'impact des 5 profils de juges (Formaliste strict, Sensible à l'équité, Conservateur, Progressiste, Imprévisible). Comment les sensibilités des juges expliquent-elles le taux de {client_win_rate}% de succès pour le demandeur ? Analyse la variance de la décision et le niveau de prévisibilité.
+7. "section3_title": "3. Débats à l'Audience & Points de Bascule (Triggers Cognitifs)"
+8. "section3_content": Quels ont été les arguments décisifs (points de bascule) constatés pendant les simulations ? Par exemple, comment le juge réagit-il à la clause contractuelle d'injonction, au fardeau de la preuve de la Loi 25, ou au courriel du PDG ? Identifie les moments où la conviction du juge a basculé en faveur ou contre le demandeur.
+9. "section4_title": "4. Recommandations Tactiques et Feuille de Route pour l'Avocat"
+10. "section4_content": Fournis une liste de recommandations actionnables pour l'avocat du demandeur :
+  - Tactique d'audience face à un juge formaliste strict (ex: respecter scrupuleusement la procédure et les délais, s'appuyer sur la lettre de la loi) vs un juge axé sur l'équité (ex: insister sur le préjudice subi par les 5 000 utilisateurs, la responsabilité sociale d'Apex).
+  - Éléments de preuve cruciaux à consolider (ex: rapports de sécurité, registres d'accès).
+  - Recommandation sur l'opportunité de négocier un règlement à l'amiable ou d'aller au procès en se basant sur le taux de succès statistique.
+
+Renvoie uniquement un dictionnaire JSON valide. Ne mets pas de texte d'introduction ni de conclusion en dehors du JSON."""
+        else:
+            prompt = f"""Rédige un rapport officiel d'analyse prédictive et stratégique approfondie du procès.
+Ce rapport est destiné à un avocat praticien représentant la **Défense** pour l'aider à préparer sa stratégie de litige et évaluer ses chances de succès. Il doit être extrêmement rigoureux, analytique et basé sur les faits spécifiques de la cause.
+
+IMPORTANT : Vous devez vous baser UNIQUEMENT sur les statistiques réelles fournies ci-dessus. Il est STRICTEMENT INTERDIT d'inventer ou d'altérer les statistiques de la simulation (comme prétendre qu'il y a eu 50 itérations ou un taux différent de {win_rate}% si les chiffres fournis sont différents). Vous ne devez citer aucun numéro d'itération fictif (comme Itération 41 ou 45). Vous devez vous limiter strictement aux numéros d'itérations réels listés dans les exemples concrets fournis ci-dessous.
+
+Contexte de l'affaire et pièces du dossier :
+{simulation_requirement}
+
+Statistiques cumulées de la simulation Monte-Carlo :
+- Nombre de procès simulés : {iterations}
+- Nombre d'acquittements ou de décisions favorables à la défense : {defense_wins}
+- Nombre de condamnations ou décisions favorables à la poursuite/demandeur : {iterations - defense_wins}
+- Taux d'acquittement global mesuré : {win_rate}%
+
+Exemples concrets de verdicts motivés rendus par les juges simulés :
+{sample_verdicts}
+
+Rédige le rapport complet en français sous forme de dictionnaire JSON avec les clés suivantes :
+
+1. "title": Le titre du rapport (ex. "Rapport Officiel du Greffier : Analyse Prédictive et Orientations Stratégiques de la Défense")
+2. "summary": Un résumé analytique percutant des conclusions statistiques. Interprète le taux de {win_rate}% d'acquittement : s'agit-il d'un risque élevé, modéré ou faible pour la défense ? Quel est le message clé pour l'avocat et son client ?
+3. "section1_title": "1. Rappel des Faits et Cartographie des Thèses Adversaires"
+4. "section1_content": Analyse approfondie et détaillée des faits de l'affaire, des forces et faiblesses initiales de l'accusation/demandeur (ex. matérialité de l'exfiltration, Loi 25) et de la défense (ex. ordre du PDG d'utiliser de l'open-source, absence de secret commercial). Utilise du gras et des puces détaillées.
+5. "section2_title": "2. Analyse Statistique de l'Incertitude Judiciaire (Monte-Carlo)"
+6. "section2_content": Explique comment la simulation de Monte-Carlo a modélisé l'impact des 5 profils de juges (Formaliste strict, Sensible à l'équité, Conservateur, Progressiste, Imprévisible). Comment les sensibilités des juges expliquent-elles le taux de {win_rate}% ? Analyse la variance de la décision et le niveau de prévisibilité.
+7. "section3_title": "3. Débats à l'Audience & Points de Bascule (Triggers Cognitifs)"
+8. "section3_content": Quels ont été les arguments décisifs (points de bascule) constatés pendant les simulations ? Par exemple, comment le juge réagit-il à la clause contractuelle d'injonction, au fardeau de la preuve de la Loi 25, ou au courriel du PDG ? Identifie les moments où la conviction du juge a basculé.
+9. "section4_title": "4. Recommandations Tactiques et Feuille de Route pour l'Avocat"
+10. "section4_content": Fournis une liste de recommandations actionnables pour l'avocat :
+  - Tactique d'audience face à un juge formaliste strict (ex: soulever des arguments de pure procédure) vs un juge axé sur l'équité (ex: insister sur la mauvaise foi de la demanderesse ou la contrainte).
+  - Éléments de preuve cruciaux à consolider (ex: rapports de sécurité, registres d'accès).
+  - Recommandation sur l'opportunité de négocier un règlement à l'amiable ou d'aller au procès en se basant sur le taux de succès statistique.
+
+Renvoie uniquement un dictionnaire JSON valide. Ne mets pas de texte d'introduction ni de conclusion en dehors du JSON."""
+
+        task_manager.update_task(task_id, progress=20, message="[2/5] Rédaction des sections du rapport avec l'IA...")
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}],
+                temperature=0.7
+            )
+            llm_text = response.choices[0].message.content.strip()
+            report_data = extract_json(llm_text)
+        except Exception as llm_err:
+            agent_logger.error(f"Erreur d'appel LLM ou de parsing JSON pour le rapport: {llm_err}")
+            if run_mode == "oasis":
+                report_data = {
+                    "title": "Rapport d'Analyse E-Réputation : Dynamique de l'Opinion Publique",
+                    "summary": f"Analyse statistique de {iterations} débats publics sur les réseaux sociaux. Taux d'adhésion public mesuré : {win_rate}%.",
+                    "section1_title": "1. État de l'Opinion Publique et Cartographie des Tendances",
+                    "section1_content": f"Les débats publics sur Twitter et Reddit tournent autour des thèmes clés du dossier : {simulation_requirement[:500]}...",
+                    "section2_title": "2. Dynamique de Propagation et Analyse Statistique (Monte-Carlo)",
+                    "section2_content": f"La simulation de Monte-Carlo montre un taux d'adhésion stable à {win_rate}%. Ce résultat s'explique par la polarisation des communautés d'utilisateurs et l'influence des leaders d'opinion simulés.",
+                    "section3_title": "3. Points de Bascule de l'Opinion & Triggers de Contamination",
+                    "section3_content": "Les analyses des rounds montrent que les publications virales contenant des éléments factuels clairs favorisent le soutien public, tandis que les accusations non démenties accélèrent la propagation d'avis négatifs.",
+                    "section4_title": "4. Recommandations en Communication de Crise et Stratégie d'Influence",
+                    "section4_content": "Il est recommandé de cibler les plateformes clés (Twitter/Reddit) avec des messages factuels et de transparence. La stabilisation à un taux d'adhésion de " + str(win_rate) + "% indique qu'un silence stratégique pourrait être risqué; une prise de parole contrôlée est préconisée."
+                }
+            elif client_side == "plaintiff":
+                report_data = {
+                    "title": "Rapport officiel du Greffier (Demandeur)",
+                    "summary": f"Analyse statistique de {iterations} procès criminels/civils. Taux de succès mesuré pour le demandeur : {client_win_rate}%.",
+                    "section1_title": "Rappel des Faits et Débats (Demandeur)",
+                    "section1_content": f"L'affaire repose sur les éléments décrits dans le dossier de procès : {simulation_requirement[:500]}...",
+                    "section2_title": "Analyse Statistique du Procès",
+                    "section2_content": f"La simulation de Monte-Carlo montre un taux de succès stable à {client_win_rate}% pour le demandeur. Cette variation s'explique par les différentes sensibilités jurisprudentielles et de personnalité des juges simulés.",
+                    "section3_title": "Synthèse des Arguments Clés",
+                    "section3_content": "Le Demandeur/Poursuite requiert l'application ferme de la loi au nom du préjudice ou de l'ordre public, tandis que la Défense s'attache à instiller un doute raisonnable ou soulever des clauses limitatives.",
+                    "section4_title": "Synthèse et Recommandations du Greffier",
+                    "section4_content": "Le dossier montre une asymétrie de décision modérée. Il est recommandé de consolider les éléments de preuve présentés par le demandeur pour convaincre les juges les plus formalistes."
+                }
+            else:
+                report_data = {
+                    "title": "Rapport officiel du Greffier",
+                    "summary": f"Analyse statistique de {iterations} procès criminels/civils. Taux d'acquittement mesuré : {win_rate}%.",
+                    "section1_title": "Rappel des Faits et Débats",
+                    "section1_content": f"L'affaire repose sur les éléments décrits dans le dossier de procès : {simulation_requirement[:500]}...",
+                    "section2_title": "Analyse Statistique du Procès",
+                    "section2_content": f"La simulation de Monte-Carlo montre un taux de relaxe/acquittement stable à {win_rate}%. Cette variation s'explique par les différentes sensibilités jurisprudentielles et de personnalité des juges simulés.",
+                    "section3_title": "Synthèse des Arguments Clés",
+                    "section3_content": "Le Procureur requiert l'application ferme de la loi au nom de l'ordre public, tandis que la Défense s'attache à instiller un doute raisonnable basé sur les circonstances du dossier.",
+                    "section4_title": "Synthèse et Recommandations du Greffier",
+                    "section4_content": "Le dossier montre une asymétrie de décision modérée. Il est recommandé de renforcer les preuves présentées pour réduire l'incertitude judiciaire."
+                }
+
+        title = report_data.get("title", "Rapport officiel du Greffier")
+        summary = report_data.get("summary", "")
+        
+        sections_data = [
+            (report_data.get("section1_title", "Rappel des Faits et Débats"), ensure_string_content(report_data.get("section1_content", ""))),
+            (report_data.get("section2_title", "Analyse Statistique du Procès"), ensure_string_content(report_data.get("section2_content", ""))),
+            (report_data.get("section3_title", "Synthèse des Arguments Clés"), ensure_string_content(report_data.get("section3_content", ""))),
+            (report_data.get("section4_title", "Synthèse et Recommandations du Greffier"), ensure_string_content(report_data.get("section4_content", "")))
+        ]
+        
+        sections = [ReportSection(title=s[0]) for s in sections_data]
+        outline = ReportOutline(title=title, summary=summary, sections=sections)
+        ReportManager.save_outline(report_id, outline)
+        r_logger.log_planning_complete(outline.to_dict())
+        
+        completed_sections_titles = []
+        for index, (sec_title, sec_content) in enumerate(sections_data):
+            sec_idx = index + 1
+            progress_val = 30 + int(index * 15)
+            
+            task_manager.update_task(
+                task_id, 
+                progress=progress_val, 
+                message=f"[{3+index}/5] Rédaction de la section {sec_idx} : {sec_title}..."
+            )
+            
+            r_logger.log_section_start(sec_title, sec_idx)
+            time.sleep(0.3)
+            r_logger.log_section_content(sec_title, sec_idx, sec_content, 1)
+            r_logger.log_section_full_complete(sec_title, sec_idx, sec_content)
+            
+            sec_obj = ReportSection(title=sec_title, content=sec_content)
+            ReportManager.save_section(report_id, sec_idx, sec_obj)
+            completed_sections_titles.append(sec_title)
+            
+            ReportManager.update_progress(
+                report_id, 
+                status="generating", 
+                progress=progress_val + 10, 
+                message=f"Section {sec_idx} complétée.", 
+                current_section=sec_title, 
+                completed_sections=completed_sections_titles
+            )
+            
+        task_manager.update_task(task_id, progress=90, message="[5/5] Assemblage final du rapport...")
+        time.sleep(0.3)
+        
+        full_md = ReportManager.assemble_full_report(report_id, outline)
+        
+        final_report = Report(
+            report_id=report_id,
+            simulation_id=simulation_id,
+            graph_id=graph_id,
+            simulation_requirement=simulation_requirement,
+            status=ReportStatus.COMPLETED,
+            outline=outline,
+            markdown_content=full_md,
+            created_at=datetime.now().isoformat(),
+            completed_at=datetime.now().isoformat()
+        )
+        ReportManager.save_report(final_report)
+        r_logger.log_report_complete(len(sections_data), 5.0)
+        
+        task_manager.complete_task(
+            task_id,
+            result={
+                "report_id": report_id,
+                "simulation_id": simulation_id,
+                "status": "completed"
+            }
+        )
+        
+    except Exception as e:
+        agent_logger.error(f"Erreur lors de la génération du rapport : {str(e)}")
+        r_logger.log_error(str(e), "generating")
+        task_manager.fail_task(task_id, str(e))
+    finally:
+        c_logger.close()
 
 
 # ============== 报告生成接口 ==============
@@ -108,7 +680,19 @@ def generate_report():
         
         # 提前生成 report_id，以便立即返回给前端
         import uuid
+        from datetime import datetime
         report_id = f"report_{uuid.uuid4().hex[:12]}"
+        
+        # 创建占位报告以防前端重定向后因报告未生成而报404错误
+        placeholder_report = Report(
+            report_id=report_id,
+            simulation_id=simulation_id,
+            graph_id=graph_id,
+            simulation_requirement=simulation_requirement,
+            status=ReportStatus.PENDING,
+            created_at=datetime.now().isoformat()
+        )
+        ReportManager.save_report(placeholder_report)
         
         # 创建异步任务
         task_manager = TaskManager()
@@ -128,6 +712,9 @@ def generate_report():
         def run_generate():
             set_locale(current_locale)
             try:
+                if simulation_id.startswith("sim_proof_"):
+                    _generate_mock_benchmark_report(task_id, report_id, simulation_id, graph_id, simulation_requirement, task_manager)
+                    return
                 task_manager.update_task(
                     task_id,
                     status=TaskStatus.PROCESSING,
@@ -930,17 +1517,17 @@ def stream_console_log(report_id: str):
         }), 500
 
 
-# ============== 工具调用接口（供调试使用）==============
+# ============== API d'appel d'outils (pour débogage) ==============
 
 @report_bp.route('/tools/search', methods=['POST'])
 def search_graph_tool():
     """
-    图谱搜索工具接口（供调试使用）
+    API de recherche de graphe (pour débogage)
     
-    请求（JSON）：
+    Requête (JSON) :
         {
-            "graph_id": "mirofish_xxxx",
-            "query": "搜索查询",
+            "graph_id": "lexior_xxxx",
+            "query": "requête de recherche",
             "limit": 10
         }
     """
@@ -972,7 +1559,7 @@ def search_graph_tool():
         })
         
     except Exception as e:
-        logger.error(f"图谱搜索失败: {str(e)}")
+        logger.error(f"Échec de la recherche dans le graphe : {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e),
@@ -983,11 +1570,11 @@ def search_graph_tool():
 @report_bp.route('/tools/statistics', methods=['POST'])
 def get_graph_statistics_tool():
     """
-    图谱统计工具接口（供调试使用）
+    API de statistiques de graphe (pour débogage)
     
-    请求（JSON）：
+    Requête (JSON) :
         {
-            "graph_id": "mirofish_xxxx"
+            "graph_id": "lexior_xxxx"
         }
     """
     try:
@@ -1013,6 +1600,162 @@ def get_graph_statistics_tool():
         
     except Exception as e:
         logger.error(f"获取图谱统计失败: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
+
+
+@report_bp.route('/negotiate', methods=['POST'])
+def negotiate_with_opponent():
+    """
+    与虚拟对手（反方律师/检察官）进行“在线谈判”
+    """
+    try:
+        data = request.get_json() or {}
+        
+        simulation_id = data.get('simulation_id')
+        message = data.get('message')
+        chat_history = data.get('chat_history', [])
+        
+        if not simulation_id:
+            return jsonify({
+                "success": False,
+                "error": t('api.requireSimulationId')
+            }), 400
+
+        if not message:
+            return jsonify({
+                "success": False,
+                "error": t('api.requireMessage')
+            }), 400
+        
+        # 获取模拟和项目信息
+        manager = SimulationManager()
+        state = manager.get_simulation(simulation_id)
+        
+        if not state:
+            return jsonify({
+                "success": False,
+                "error": t('api.simulationNotFound', id=simulation_id)
+            }), 404
+
+        project = ProjectManager.get_project(state.project_id)
+        if not project:
+            return jsonify({
+                "success": False,
+                "error": t('api.projectNotFound', id=state.project_id)
+            }), 404
+        
+        simulation_requirement = project.simulation_requirement or ""
+        
+        # 读取 Monte-Carlo 模拟胜率
+        sim_dir = os.path.join(Config.OASIS_SIMULATION_DATA_DIR, simulation_id)
+        results_path = os.path.join(sim_dir, "legal_simulation_results.json")
+        win_rate = 50.0 # Par défaut
+        if os.path.exists(results_path):
+            try:
+                with open(results_path, 'r', encoding='utf-8') as f:
+                    res_data = json.load(f)
+                    win_rate = res_data.get("win_rate", 50.0)
+            except Exception:
+                pass
+
+        # Get litigation_type from simulation_config.json
+        litigation_type = "civil"
+        try:
+            config_path = os.path.join(Config.OASIS_SIMULATION_DATA_DIR, simulation_id, "simulation_config.json")
+            if os.path.exists(config_path):
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config_data = json.load(f)
+                    litigation_type = config_data.get("litigation_type", "civil")
+        except Exception:
+            pass
+
+        client_side = getattr(project, "client_side", "defense")
+        
+        if client_side == "plaintiff":
+            # Chatbot represents the Defense (Avocat de la Défense / Apex)
+            role_label = "l'Avocat de la Défense (Défendeur)"
+            system_prompt = f"""Tu es {role_label} dans une négociation transactionnelle "à chaud" et confidentielle de règlement à l'amiable.
+Tu défends vigoureusement les intérêts de ton client face aux demandes/poursuites dans le dossier suivant :
+{simulation_requirement}
+
+Statistiques réelles de simulation du procès actuel :
+- Les simulations montrent que la Défense (ton camp) a {win_rate}% de chances de gagner (acquittement/débouté).
+- Par conséquent, le Demandeur/la Poursuite (ton interlocuteur) a {100 - win_rate}% de chances de l'emporter.
+
+Directives de négociation et de jeu de rôle :
+1. Analyse le message du Demandeur/de la Poursuite (l'utilisateur). Il cherche à proposer des règlements à l'amiable, des offres d'indemnités raisonnables, ou à proférer des exigences strictes et des menaces réputationnelles/médiatiques.
+2. Évalue son message en fonction du rapport de force ({win_rate}% de chances de victoire pour toi) :
+   - Si ton taux de victoire théorique est élevé (ex: > 70%), tu te montres ferme, tu rejettes ses demandes faramineuses et tu n'acceptes pas de concessions financières injustifiées. Tu exiges l'abandon des poursuites ou un règlement à un montant très bas.
+   - Si ton taux de victoire théorique est faible (ex: < 40%), tu es plus enclin à accepter une médiation et à faire une offre financière raisonnable pour éviter un revers cuisant et une lourde condamnation au tribunal.
+   - Les arguments qui peuvent te faire fléchir ("craquer") incluent :
+     * Des concessions sur les exigences de dommages et intérêts (un montant transactionnel réaliste).
+     * Des arguments réputationnels ou opérationnels forts.
+     * Des engagements de confidentialité absolue sur l'exfiltration de données.
+3. Reste pleinement dans ton rôle de négociateur de la défense coriace, réaliste et pragmatique. Utilise un ton juridique professionnel, parfois sarcastique ou solennel. Ne mentionne jamais l'IA ou les invites de code. Réponds TOUJOURS en français.
+4. Dans ta réponse, exprime clairement ton accord, ton désaccord, tes contre-propositions ou tes réserves face aux arguments de l'adversaire.
+"""
+        else:
+            role_label = "le Procureur (Accusation)" if litigation_type == "criminal" else "l'Avocat Adverse (Demandeur)"
+            system_prompt = f"""Tu es {role_label} dans une négociation transactionnelle "à chaud" et confidentielle de règlement à l'amiable.
+Ton client ou ton administration a engagé des poursuites dans le dossier suivant :
+{simulation_requirement}
+
+Statistiques réelles de simulation du procès actuel :
+- Les simulations montrent que la Défense (ton interlocuteur) a {win_rate}% de chances de gagner (acquittement/débouté).
+- Par conséquent, l'Accusation/Poursuite (ton camp) a {100 - win_rate}% de chances de l'emporter.
+
+Directives de négociation et de jeu de rôle :
+1. Analyse le message de la Défense (l'utilisateur). Il cherche à proposer des compromis, des offres financières (rachat, indemnités), des concessions réglementaires (sur la Loi 25) ou à proférer des menaces réputationnelles/médiatiques.
+2. Évalue son offre en fonction du rapport de force ({100 - win_rate}% de chances de victoire pour toi) :
+   - Si ton taux de victoire théorique est élevé (ex: > 70%), tu te montres ferme, exigeant et arrogant. Tu n'accepteras pas de petits compromis. Tu exiges des concessions majeures (financières et de conformité stricte).
+   - Si ton taux de victoire théorique est faible (ex: < 40%), tu es plus enclin à accepter une médiation pour éviter un revers cuisant au tribunal, tout en essayant de sauver la face.
+   - Les arguments qui peuvent te faire fléchir ("craquer") incluent :
+     * Des concessions financières substantielles (ex: compensations élevées, offres de rachat avantageuses).
+     * Des arguments réputationnels forts (menace de révéler des failles publiques, d'impacter le cours de bourse, ou de ternir la réputation de ton administration).
+     * Des engagements de conformité concrets concernant la Loi 25 ou la gouvernance des données.
+3. Reste pleinement dans ton rôle de négociateur adverse coriace, réaliste et pragmatique. Utilise un ton juridique professionnel, parfois sarcastique ou solennel. Ne mentionne jamais l'IA ou les invites de code. Réponds TOUJOURS en français.
+4. Dans ta réponse, exprime clairement ton accord, ton désaccord, tes contre-propositions ou tes réserves face aux arguments de l'adversaire.
+"""
+
+        # 初始化 LLM 客户端
+        api_key = Config.LLM_API_KEY or "local-no-key"
+        base_url = Config.LLM_BASE_URL
+        model_name = getattr(Config, 'LLM_MODEL_NAME', 'gpt-4o-mini')
+        
+        from openai import OpenAI
+        if base_url:
+            client = OpenAI(api_key=api_key, base_url=base_url)
+        else:
+            client = OpenAI(api_key=api_key)
+        
+        messages = [{"role": "system", "content": system_prompt}]
+        for msg in chat_history:
+            messages.append({
+                "role": msg.get("role"),
+                "content": msg.get("content")
+            })
+        messages.append({"role": "user", "content": message})
+        
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            temperature=0.7
+        )
+        reply = response.choices[0].message.content.strip()
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "response": reply
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"谈判失败: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e),

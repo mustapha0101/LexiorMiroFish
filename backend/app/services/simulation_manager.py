@@ -53,6 +53,7 @@ class SimulationState:
     
     # 状态
     status: SimulationStatus = SimulationStatus.CREATED
+    run_mode: str = "courtroom"
     
     # 准备阶段数据
     entities_count: int = 0
@@ -84,6 +85,7 @@ class SimulationState:
             "enable_twitter": self.enable_twitter,
             "enable_reddit": self.enable_reddit,
             "status": self.status.value,
+            "run_mode": self.run_mode,
             "entities_count": self.entities_count,
             "profiles_count": self.profiles_count,
             "entity_types": self.entity_types,
@@ -104,6 +106,7 @@ class SimulationState:
             "project_id": self.project_id,
             "graph_id": self.graph_id,
             "status": self.status.value,
+            "run_mode": self.run_mode,
             "entities_count": self.entities_count,
             "profiles_count": self.profiles_count,
             "entity_types": self.entity_types,
@@ -121,6 +124,7 @@ class SimulationManager:
     2. 生成OASIS Agent Profile
     3. 使用LLM智能生成模拟配置参数
     4. 准备预设脚本所需的所有文件
+    5. 复制预设脚本到模拟目录
     """
     
     # 模拟数据存储目录
@@ -165,8 +169,12 @@ class SimulationManager:
         if not os.path.exists(state_file):
             return None
         
-        with open(state_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        try:
+            with open(state_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception as e:
+            logger.warning(f"Error loading simulation state for {simulation_id}: {e}")
+            return None
         
         state = SimulationState(
             simulation_id=simulation_id,
@@ -175,6 +183,7 @@ class SimulationManager:
             enable_twitter=data.get("enable_twitter", True),
             enable_reddit=data.get("enable_reddit", True),
             status=SimulationStatus(data.get("status", "created")),
+            run_mode=data.get("run_mode", "courtroom"),
             entities_count=data.get("entities_count", 0),
             profiles_count=data.get("profiles_count", 0),
             entity_types=data.get("entity_types", []),
@@ -211,7 +220,12 @@ class SimulationManager:
             SimulationState
         """
         import uuid
-        simulation_id = f"sim_{uuid.uuid4().hex[:12]}"
+        if project_id.startswith("proj_proof_"):
+            parts = project_id.split('_')
+            benchmark_type = parts[2] if len(parts) > 2 else "hysteresis"
+            simulation_id = f"sim_proof_{benchmark_type}_{uuid.uuid4().hex[:8]}"
+        else:
+            simulation_id = f"sim_{uuid.uuid4().hex[:12]}"
         
         state = SimulationState(
             simulation_id=simulation_id,
@@ -284,6 +298,11 @@ class SimulationManager:
                 enrich_with_edges=True
             )
             
+            # DÉBOGAGE LOCAL: Limiter le nombre d'agents simulés à 5 pour que la phase de préparation (LLM) soit instantanée au lieu de durer 30 minutes
+            if len(filtered.entities) > 5:
+                filtered.entities = filtered.entities[:5]
+                filtered.filtered_count = len(filtered.entities)
+            
             state.entities_count = filtered.filtered_count
             state.entity_types = list(filtered.entity_types)
             
@@ -302,15 +321,9 @@ class SimulationManager:
                 return state
             
             # ========== 阶段2: 生成Agent Profile ==========
-            total_entities = len(filtered.entities)
-            
-            if progress_callback:
-                progress_callback(
-                    "generating_profiles", 0,
-                    t('progress.startGenerating'),
-                    current=0,
-                    total=total_entities
-                )
+            from ..models.project import ProjectManager
+            project = ProjectManager.get_project(state.project_id)
+            is_social_or_oasis = (state.run_mode == "oasis") or (project and project.simulation_mode == "social")
             
             # 传入graph_id以启用Zep检索功能，获取更丰富的上下文
             generator = OasisProfileGenerator(graph_id=state.graph_id)
@@ -319,7 +332,7 @@ class SimulationManager:
                 if progress_callback:
                     progress_callback(
                         "generating_profiles", 
-                        int(current / total * 100), 
+                        int(current / total * 100) if total > 0 else 0, 
                         msg,
                         current=current,
                         total=total,
@@ -336,17 +349,49 @@ class SimulationManager:
                 realtime_output_path = os.path.join(sim_dir, "twitter_profiles.csv")
                 realtime_platform = "twitter"
             
-            profiles = generator.generate_profiles_from_entities(
-                entities=filtered.entities,
-                use_llm=use_llm_for_profiles,
-                progress_callback=profile_progress,
-                graph_id=state.graph_id,  # 传入graph_id用于Zep检索
-                parallel_count=parallel_profile_count,  # 并行生成数量
-                realtime_output_path=realtime_output_path,  # 实时保存路径
-                output_platform=realtime_platform  # 输出格式
-            )
-            
-            state.profiles_count = len(profiles)
+            if is_social_or_oasis:
+                total_agents = 8
+                if progress_callback:
+                    progress_callback(
+                        "generating_profiles", 0,
+                        t('progress.startGenerating'),
+                        current=0,
+                        total=total_agents
+                    )
+                
+                profiles = generator.generate_public_opinion_profiles(
+                    case_facts=document_text,
+                    simulation_requirement=simulation_requirement,
+                    count=total_agents,
+                    progress_callback=profile_progress,
+                    realtime_output_path=realtime_output_path,
+                    output_platform=realtime_platform
+                )
+                
+                state.entities_count = len(profiles)
+                state.profiles_count = len(profiles)
+                state.entity_types = ["Activiste", "Journaliste", "Porte-parole", "Expert", "Observateur", "Consommateur"]
+            else:
+                total_entities = len(filtered.entities)
+                if progress_callback:
+                    progress_callback(
+                        "generating_profiles", 0,
+                        t('progress.startGenerating'),
+                        current=0,
+                        total=total_entities
+                    )
+                
+                profiles = generator.generate_profiles_from_entities(
+                    entities=filtered.entities,
+                    use_llm=use_llm_for_profiles,
+                    progress_callback=profile_progress,
+                    graph_id=state.graph_id,  # 传入graph_id用于Zep检索
+                    parallel_count=parallel_profile_count,  # 并行生成数量
+                    realtime_output_path=realtime_output_path,  # 实时保存路径
+                    output_platform=realtime_platform  # 输出格式
+                )
+                
+                state.profiles_count = len(profiles)
             
             # 保存Profile文件（注意：Twitter使用CSV格式，Reddit使用JSON格式）
             # Reddit 已经在生成过程中实时保存了，这里再保存一次确保完整性
@@ -354,8 +399,8 @@ class SimulationManager:
                 progress_callback(
                     "generating_profiles", 95,
                     t('progress.savingProfiles'),
-                    current=total_entities,
-                    total=total_entities
+                    current=len(profiles),
+                    total=len(profiles)
                 )
             
             if state.enable_reddit:
@@ -400,15 +445,30 @@ class SimulationManager:
                     total=3
                 )
             
+            from .zep_entity_reader import EntityNode
+            config_entities = []
+            if is_social_or_oasis:
+                for p in profiles:
+                    config_entities.append(EntityNode(
+                        uuid=p.source_entity_uuid or f"node_{p.user_name}",
+                        name=p.name,
+                        labels=["Entity", p.source_entity_type or "Citoyen"],
+                        summary=p.persona,
+                        attributes={"bio": p.bio, "profession": p.profession, "username": p.user_name}
+                    ))
+            else:
+                config_entities = filtered.entities
+
             sim_params = config_generator.generate_config(
                 simulation_id=simulation_id,
                 project_id=state.project_id,
                 graph_id=state.graph_id,
                 simulation_requirement=simulation_requirement,
                 document_text=document_text,
-                entities=filtered.entities,
+                entities=config_entities,
                 enable_twitter=state.enable_twitter,
-                enable_reddit=state.enable_reddit
+                enable_reddit=state.enable_reddit,
+                run_mode=state.run_mode
             )
             
             if progress_callback:
@@ -466,7 +526,7 @@ class SimulationManager:
         
         if os.path.exists(self.SIMULATION_DATA_DIR):
             for sim_id in os.listdir(self.SIMULATION_DATA_DIR):
-                # 跳过隐藏文件（如 .DS_Store）和非目录文件
+                # 跳过隐藏文件（如 .DS_Store） and 非目录文件
                 sim_path = os.path.join(self.SIMULATION_DATA_DIR, sim_id)
                 if sim_id.startswith('.') or not os.path.isdir(sim_path):
                     continue
@@ -476,6 +536,8 @@ class SimulationManager:
                     if project_id is None or state.project_id == project_id:
                         simulations.append(state)
         
+        # Sort by created_at descending (latest first)
+        simulations.sort(key=lambda x: x.created_at, reverse=True)
         return simulations
     
     def get_profiles(self, simulation_id: str, platform: str = "reddit") -> List[Dict[str, Any]]:
@@ -490,8 +552,12 @@ class SimulationManager:
         if not os.path.exists(profile_path):
             return []
         
-        with open(profile_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        try:
+            with open(profile_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Error loading profiles for {simulation_id} on {platform}: {e}")
+            return []
     
     def get_simulation_config(self, simulation_id: str) -> Optional[Dict[str, Any]]:
         """获取模拟配置"""
@@ -501,8 +567,12 @@ class SimulationManager:
         if not os.path.exists(config_path):
             return None
         
-        with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Error loading simulation config for {simulation_id}: {e}")
+            return None
     
     def get_run_instructions(self, simulation_id: str) -> Dict[str, str]:
         """获取运行说明"""

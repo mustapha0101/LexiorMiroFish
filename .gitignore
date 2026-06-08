@@ -18,6 +18,10 @@ __pycache__/
 .Python
 .venv/
 venv/
+venv310/
+backend/venv310/
+backend/scratch/
+papier\ recherche/
 ENV/
 .eggs/
 *.egg-info/

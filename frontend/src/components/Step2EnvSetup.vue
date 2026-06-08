@@ -6,7 +6,7 @@
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">01</span>
-            <span class="step-title">{{ $t('step2.simInstanceInit') }}</span>
+            <span class="step-title">{{ isOasisOrSocial ? 'Initialisation de la simulation publique' : 'Initialisation du procès judiciaire' }}</span>
           </div>
           <div class="step-status">
             <span v-if="phase > 0" class="badge success">{{ $t('common.completed') }}</span>
@@ -17,7 +17,7 @@
         <div class="card-content">
           <p class="api-note">POST /api/simulation/create</p>
           <p class="description">
-            {{ $t('step2.simInstanceDesc') }}
+            {{ isOasisOrSocial ? 'Création de l\'instance de simulation publique sur les réseaux sociaux.' : (isCivil ? 'Création de l\'instance de procès civil' : 'Création de l\'instance de procès criminel') }}
           </p>
 
           <div v-if="simulationId" class="info-card">
@@ -46,7 +46,7 @@
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">02</span>
-            <span class="step-title">{{ $t('step2.generateAgentPersona') }}</span>
+            <span class="step-title">{{ isOasisOrSocial ? 'Génération des personas d\'opinion publique' : 'Génération des Acteurs du Tribunal' }}</span>
           </div>
           <div class="step-status">
             <span v-if="phase > 1" class="badge success">{{ $t('common.completed') }}</span>
@@ -58,29 +58,29 @@
         <div class="card-content">
           <p class="api-note">POST /api/simulation/prepare</p>
           <p class="description">
-            {{ $t('step2.generateAgentPersonaDesc') }}
+            {{ isOasisOrSocial ? 'Initialisation des 8 acteurs et segments d\'opinion publique (Lanceur d\'alerte, Journaliste, Porte-parole, Expert, Citoyen moyen, Citoyen indigné, Sceptique, Consommateur) basés sur le dossier.' : (isCivil ? 'Initialisation des 5 acteurs clés du procès (Juge, Avocat du Demandeur, Avocat de la Défense, Défendeur, Greffier) basés sur le dossier.' : 'Initialisation des 5 acteurs clés du procès (Juge, Le Procureur, Avocat de la Défense, Le Prévenu, Greffier) basés sur le dossier.') }}
           </p>
 
           <!-- Profiles Stats -->
           <div v-if="profiles.length > 0" class="stats-grid">
             <div class="stat-card">
               <span class="stat-value">{{ profiles.length }}</span>
-              <span class="stat-label">{{ $t('step2.currentAgentCount') }}</span>
+              <span class="stat-label">{{ isOasisOrSocial ? 'Personas générés' : 'Acteurs générés' }}</span>
             </div>
             <div class="stat-card">
               <span class="stat-value">{{ expectedTotal || '-' }}</span>
-              <span class="stat-label">{{ $t('step2.expectedAgentTotal') }}</span>
+              <span class="stat-label">{{ isOasisOrSocial ? 'Personas attendus' : 'Acteurs attendus' }}</span>
             </div>
             <div class="stat-card">
               <span class="stat-value">{{ totalTopicsCount }}</span>
-              <span class="stat-label">{{ $t('step2.relatedTopicsCount') }}</span>
+              <span class="stat-label">{{ isOasisOrSocial ? 'Sujets d\'intérêt' : $t('step2.relatedTopicsCount') }}</span>
             </div>
           </div>
 
           <!-- Profiles List Preview -->
           <div v-if="profiles.length > 0" class="profiles-preview">
             <div class="preview-header">
-              <span class="preview-title">{{ $t('step2.generatedAgentPersonas') }}</span>
+              <span class="preview-title">{{ isOasisOrSocial ? 'Personas d\'opinion publique initialisés' : 'Acteurs du tribunal initialisés' }}</span>
             </div>
             <div class="profiles-list">
               <div 
@@ -114,7 +114,7 @@
       </div>
 
       <!-- Step 03: 生成双平台模拟配置 -->
-      <div class="step-card" :class="{ 'active': phase === 2, 'completed': phase > 2 }">
+      <div v-if="props.projectData?.simulation_mode !== 'legal'" class="step-card" :class="{ 'active': phase === 2, 'completed': phase > 2 }">
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">03</span>
@@ -347,7 +347,7 @@
       </div>
 
       <!-- Step 04: 初始激活编排 -->
-      <div class="step-card" :class="{ 'active': phase === 3, 'completed': phase > 3 }">
+      <div v-if="props.projectData?.simulation_mode !== 'legal'" class="step-card" :class="{ 'active': phase === 3, 'completed': phase > 3 }">
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">04</span>
@@ -423,7 +423,7 @@
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">05</span>
-            <span class="step-title">{{ $t('step2.setupComplete') }}</span>
+            <span class="step-title">{{ isOasisOrSocial ? 'Configuration de la simulation prête' : 'Configuration de l\'Audience prête' }}</span>
           </div>
           <div class="step-status">
             <span v-if="phase >= 4" class="badge processing">{{ $t('step1.inProgress') }}</span>
@@ -433,19 +433,160 @@
 
         <div class="card-content">
           <p class="api-note">POST /api/simulation/start</p>
-          <p class="description">{{ $t('step2.setupCompleteDesc') }}</p>
+          <p class="description">{{ isOasisOrSocial ? 'Configurez l\'environnement d\'exécution et le nombre de rounds pour la simulation.' : 'Configurez l\'environnement d\'exécution et le nombre d\'itérations pour la simulation.' }}</p>
           
-          <!-- 模拟轮数配置 - 只有在配置生成完成且轮数计算出来后才显示 -->
-          <div v-if="simulationConfig && autoGeneratedRounds" class="rounds-config-section">
+          <!-- Choix de la Partie Représentée (uniquement pour les projets judiciaires) -->
+          <div v-if="props.projectData?.simulation_mode === 'legal' && runMode === 'courtroom'" class="side-select-section">
+            <span class="section-title">Choix de la Partie Représentée</span>
+            <span class="section-desc">Sélectionnez le camp que vous souhaitez incarner pour évaluer vos options et adapter les conseils tactiques.</span>
+            
+            <div class="side-cards-grid">
+              <div 
+                class="side-select-card" 
+                :class="{ active: clientSide === 'defense' }" 
+                @click="clientSide = 'defense'"
+              >
+                <div class="side-icon">🛡️</div>
+                <div class="side-details">
+                  <span class="side-name">La Défense</span>
+                  <span class="side-description">Représenter la partie défenderesse ou le prévenu. Analyser les failles de l'accusation et maximiser les chances d'acquittement ou de rejet.</span>
+                </div>
+              </div>
+              
+              <div 
+                class="side-select-card" 
+                :class="{ active: clientSide === 'plaintiff' }" 
+                @click="clientSide = 'plaintiff'"
+              >
+                <div class="side-icon">⚖️</div>
+                <div class="side-details">
+                  <span class="side-name">{{ isCivil ? 'Le Demandeur' : 'La Poursuite' }}</span>
+                  <span class="side-description">Représenter la partie demanderesse ou poursuivante. Consolider les faits et maximiser les chances de condamnation.</span>
+                </div>
+              </div>
+              </div>
+            </div>
+
+          <!-- Radar d'Anticipation Tactique (Détecteur de Failles / Lignes de Force) -->
+          <div v-if="props.projectData?.simulation_mode === 'legal' && runMode === 'courtroom'" class="radar-tactique-section">
+            <div class="radar-header-inline">
+              <div class="radar-header-text">
+                <span class="section-title">Radar d'Anticipation Tactique (Détecteur de Failles)</span>
+                <span class="section-desc">Analysez la structure sémantique et la centralité du dossier pour détecter les failles critiques et générer des requêtes sur mesure.</span>
+              </div>
+              <button 
+                class="radar-trigger-btn" 
+                :class="{ 'loading': radarLoading }" 
+                :disabled="radarLoading"
+                @click="triggerRadarAnalysis"
+              >
+                <span v-if="radarLoading" class="spinner-icon">⏳</span>
+                <span v-else>🔍</span>
+                {{ radarLoading ? 'Analyse du dossier...' : 'Activer le Radar' }}
+              </button>
+            </div>
+
+            <!-- Strategic Opportunities Matrix -->
+            <div v-if="radarResults" class="radar-results-card">
+              <div class="matrix-title-row">
+                <div class="matrix-title-info">
+                  <span class="matrix-title">Matrice d'Anticipation Stratégique ({{ clientSide === 'defense' ? 'Défense' : 'Poursuite' }})</span>
+                  <span class="matrix-subtitle">Opportunités tactiques classées par impact sémantique potentiel</span>
+                </div>
+                <button class="expand-matrix-btn" @click="showExpandedMatrix = true" title="Agrandir la matrice dans une grande fenêtre">
+                  🖥️ Agrandir la matrice
+                </button>
+              </div>
+              
+              <div class="table-container">
+                <table class="radar-table">
+                  <thead>
+                    <tr>
+                      <th>Élément Clé</th>
+                      <th>Ligne de Force / Faille</th>
+                      <th>Impact Prédit</th>
+                      <th>Feuille de Route</th>
+                      <th class="actions-col">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(item, idx) in radarResults" :key="idx" :class="{ 'row-selected': selectedDraft && selectedDraft.node_name === item.node_name && selectedDraft.vector_name === item.vector_name }">
+                      <td class="node-cell"><strong>{{ item.node_name }}</strong></td>
+                      <td class="vector-cell"><span class="vector-badge">{{ item.vector_name }}</span></td>
+                      <td class="impact-cell">
+                        <div class="impact-value-wrapper">
+                          <span class="impact-text">{{ item.impact }}</span>
+                          <div class="progress-bar-container">
+                            <div class="progress-bar-fill" :style="{ width: (item.impact_value || 0) + '%' }"></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="plan-cell plan-cell-clamp">{{ item.match_plan }}</td>
+                      <td class="action-cell">
+                        <button class="detail-btn" @click="openOpportunityDetail(item)" title="Voir les détails">
+                          🔍 Détails
+                        </button>
+                        <button class="draft-btn" @click="triggerDraftRequest(item)">
+                          📄 Requête
+                        </button>
+                        <span v-if="selectedDraft && selectedDraft.node_name === item.node_name && selectedDraft.vector_name === item.vector_name" class="badge success select-badge-animate">
+                          Sélectionné
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sélecteur de Mode d'Exécution (uniquement pour les projets judiciaires) -->
+          <div v-if="props.projectData?.simulation_mode === 'legal'" class="run-mode-section">
+            <span class="section-title">Mode d'Exécution Judiciaire</span>
+            <span class="section-desc">Choisissez l'environnement dans lequel faire tourner la simulation de ce dossier.</span>
+            
+            <div class="mode-cards-grid">
+              <div 
+                class="mode-select-card" 
+                :class="{ active: runMode === 'courtroom' }" 
+                @click="runMode = 'courtroom'"
+              >
+                <div class="mode-icon">⚖️</div>
+                <div class="mode-details">
+                  <span class="mode-name">{{ $t('home.modeLegal') }}</span>
+                  <span class="mode-description">Simulation itérative fermée (Monte-Carlo) entre {{ isCivil ? 'l\'Avocat du Demandeur, l\'Avocat de la Défense et le Juge pour déterminer le taux de rejet' : 'le Procureur, l\'Avocat de la Défense et le Juge pour déterminer le taux d\'acquittement' }}.</span>
+                </div>
+              </div>
+              
+              <div 
+                class="mode-select-card" 
+                :class="{ active: runMode === 'oasis' }" 
+                @click="runMode = 'oasis'"
+              >
+                <div class="mode-icon">💬</div>
+                <div class="mode-details">
+                  <span class="mode-name">{{ $t('home.modeSocial') }}</span>
+                  <span class="mode-description">Plateforme de débat public ouverte (Twitter, Reddit) avec possibilité d'injecter des communiqués ou des arguments en direct.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 模拟轮数配置 - 只有 en cours / prête -->
+          <div v-if="simulationConfig && (autoGeneratedRounds || isOasisOrSocial || !isOasisOrSocial)" class="rounds-config-section">
             <div class="rounds-header">
               <div class="header-left">
-                <span class="section-title">{{ $t('step2.roundsConfig') }}</span>
-                <span class="section-desc">{{ $t('step2.roundsConfigDesc', { hours: simulationConfig?.time_config?.total_simulation_hours || '-', minutesPerRound: simulationConfig?.time_config?.minutes_per_round || '-' }) }}</span>
+                <span class="section-title">{{ isOasisOrSocial ? 'Nombre de rounds' : 'Nombre d\'itérations' }}</span>
+                <span class="section-desc">
+                  {{ isOasisOrSocial 
+                    ? 'Déterminez le nombre de rounds de débats pour observer la propagation de l\'opinion et les arguments.' 
+                    : 'Déterminez le nombre de procès indépendants à simuler pour calculer le taux d\'acquittement ou de rejet.' }}
+                </span>
               </div>
               <label class="switch-control">
                 <input type="checkbox" v-model="useCustomRounds">
                 <span class="switch-track"></span>
-                <span class="switch-label">{{ $t('step2.customToggle') }}</span>
+                <span class="switch-label">Personnaliser</span>
               </label>
             </div>
             
@@ -454,10 +595,18 @@
                 <div class="slider-display">
                   <div class="slider-main-value">
                     <span class="val-num">{{ customMaxRounds }}</span>
-                    <span class="val-unit">{{ $t('step2.roundsUnit') }}</span>
+                    <span class="val-unit">{{ isOasisOrSocial ? 'rounds' : 'simulations' }}</span>
                   </div>
-                  <div class="slider-meta-info">
-                    <span>{{ $t('step2.estimatedDuration', { minutes: Math.round(customMaxRounds * 0.6) }) }}</span>
+                  <div class="slider-meta-info" style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+                    <span style="color: #1E293B; font-weight: 600;">
+                      {{ isOasisOrSocial 
+                        ? `Estimation : ${customMaxRounds} rounds` 
+                        : `Estimation : ${customMaxRounds} simulations` }}
+                    </span>
+                    <span class="cost-badge" style="font-size: 11px; color: #334155; background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.25); padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px; width: fit-content; margin-top: 4px; font-weight: 500;">
+                      💰 Coût estimé LLM ({{ simulationConfig?.llm_model || 'gpt-4o-mini' }}) : 
+                      <strong style="color: #0284C7; font-weight: 700;">{{ estimatedCost === 0 ? 'Gratuit (Local)' : `${estimatedCost.toFixed(3)} USD` }}</strong>
+                    </span>
                   </div>
                 </div>
 
@@ -465,21 +614,29 @@
                   <input 
                     type="range" 
                     v-model.number="customMaxRounds" 
-                    min="10" 
-                    :max="autoGeneratedRounds"
-                    step="5"
+                    :min="isOasisOrSocial ? 5 : 1" 
+                    :max="isOasisOrSocial ? 25 : 50"
+                    :step="1"
                     class="minimal-slider"
-                    :style="{ '--percent': ((customMaxRounds - 10) / (autoGeneratedRounds - 10)) * 100 + '%' }"
+                    :style="{ '--percent': ((customMaxRounds - (isOasisOrSocial ? 5 : 1)) / ((isOasisOrSocial ? 25 : 50) - (isOasisOrSocial ? 5 : 1))) * 100 + '%' }"
                   />
                   <div class="range-marks">
-                    <span>10</span>
+                    <span>{{ isOasisOrSocial ? 5 : 1 }}</span>
                     <span 
+                      v-if="!isOasisOrSocial"
                       class="mark-recommend" 
-                      :class="{ active: customMaxRounds === 40 }"
-                      @click="customMaxRounds = 40"
-                      :style="{ position: 'absolute', left: `calc(${(40 - 10) / (autoGeneratedRounds - 10) * 100}% - 30px)` }"
-                    >{{ $t('step2.recommendedRounds', { rounds: 40 }) }}</span>
-                    <span>{{ autoGeneratedRounds }}</span>
+                      :class="{ active: customMaxRounds === recommendedRounds }"
+                      @click="customMaxRounds = recommendedRounds"
+                      :style="{ position: 'absolute', left: `calc(${(recommendedRounds - 1) / 49 * 100}% - 30px)` }"
+                    >{{ `${recommendedRounds} itér. (Recommandé)` }}</span>
+                    <span 
+                      v-else
+                      class="mark-recommend" 
+                      :class="{ active: customMaxRounds === 10 }"
+                      @click="customMaxRounds = 10"
+                      :style="{ position: 'absolute', left: `calc(${(10 - 5) / 20 * 100}% - 30px)` }"
+                    >10 rounds (Recommandé)</span>
+                    <span>{{ isOasisOrSocial ? 25 : 50 }}</span>
                   </div>
                 </div>
               </div>
@@ -487,21 +644,27 @@
               <div v-else class="rounds-content auto" key="auto">
                 <div class="auto-info-card">
                   <div class="auto-value">
-                    <span class="val-num">{{ autoGeneratedRounds }}</span>
-                    <span class="val-unit">{{ $t('step2.roundsUnit') }}</span>
+                    <span class="val-num">{{ isOasisOrSocial ? 10 : recommendedRounds }}</span>
+                    <span class="val-unit">{{ isOasisOrSocial ? 'rounds' : 'simulations' }}</span>
                   </div>
                   <div class="auto-content">
-                    <div class="auto-meta-row">
+                    <div class="auto-meta-row" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
                       <span class="duration-badge">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <circle cx="12" cy="12" r="10"></circle>
                           <polyline points="12 6 12 12 16 14"></polyline>
                         </svg>
-                        {{ $t('step2.estimatedDurationFull', { minutes: Math.round(autoGeneratedRounds * 0.6) }) }}
+                        {{ isOasisOrSocial 
+                          ? 'Recommandation : 10 rounds de débats' 
+                          : `Recommandation selon le cas : ${recommendedRounds} simulations` }}
+                      </span>
+                      <span class="cost-badge" style="font-size: 11px; color: #334155; background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.25); padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px; font-weight: 500;">
+                        💰 Coût estimé LLM ({{ simulationConfig?.llm_model || 'gpt-4o-mini' }}) : 
+                        <strong style="color: #0284C7; font-weight: 700;">{{ estimatedCost === 0 ? 'Gratuit (Local)' : `${estimatedCost.toFixed(3)} USD` }}</strong>
                       </span>
                     </div>
                     <div class="auto-desc">
-                      <p class="highlight-tip" @click="useCustomRounds = true">{{ $t('step2.customTip') }} ➝</p>
+                      <p class="highlight-tip" @click="useCustomRounds = true">Personnaliser les paramètres ➝</p>
                     </div>
                   </div>
                 </div>
@@ -521,7 +684,7 @@
               :disabled="phase < 4"
               @click="handleStartSimulation"
             >
-              {{ $t('step2.startDualWorldSim') }} ➝
+              {{ isOasisOrSocial ? 'Lancer la simulation' : 'Lancer le procès' }} ➝
             </button>
           </div>
         </div>
@@ -533,85 +696,380 @@
       <div v-if="selectedProfile" class="profile-modal-overlay" @click.self="selectedProfile = null">
         <div class="profile-modal">
           <div class="modal-header">
-          <div class="modal-header-info">
-            <div class="modal-name-row">
-              <span class="modal-realname">{{ selectedProfile.username }}</span>
-              <span class="modal-username">@{{ selectedProfile.name }}</span>
+            <div class="modal-header-info">
+              <div class="modal-name-row" v-if="!isEditing">
+                <span class="modal-realname">{{ selectedProfile.username }}</span>
+                <span class="modal-username">@{{ selectedProfile.name }}</span>
+              </div>
+              <div class="modal-name-row-edit" v-else>
+                <input class="edit-input name-edit" v-model="editForm.username" placeholder="Nom d'affichage">
+                <input class="edit-input name-edit-handle" v-model="editForm.name" placeholder="Handle / ID">
+              </div>
+              <span class="modal-profession" v-if="!isEditing">{{ selectedProfile.profession }}</span>
+              <input class="edit-input profession-edit" v-else v-model="editForm.profession" placeholder="Profession">
             </div>
-            <span class="modal-profession">{{ selectedProfile.profession }}</span>
-          </div>
-          <button class="close-btn" @click="selectedProfile = null">×</button>
-        </div>
-        
-        <div class="modal-body">
-          <!-- 基本信息 -->
-          <div class="modal-info-grid">
-            <div class="info-item">
-              <span class="info-label">{{ $t('step2.profileModalAge') }}</span>
-              <span class="info-value">{{ selectedProfile.age || '-' }} {{ $t('step2.yearsOld') }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">{{ $t('step2.profileModalGender') }}</span>
-              <span class="info-value">{{ { male: $t('step2.genderMale'), female: $t('step2.genderFemale'), other: $t('step2.genderOther') }[selectedProfile.gender] || selectedProfile.gender }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">{{ $t('step2.profileModalCountry') }}</span>
-              <span class="info-value">{{ selectedProfile.country || '-' }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">{{ $t('step2.profileModalMbti') }}</span>
-              <span class="info-value mbti">{{ selectedProfile.mbti || '-' }}</span>
+            <div class="modal-header-actions">
+              <button v-if="!isEditing" class="edit-mode-btn" @click="startEditing">
+                ✏️ Modifier
+              </button>
+              <template v-else>
+                <button class="save-profile-btn" :disabled="isSaving" @click="handleSaveProfile">
+                  {{ isSaving ? 'Enregistrement...' : '✓ Enregistrer' }}
+                </button>
+                <button class="cancel-profile-btn" @click="cancelEditing">
+                  ✕ Annuler
+                </button>
+              </template>
+              <button class="close-btn" @click="selectedProfile = null">×</button>
             </div>
           </div>
+          
+          <div class="modal-body">
+            <!-- Mode Édition -->
+            <div v-if="isEditing" class="edit-profile-form">
+              <!-- Informations de base -->
+              <div class="form-grid">
+                <div class="form-item">
+                  <label class="form-label">Âge</label>
+                  <input type="number" class="edit-input" v-model.number="editForm.age">
+                </div>
+                <div class="form-item">
+                  <label class="form-label">Genre</label>
+                  <select class="edit-select" v-model="editForm.gender">
+                    <option value="male">Homme (male)</option>
+                    <option value="female">Femme (female)</option>
+                    <option value="other">Autre (other)</option>
+                  </select>
+                </div>
+                <div class="form-item">
+                  <label class="form-label">Pays</label>
+                  <input type="text" class="edit-input" v-model="editForm.country">
+                </div>
+                <div class="form-item">
+                  <label class="form-label">MBTI</label>
+                  <input type="text" class="edit-input" v-model="editForm.mbti">
+                </div>
+              </div>
 
-          <!-- 简介 -->
-          <div class="modal-section">
-            <span class="section-label">{{ $t('step2.profileModalBio') }}</span>
-            <p class="section-bio">{{ selectedProfile.bio || $t('step2.noBio') }}</p>
-          </div>
+              <!-- Biographie & Persona -->
+              <div class="form-section">
+                <label class="form-label">Biographie (bio)</label>
+                <textarea class="edit-textarea bio-textarea" v-model="editForm.bio" placeholder="Biographie..."></textarea>
+              </div>
 
-          <!-- 关注话题 -->
-          <div class="modal-section" v-if="selectedProfile.interested_topics?.length">
-            <span class="section-label">{{ $t('step2.profileModalTopics') }}</span>
-            <div class="topics-grid">
-              <span 
-                v-for="topic in selectedProfile.interested_topics" 
-                :key="topic" 
-                class="topic-item"
-              >{{ topic }}</span>
+              <div class="form-section">
+                <label class="form-label">Persona (Profil cognitif détaillé)</label>
+                <textarea class="edit-textarea persona-textarea" v-model="editForm.persona" placeholder="Persona..."></textarea>
+              </div>
+
+              <!-- Intérêts -->
+              <div class="form-section">
+                <label class="form-label">Sujets d'intérêt (séparés par des virgules)</label>
+                <input type="text" class="edit-input" :value="editForm.interested_topics.join(', ')" @input="editForm.interested_topics = $event.target.value.split(',').map(s => s.trim()).filter(Boolean)">
+              </div>
+
+              <!-- Paramètres Comportementaux (si configuration disponible) -->
+              <div v-if="simulationConfig?.agent_configs?.some(a => a.agent_id === selectedProfile.user_id)" class="behavioral-parameters-section">
+                <span class="section-label">Paramètres Comportementaux de Simulation</span>
+                
+                <div class="form-grid behavior-grid">
+                  <div class="form-item">
+                    <label class="form-label">Stance (Attitude)</label>
+                    <select class="edit-select" v-model="editForm.stance">
+                      <option value="supportive">Soutien (supportive)</option>
+                      <option value="opposing">Opposant (opposing)</option>
+                      <option value="neutral">Neutre (neutral)</option>
+                      <option value="observer">Observateur (observer)</option>
+                    </select>
+                  </div>
+                  <div class="form-item">
+                    <label class="form-label">Poids d'influence</label>
+                    <input type="number" step="0.1" class="edit-input" v-model.number="editForm.influence_weight">
+                  </div>
+                  <div class="form-item">
+                    <label class="form-label">Niveau d'activité (0-1)</label>
+                    <input type="number" step="0.05" min="0" max="1" class="edit-input" v-model.number="editForm.activity_level">
+                  </div>
+                  <div class="form-item">
+                    <label class="form-label">Biais d'opinion (-1 à 1)</label>
+                    <input type="number" step="0.1" min="-1" max="1" class="edit-input" v-model.number="editForm.sentiment_bias">
+                  </div>
+                  <div class="form-item">
+                    <label class="form-label">Posts / heure</label>
+                    <input type="number" step="0.1" min="0" class="edit-input" v-model.number="editForm.posts_per_hour">
+                  </div>
+                  <div class="form-item">
+                    <label class="form-label">Comments / heure</label>
+                    <input type="number" step="0.1" min="0" class="edit-input" v-model.number="editForm.comments_per_hour">
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <!-- 详细人设 -->
-          <div class="modal-section" v-if="selectedProfile.persona">
-            <span class="section-label">{{ $t('step2.profileModalPersona') }}</span>
-            
-            <!-- 人设维度概览 -->
-            <div class="persona-dimensions">
-              <div class="dimension-card">
-                <span class="dim-title">{{ $t('step2.personaDimExperience') }}</span>
-                <span class="dim-desc">{{ $t('step2.personaDimExperienceDesc') }}</span>
+            <!-- Mode Lecture Seule (Original) -->
+            <div v-else>
+              <!-- 基本信息 -->
+              <div class="modal-info-grid">
+                <div class="info-item">
+                  <span class="info-label">{{ $t('step2.profileModalAge') }}</span>
+                  <span class="info-value">{{ selectedProfile.age || '-' }} {{ $t('step2.yearsOld') }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">{{ $t('step2.profileModalGender') }}</span>
+                  <span class="info-value">{{ { male: $t('step2.genderMale'), female: $t('step2.genderFemale'), other: $t('step2.genderOther') }[selectedProfile.gender] || selectedProfile.gender }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">{{ $t('step2.profileModalCountry') }}</span>
+                  <span class="info-value">{{ selectedProfile.country || '-' }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">{{ $t('step2.profileModalMbti') }}</span>
+                  <span class="info-value mbti">{{ selectedProfile.mbti || '-' }}</span>
+                </div>
               </div>
-              <div class="dimension-card">
-                <span class="dim-title">{{ $t('step2.personaDimBehavior') }}</span>
-                <span class="dim-desc">{{ $t('step2.personaDimBehaviorDesc') }}</span>
-              </div>
-              <div class="dimension-card">
-                <span class="dim-title">{{ $t('step2.personaDimMemory') }}</span>
-                <span class="dim-desc">{{ $t('step2.personaDimMemoryDesc') }}</span>
-              </div>
-              <div class="dimension-card">
-                <span class="dim-title">{{ $t('step2.personaDimSocial') }}</span>
-                <span class="dim-desc">{{ $t('step2.personaDimSocialDesc') }}</span>
-              </div>
-            </div>
 
-            <div class="persona-content">
-              <p class="section-persona">{{ selectedProfile.persona }}</p>
+              <!-- 简介 -->
+              <div class="modal-section">
+                <span class="section-label">{{ $t('step2.profileModalBio') }}</span>
+                <p class="section-bio">{{ selectedProfile.bio || $t('step2.noBio') }}</p>
+              </div>
+
+              <!-- 关注话题 -->
+              <div class="modal-section" v-if="selectedProfile.interested_topics?.length">
+                <span class="section-label">{{ $t('step2.profileModalTopics') }}</span>
+                <div class="topics-grid">
+                  <span 
+                    v-for="topic in selectedProfile.interested_topics" 
+                    :key="topic" 
+                    class="topic-item"
+                  >{{ topic }}</span>
+                </div>
+              </div>
+
+              <!-- 详细人设 -->
+              <div class="modal-section" v-if="selectedProfile.persona">
+                <span class="section-label">{{ $t('step2.profileModalPersona') }}</span>
+                
+                <!-- 人设维度概览 -->
+                <div class="persona-dimensions">
+                  <div class="dimension-card">
+                    <span class="dim-title">{{ $t('step2.personaDimExperience') }}</span>
+                    <span class="dim-desc">{{ $t('step2.personaDimExperienceDesc') }}</span>
+                  </div>
+                  <div class="dimension-card">
+                    <span class="dim-title">{{ $t('step2.personaDimBehavior') }}</span>
+                    <span class="dim-desc">{{ $t('step2.personaDimBehaviorDesc') }}</span>
+                  </div>
+                  <div class="dimension-card">
+                    <span class="dim-title">{{ $t('step2.personaDimMemory') }}</span>
+                    <span class="dim-desc">{{ $t('step2.personaDimMemoryDesc') }}</span>
+                  </div>
+                  <div class="dimension-card">
+                    <span class="dim-title">{{ $t('step2.personaDimSocial') }}</span>
+                    <span class="dim-desc">{{ $t('step2.personaDimSocialDesc') }}</span>
+                  </div>
+                </div>
+
+                <div class="persona-content">
+                  <p class="section-persona">{{ selectedProfile.persona }}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+    </Transition>
+
+    <!-- Typewriter Draft Modal -->
+    <Transition name="modal">
+      <div v-if="showDraftModal" class="legal-draft-modal-overlay" @click.self="showDraftModal = false">
+        <div class="legal-draft-modal">
+          <div class="modal-header">
+            <div class="modal-header-info">
+              <span class="modal-realname">Projet de document juridique</span>
+              <span class="modal-username">{{ selectedVector?.vector_name }}</span>
+            </div>
+            <div class="modal-header-actions">
+              <button 
+                v-if="draftText && !draftLoading" 
+                class="save-profile-btn" 
+                @click="selectDraftForSimulation"
+                style="background-color: #16A34A;"
+              >
+                {{ selectedDraft?.text === draftText ? '✓ Sélectionné' : '✓ Sélectionner pour le procès' }}
+              </button>
+              <button class="save-profile-btn" @click="copyDraftText" :disabled="draftLoading">
+                📋 Copier
+              </button>
+              <button class="cancel-profile-btn" @click="showDraftModal = false">
+                Fermer
+              </button>
+            </div>
+          </div>
+          <div class="modal-body draft-body">
+            <div v-if="draftLoading && !draftText" class="draft-loader">
+              <span class="spinner-icon">⏳</span>
+              <p>Rédaction du document juridique en cours...</p>
+            </div>
+            <pre v-else class="typewriter-content">{{ draftText }}<span v-if="draftLoading" class="cursor">|</span></pre>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Expanded Matrix Modal -->
+    <Transition name="modal">
+      <div v-if="showExpandedMatrix" class="large-modal-overlay" @click.self="showExpandedMatrix = false">
+        <div class="large-modal glassmorphic-modal">
+          <div class="modal-header gold-border-bottom">
+            <div class="modal-header-info">
+              <span class="modal-realname font-serif-gold">Matrice d'Anticipation Stratégique</span>
+              <span class="modal-username">Vue élargie pour le camp : {{ clientSide === 'defense' ? 'Défense' : 'Poursuite / Demandeur' }}</span>
+            </div>
+            <div class="modal-header-actions">
+              <button class="cancel-profile-btn gold-border-btn" @click="showExpandedMatrix = false">
+                ✕ Fermer la vue
+              </button>
+              <button class="close-btn" @click="showExpandedMatrix = false">×</button>
+            </div>
+          </div>
+          <div class="modal-body large-body">
+            <p class="matrix-description-text">
+              Cette vue panoramique vous permet d'analyser en détail les lignes de force et les failles du dossier. Utilisez les boutons d'actions pour étudier chaque élément ou générer des projets de requêtes.
+            </p>
+            <div class="table-container large-table-container">
+              <table class="radar-table large-radar-table">
+                <thead>
+                  <tr>
+                    <th style="width: 15%">Élément Clé</th>
+                    <th style="width: 20%">Ligne de Force / Faille</th>
+                    <th style="width: 15%">Impact Prédit</th>
+                    <th style="width: 35%">Feuille de Route (Plan de match)</th>
+                    <th style="width: 15%" class="actions-col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(item, idx) in radarResults" :key="idx" :class="{ 'row-selected': selectedDraft && selectedDraft.node_name === item.node_name && selectedDraft.vector_name === item.vector_name }">
+                    <td class="node-cell"><strong>{{ item.node_name }}</strong></td>
+                    <td class="vector-cell"><span class="vector-badge">{{ item.vector_name }}</span></td>
+                    <td class="impact-cell">
+                      <div class="impact-value-wrapper">
+                        <span class="impact-text">{{ item.impact }}</span>
+                        <div class="progress-bar-container">
+                          <div class="progress-bar-fill" :style="{ width: (item.impact_value || 0) + '%' }"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="plan-cell plan-cell-expanded">{{ item.match_plan }}</td>
+                    <td class="action-cell">
+                      <button class="detail-btn" @click="openOpportunityDetail(item)" title="Voir la fiche détaillée">
+                        🔍 Détails
+                      </button>
+                      <button class="draft-btn" @click="triggerDraftRequest(item)">
+                        📄 Requête
+                      </button>
+                      <span v-if="selectedDraft && selectedDraft.node_name === item.node_name && selectedDraft.vector_name === item.vector_name" class="badge success select-badge-animate">
+                        Sélectionné
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Opportunity Detail Modal -->
+    <Transition name="modal">
+      <div v-if="selectedOpportunity" class="detail-modal-overlay" @click.self="selectedOpportunity = null">
+        <div class="detail-modal glassmorphic-modal">
+          <div class="modal-header gold-border-bottom">
+            <div class="modal-header-info">
+              <span class="modal-realname font-serif-gold">Fiche d'Opportunité Tactique</span>
+              <span class="modal-username">Analyse sémantique approfondie</span>
+            </div>
+            <div class="modal-header-actions">
+              <button class="close-btn" @click="selectedOpportunity = null">×</button>
+            </div>
+          </div>
+          <div class="modal-body detail-body-content">
+            <!-- Header Card for Node & Vector -->
+            <div class="detail-card-header-pane">
+              <div class="detail-meta-group">
+                <span class="detail-label-tag">ÉLÉMENT CLÉ</span>
+                <span class="detail-value-highlight">{{ selectedOpportunity.node_name }}</span>
+              </div>
+              <div class="detail-meta-group">
+                <span class="detail-label-tag">VECTEUR ANALYSÉ</span>
+                <span class="vector-badge large-vector-badge">{{ selectedOpportunity.vector_name }}</span>
+              </div>
+            </div>
+
+            <!-- Impact Section -->
+            <div class="detail-impact-card">
+              <div class="impact-radial-indicator">
+                <span class="impact-radial-text">{{ selectedOpportunity.impact }}</span>
+                <div class="detail-progress-container">
+                  <div class="detail-progress-fill" :style="{ width: (selectedOpportunity.impact_value || 0) + '%' }"></div>
+                </div>
+              </div>
+              <div class="impact-explanation">
+                <span class="detail-section-title">Impact Prédit sur le Procès</span>
+                <p class="detail-section-desc">Cette estimation mesure le déplacement de probabilité de gain ou d'acquittement si l'argument est correctement articulé devant le tribunal.</p>
+              </div>
+            </div>
+
+            <!-- Match Plan (Feuille de Route) -->
+            <div class="detail-plan-section">
+              <span class="detail-section-label-gold">Feuille de Route Tactique (Plan de match)</span>
+              <div class="detail-plan-card-body">
+                <p class="detail-plan-text">{{ selectedOpportunity.match_plan }}</p>
+              </div>
+            </div>
+
+            <!-- Selection Status Info -->
+            <div class="detail-status-section">
+              <div v-if="selectedDraft && selectedDraft.node_name === selectedOpportunity.node_name && selectedDraft.vector_name === selectedOpportunity.vector_name" class="status-active-badge">
+                <span class="status-icon">✓</span>
+                <div class="status-text-wrapper">
+                  <span class="status-title">Stimulus Actif</span>
+                  <span class="status-desc">Ce plan de match est actuellement sélectionné et sera injecté au démarrage du procès.</span>
+                </div>
+              </div>
+              <div v-else class="status-inactive-badge">
+                <span class="status-icon">ℹ️</span>
+                <div class="status-text-wrapper">
+                  <span class="status-title">Non Sélectionné</span>
+                  <span class="status-desc">Pour activer cette tactique, générez la requête ci-dessous et validez sa sélection.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Actions Bar -->
+          <div class="modal-footer-actions gold-border-top">
+            <button class="cancel-profile-btn" @click="selectedOpportunity = null">
+              Fermer
+            </button>
+            
+            <button 
+              v-if="selectedDraft && selectedDraft.node_name === selectedOpportunity.node_name && selectedDraft.vector_name === selectedOpportunity.vector_name"
+              class="draft-btn-view"
+              @click="triggerDraftRequest(selectedOpportunity)"
+            >
+              📄 Consulter la Requête
+            </button>
+            <button 
+              v-else
+              class="draft-btn-generate pulsing-gold-btn" 
+              @click="triggerDraftRequest(selectedOpportunity)"
+            >
+              ✨ Rédiger la Requête & Sélectionner
+            </button>
+          </div>
+        </div>
       </div>
     </Transition>
 
@@ -639,7 +1097,12 @@ import {
   getPrepareStatus,
   getSimulationProfilesRealtime,
   getSimulationConfig,
-  getSimulationConfigRealtime
+  getSimulationConfigRealtime,
+  updateSimulationProfile,
+  runSensitivityAnalysis,
+  generateLegalRequest,
+  selectDraft,
+  getRadarAnalysis
 } from '../api/simulation'
 
 const { t } = useI18n()
@@ -655,6 +1118,14 @@ const emit = defineEmits(['go-back', 'next-step', 'add-log', 'update-status'])
 
 // State
 const phase = ref(0) // 0: 初始化, 1: 生成人设, 2: 生成配置, 3: 完成
+const runMode = ref('courtroom') // courtroom or oasis
+const clientSide = ref(props.projectData?.client_side || 'defense')
+
+watch(() => props.projectData?.client_side, (newVal) => {
+  if (newVal) {
+    clientSide.value = newVal
+  }
+})
 const taskId = ref(null)
 const prepareProgress = ref(0)
 const currentStage = ref('')
@@ -663,8 +1134,188 @@ const profiles = ref([])
 const entityTypes = ref([])
 const expectedTotal = ref(null)
 const simulationConfig = ref(null)
+
+const isCivil = computed(() => {
+  if (props.projectData?.simulation_mode !== 'legal') return false
+  if (simulationConfig.value?.litigation_type === 'civil') return true
+  if (simulationConfig.value?.litigation_type === 'criminal') return false
+  return profiles.value.some(p => p.username && (p.username.toLowerCase().includes("demandeur") || p.username.toLowerCase().includes("défendeur")))
+})
+
+const isOasisOrSocial = computed(() => {
+  return runMode.value === 'oasis' || props.projectData?.simulation_mode === 'social'
+})
+
 const selectedProfile = ref(null)
 const showProfilesDetail = ref(true)
+
+// Editing Profile States
+const isEditing = ref(false)
+const isSaving = ref(false)
+const editForm = ref({
+  name: '',
+  username: '',
+  profession: '',
+  age: 30,
+  gender: 'male',
+  mbti: '',
+  country: '',
+  bio: '',
+  persona: '',
+  interested_topics: [],
+  stance: 'neutral',
+  influence_weight: 1.0,
+  activity_level: 0.5,
+  posts_per_hour: 1.0,
+  comments_per_hour: 2.0,
+  sentiment_bias: 0.0
+})
+
+// Tactical Radar State
+const radarResults = ref(null)
+const radarLoading = ref(false)
+const draftText = ref('')
+const draftLoading = ref(false)
+const showDraftModal = ref(false)
+const selectedVector = ref(null)
+const selectedDraft = ref(null)
+
+// State for Expanded Matrix and Opportunity Details
+const showExpandedMatrix = ref(false)
+const selectedOpportunity = ref(null)
+
+const openOpportunityDetail = (opportunity) => {
+  selectedOpportunity.value = opportunity
+}
+
+const triggerRadarAnalysis = async () => {
+  if (radarLoading.value) return
+  radarLoading.value = true
+  radarResults.value = null
+  try {
+    const res = await runSensitivityAnalysis({
+      project_id: props.projectData?.project_id,
+      client_side: clientSide.value,
+      simulation_id: props.simulationId
+    })
+    if (res.data?.success) {
+      radarResults.value = res.data.data
+    } else if (res.success) {
+      radarResults.value = res.data
+    } else {
+      radarResults.value = res.data || []
+    }
+    addLog(`[Radar Tactique] Analyse de sensibilité terminée pour le camp : ${clientSide.value === 'defense' ? 'Défense' : 'Poursuite/Demandeur'}.`)
+  } catch (err) {
+    console.error(err)
+    addLog(`[Radar Tactique] Erreur lors de l'analyse : ${err.message || err}`)
+  } finally {
+    radarLoading.value = false
+  }
+}
+
+const triggerDraftRequest = async (opportunity) => {
+  if (draftLoading.value) return
+  selectedVector.value = opportunity
+  draftLoading.value = true
+  draftText.value = ""
+  showDraftModal.value = true
+  
+  try {
+    const res = await generateLegalRequest({
+      project_id: props.projectData?.project_id,
+      client_side: clientSide.value,
+      node_name: opportunity.node_name,
+      vector_name: opportunity.vector_name,
+      request_type: opportunity.request_type || 'requete',
+      simulation_id: props.simulationId
+    })
+    
+    const generated = res.data?.draft || res.data?.data?.draft || res.draft || ""
+    
+    let i = 0
+    const speed = 4
+    const typeWriter = () => {
+      if (i < generated.length) {
+        draftText.value += generated.charAt(i)
+        i++
+        setTimeout(typeWriter, speed)
+      } else {
+        draftLoading.value = false
+      }
+    }
+    typeWriter()
+    
+    addLog(`[Radar Tactique] Projet de document juridique généré pour '${opportunity.node_name}'.`)
+  } catch (err) {
+    console.error(err)
+    draftText.value = "Erreur lors de la génération du document : " + (err.message || err)
+    draftLoading.value = false
+    addLog(`[Radar Tactique] Erreur lors de la génération du projet de requête : ${err.message || err}`)
+  }
+}
+
+const copyDraftText = () => {
+  navigator.clipboard.writeText(draftText.value)
+  alert("Projet de requête copié dans le presse-papiers.")
+}
+
+const loadSavedRadarAnalysis = async () => {
+  if (!props.simulationId) return
+  try {
+    const res = await getRadarAnalysis(props.simulationId)
+    if (res.data?.success || res.success) {
+      const savedData = res.data?.data || res.data
+      if (savedData && savedData.selected_draft) {
+        selectedDraft.value = savedData.selected_draft
+      }
+      
+      const currentSideResults = savedData ? savedData[clientSide.value] : null
+      if (currentSideResults && currentSideResults.length > 0) {
+        radarResults.value = currentSideResults
+      } else {
+        radarResults.value = null
+      }
+    }
+  } catch (err) {
+    console.error("Failed to load saved radar analysis:", err)
+  }
+}
+
+watch(clientSide, async () => {
+  radarResults.value = null
+  if (selectedDraft.value && selectedDraft.value.client_side !== clientSide.value) {
+    selectedDraft.value = null
+  }
+  await loadSavedRadarAnalysis()
+})
+
+const selectDraftForSimulation = async () => {
+  if (!draftText.value) return
+  const draftObj = {
+    node_name: selectedVector.value.node_name,
+    vector_name: selectedVector.value.vector_name,
+    text: draftText.value,
+    client_side: clientSide.value
+  }
+  selectedDraft.value = draftObj
+  
+  if (props.simulationId) {
+    try {
+      await selectDraft(props.simulationId, draftObj)
+      addLog(`[Radar Tactique] Sélection enregistrée dans le dossier de simulation.`)
+    } catch (err) {
+      console.error("Failed to save draft selection:", err)
+      addLog(`[Radar Tactique] Avertissement : Impossible d'enregistrer la sélection sur le serveur.`)
+    }
+  }
+
+  addLog(`[Radar Tactique] Requête pour '${selectedVector.value.node_name}' sélectionnée et intégrée comme stimulus initial pour la simulation.`)
+  showDraftModal.value = false
+  if (selectedOpportunity.value) {
+    selectedOpportunity.value = null
+  }
+}
 
 // 日志去重：记录上一次输出的关键信息
 let lastLoggedMessage = ''
@@ -674,6 +1325,43 @@ let lastLoggedConfigStage = ''
 // 模拟轮数配置
 const useCustomRounds = ref(false) // 默认使用自动配置轮数
 const customMaxRounds = ref(40)   // 默认推荐40轮
+
+// Recommandation d'itérations basée sur la complexité du cas (GraphRAG ou description)
+const recommendedRounds = computed(() => {
+  if (props.projectData?.simulation_mode !== 'legal') return 40;
+  
+  // Utiliser la complexité du graphe de connaissances si disponible
+  const nodeCount = props.graphData?.nodes?.length || 0;
+  if (nodeCount > 0) {
+    if (nodeCount >= 15) return 45;
+    if (nodeCount >= 10) return 35;
+    if (nodeCount >= 5) return 25;
+    return 15;
+  }
+  
+  // Alternative : se baser sur la longueur du scénario de l'affaire
+  const reqLength = props.projectData?.simulation_requirement?.length || 0;
+  if (reqLength > 500) return 40;
+  if (reqLength > 250) return 30;
+  return 20;
+})
+
+// Mettre à jour la valeur par défaut lors du chargement
+watch(recommendedRounds, (newVal) => {
+  if (newVal && runMode.value === 'courtroom') {
+    customMaxRounds.value = newVal
+  }
+}, { immediate: true })
+
+watch(runMode, (newVal) => {
+  if (props.projectData?.simulation_mode === 'legal') {
+    if (newVal === 'courtroom') {
+      customMaxRounds.value = recommendedRounds.value
+    } else {
+      customMaxRounds.value = 10
+    }
+  }
+})
 
 // Watch stage to update phase
 watch(currentStage, (newStage) => {
@@ -704,6 +1392,52 @@ const autoGeneratedRounds = computed(() => {
   const calculatedRounds = Math.floor((totalHours * 60) / minutesPerRound)
   // 确保最大轮数不小于40（推荐值），避免滑动条范围异常
   return Math.max(calculatedRounds, 40)
+})
+
+const MODEL_PRICES = {
+  "gpt-4o-mini": { input: 0.15 / 1000000, output: 0.60 / 1000000 },
+  "gpt-4o": { input: 2.50 / 1000000, output: 10.00 / 1000000 },
+  "gpt-4-turbo": { input: 10.00 / 1000000, output: 30.00 / 1000000 },
+  "gpt-3.5-turbo": { input: 0.50 / 1000000, output: 1.50 / 1000000 },
+  "claude-3-5-sonnet": { input: 3.00 / 1000000, output: 15.00 / 1000000 },
+  "claude-3-haiku": { input: 0.25 / 1000000, output: 1.25 / 1000000 },
+  "gemini-1.5-flash": { input: 0.075 / 1000000, output: 0.30 / 1000000 },
+  "gemini-1.5-pro": { input: 1.25 / 1000000, output: 5.00 / 1000000 },
+}
+
+const estimatedCost = computed(() => {
+  if (!simulationConfig.value) return 0
+  
+  const modelName = simulationConfig.value.llm_model || 'gpt-4o-mini'
+  const baseUrl = simulationConfig.value.llm_base_url || ''
+  
+  // Check if it is a local model
+  const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.toLowerCase().includes('local')
+  if (isLocal) return 0
+  
+  // Find prices
+  let rates = { input: 0.15 / 1000000, output: 0.60 / 1000000 } // gpt-4o-mini default
+  const modelLower = modelName.toLowerCase()
+  for (const [key, val] of Object.entries(MODEL_PRICES)) {
+    if (modelLower.includes(key.toLowerCase())) {
+      rates = val
+      break
+    }
+  }
+  
+  const rounds = useCustomRounds.value ? customMaxRounds.value : (props.projectData?.simulation_mode === 'legal' && runMode.value === 'courtroom' ? recommendedRounds.value : (autoGeneratedRounds.value || 10))
+  
+  if (props.projectData?.simulation_mode === 'legal' && runMode.value === 'courtroom') {
+    // Courtroom mode: 1 simulation = ~18,000 input tokens, ~2,400 output tokens
+    const totalInput = rounds * 18000
+    const totalOutput = rounds * 2400
+    return (totalInput * rates.input) + (totalOutput * rates.output)
+  } else {
+    // Oasis/Parallel mode: 1 round = ~30,000 input tokens, ~4,500 output tokens
+    const totalInput = rounds * 30000
+    const totalOutput = rounds * 4500
+    return (totalInput * rates.input) + (totalOutput * rates.output)
+  }
 })
 
 // Polling timer
@@ -742,16 +1476,31 @@ const addLog = (msg) => {
 
 // 处理开始模拟按钮点击
 const handleStartSimulation = () => {
-  // 构建传递给父组件的参数
-  const params = {}
+  // 构建传递给父组件 der param
+  const params = {
+    runMode: runMode.value,
+    selectedDraft: selectedDraft.value ? selectedDraft.value.text : null
+  }
   
-  if (useCustomRounds.value) {
-    // 用户自定义轮数，传递 max_rounds 参数
-    params.maxRounds = customMaxRounds.value
-    addLog(t('log.startSimCustomRounds', { rounds: customMaxRounds.value }))
+  if (props.projectData?.simulation_mode === 'legal') {
+    params.clientSide = clientSide.value
+    if (runMode.value === 'courtroom') {
+      params.maxRounds = useCustomRounds.value ? customMaxRounds.value : recommendedRounds.value
+      addLog(`Démarrage du procès d'audience avec ${params.maxRounds} simulations (Monte-Carlo).`)
+    } else {
+      params.maxRounds = useCustomRounds.value ? customMaxRounds.value : 10
+      addLog(`Démarrage de la Simulation Publique Interactive avec ${params.maxRounds} rounds de débat public.`)
+    }
   } else {
-    // 用户选择保持自动生成的轮数，不传递 max_rounds 参数
-    addLog(t('log.startSimAutoRounds', { rounds: autoGeneratedRounds.value }))
+    params.runMode = 'oasis'
+    if (useCustomRounds.value) {
+      // 用户自定义轮数，传递 max_rounds 参数
+      params.maxRounds = customMaxRounds.value
+      addLog(t('log.startSimCustomRounds', { rounds: customMaxRounds.value }))
+    } else {
+      // 用户选择保持自动生成的轮数，不传递 max_rounds 参数
+      addLog(t('log.startSimAutoRounds', { rounds: autoGeneratedRounds.value || 10 }))
+    }
   }
   
   emit('next-step', params)
@@ -766,6 +1515,106 @@ const truncateBio = (bio) => {
 
 const selectProfile = (profile) => {
   selectedProfile.value = profile
+  isEditing.value = false
+}
+
+const startEditing = () => {
+  const profile = selectedProfile.value
+  if (!profile) return
+  
+  // Find associated agent config in simulationConfig
+  const agentConfig = simulationConfig.value?.agent_configs?.find(
+    a => a.agent_id === profile.user_id
+  )
+  
+  editForm.value = {
+    name: profile.name || '',
+    username: profile.username || '',
+    profession: profile.profession || '',
+    age: profile.age || 30,
+    gender: profile.gender || 'male',
+    mbti: profile.mbti || '',
+    country: profile.country || '',
+    bio: profile.bio || '',
+    persona: profile.persona || '',
+    interested_topics: profile.interested_topics ? [...profile.interested_topics] : [],
+    // Simulation Parameters:
+    stance: agentConfig?.stance || 'neutral',
+    influence_weight: agentConfig?.influence_weight || 1.0,
+    activity_level: agentConfig?.activity_level || 0.5,
+    posts_per_hour: agentConfig?.posts_per_hour || 1.0,
+    comments_per_hour: agentConfig?.comments_per_hour || 2.0,
+    sentiment_bias: agentConfig?.sentiment_bias || 0.0
+  }
+  
+  isEditing.value = true
+}
+
+const cancelEditing = () => {
+  isEditing.value = false
+}
+
+const handleSaveProfile = async () => {
+  if (!props.simulationId || !selectedProfile.value) return
+  
+  isSaving.value = true
+  try {
+    const payload = {
+      user_id: selectedProfile.value.user_id,
+      ...editForm.value
+    }
+    
+    const res = await updateSimulationProfile(props.simulationId, payload)
+    if (res.success) {
+      addLog(`Profil de l'acteur @${editForm.value.username} mis à jour avec succès.`)
+      
+      // Update local profiles list
+      const idx = profiles.value.findIndex(p => p.user_id === selectedProfile.value.user_id)
+      if (idx !== -1) {
+        profiles.value[idx] = {
+          ...profiles.value[idx],
+          name: editForm.value.name,
+          username: editForm.value.username,
+          profession: editForm.value.profession,
+          age: editForm.value.age,
+          gender: editForm.value.gender,
+          mbti: editForm.value.mbti,
+          country: editForm.value.country,
+          bio: editForm.value.bio,
+          persona: editForm.value.persona,
+          interested_topics: editForm.value.interested_topics
+        }
+        
+        // Update selectedProfile to reflect changes
+        selectedProfile.value = profiles.value[idx]
+      }
+      
+      // Update local simulationConfig agent configs
+      if (simulationConfig.value && simulationConfig.value.agent_configs) {
+        const aIdx = simulationConfig.value.agent_configs.findIndex(
+          a => a.agent_id === selectedProfile.value.user_id
+        )
+        if (aIdx !== -1) {
+          const agent = simulationConfig.value.agent_configs[aIdx]
+          agent.entity_name = editForm.value.name
+          agent.stance = editForm.value.stance
+          agent.influence_weight = parseFloat(editForm.value.influence_weight)
+          agent.activity_level = parseFloat(editForm.value.activity_level)
+          agent.posts_per_hour = parseFloat(editForm.value.posts_per_hour)
+          agent.comments_per_hour = parseFloat(editForm.value.comments_per_hour)
+          agent.sentiment_bias = parseFloat(editForm.value.sentiment_bias)
+        }
+      }
+      
+      isEditing.value = false
+    } else {
+      addLog(`Erreur lors de la mise à jour : ${res.error || 'Erreur inconnue'}`)
+    }
+  } catch (err) {
+    addLog(`Échec de la mise à jour : ${err.message}`)
+  } finally {
+    isSaving.value = false
+  }
 }
 
 // 自动开始准备模拟
@@ -786,7 +1635,8 @@ const startPrepareSimulation = async () => {
     const res = await prepareSimulation({
       simulation_id: props.simulationId,
       use_llm_for_profiles: true,
-      parallel_profile_count: 5
+      parallel_profile_count: 5,
+      run_mode: runMode.value
     })
     
     if (res.success && res.data) {
@@ -1028,6 +1878,9 @@ const loadPreparedData = async () => {
   await fetchProfilesRealtime()
   addLog(t('log.loadedAgentProfiles', { count: profiles.value.length }))
 
+  // Charger l'analyse du radar tactique enregistrée
+  await loadSavedRadarAnalysis()
+
   // 获取配置（使用实时接口）
   try {
     const res = await getSimulationConfigRealtime(props.simulationId)
@@ -1068,13 +1921,37 @@ watch(() => props.systemLogs?.length, () => {
   })
 })
 
+const prepareStarted = ref(false)
+
+const triggerPrepareSimulation = () => {
+  if (prepareStarted.value) return
+  prepareStarted.value = true
+  
+  if (props.projectData?.simulation_mode === 'social') {
+    runMode.value = 'oasis'
+  } else {
+    runMode.value = 'courtroom'
+  }
+  
+  startPrepareSimulation()
+}
+
 onMounted(() => {
   // 自动开始准备流程
-  if (props.simulationId) {
+  if (props.simulationId && props.projectData) {
     addLog(t('log.step2Init'))
-    startPrepareSimulation()
+    triggerPrepareSimulation()
   }
 })
+
+watch(() => props.projectData, (newVal) => {
+  if (newVal && props.simulationId) {
+    if (!prepareStarted.value) {
+      addLog(t('log.step2Init'))
+      triggerPrepareSimulation()
+    }
+  }
+}, { immediate: true })
 
 onUnmounted(() => {
   stopPolling()
@@ -1089,7 +1966,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background: #FAFAFA;
-  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
 }
 
 .scroll-container {
@@ -2601,5 +3478,1042 @@ onUnmounted(() => {
 .modal-leave-to .profile-modal {
   transform: scale(0.95) translateY(10px);
   opacity: 0;
+}
+
+/* Sélecteur de Mode d'Exécution */
+.run-mode-section {
+  margin: 24px 0;
+  padding-top: 24px;
+  border-top: 1px solid #EAEAEA;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mode-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.mode-select-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mode-select-card:hover {
+  border-color: #CBD5E1;
+  background: #F1F5F9;
+  transform: translateY(-2px);
+}
+
+.mode-select-card.active {
+  border-color: #3B82F6;
+  background: #EFF6FF;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+
+.mode-icon {
+  font-size: 24px;
+  padding: 8px;
+  background: #FFFFFF;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.mode-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mode-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.mode-select-card.active .mode-name {
+  color: #1E40AF;
+}
+
+.mode-description {
+  font-size: 11px;
+  color: #64748B;
+  line-height: 1.4;
+}
+
+.side-select-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.side-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.side-select-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.side-select-card:hover {
+  border-color: #CBD5E1;
+  background: #F1F5F9;
+  transform: translateY(-2px);
+}
+
+.side-select-card.active {
+  border-color: #B58A3D;
+  background: #FDFBF7;
+  box-shadow: 0 4px 12px rgba(181, 138, 61, 0.08);
+}
+
+.side-icon {
+  font-size: 24px;
+  padding: 8px;
+  background: #FFFFFF;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.side-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.side-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.side-select-card.active .side-name {
+  color: #8C621F;
+}
+
+.side-description {
+  font-size: 11px;
+  color: #64748B;
+  line-height: 1.4;
+}
+
+/* Mode Édition */
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.edit-mode-btn, .save-profile-btn, .cancel-profile-btn {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+.edit-mode-btn {
+  background: #F3F4F6;
+  border-color: #E5E7EB;
+  color: #374151;
+}
+.edit-mode-btn:hover {
+  background: #E5E7EB;
+}
+.save-profile-btn {
+  background: #000;
+  color: #FFF;
+}
+.save-profile-btn:hover:not(:disabled) {
+  opacity: 0.8;
+}
+.save-profile-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.cancel-profile-btn {
+  background: transparent;
+  border-color: #D1D5DB;
+  color: #4B5563;
+}
+.cancel-profile-btn:hover {
+  background: #F9FAFB;
+}
+.modal-name-row-edit {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.edit-input, .edit-select, .edit-textarea {
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: #FAFAFA;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.2s, background-color 0.2s;
+  color: #000;
+}
+.edit-input:focus, .edit-select:focus, .edit-textarea:focus {
+  outline: none;
+  border-color: #000;
+  background: #FFF;
+}
+.name-edit {
+  font-size: 16px;
+  font-weight: 700;
+  max-width: 200px;
+}
+.name-edit-handle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  max-width: 150px;
+}
+.profession-edit {
+  font-size: 12px;
+  padding: 4px 8px;
+  max-width: 200px;
+}
+.edit-profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.form-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bio-textarea {
+  height: 60px;
+  resize: vertical;
+}
+.persona-textarea {
+  height: 120px;
+  resize: vertical;
+}
+.behavioral-parameters-section {
+  border-top: 1px dashed #E5E7EB;
+  margin-top: 12px;
+  padding-top: 16px;
+}
+.behavioral-parameters-section .section-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E293B;
+  display: block;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.behavior-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* Radar Tactique Premium Design */
+.radar-tactique-section {
+  margin-top: 24px;
+  margin-bottom: 24px;
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(253, 251, 247, 0.4);
+  border: 1px solid rgba(181, 138, 61, 0.15);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.radar-header-inline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+.radar-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.radar-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #B58A3D 0%, #D4AF37 50%, #B58A3D 100%);
+  color: #FFFFFF;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(181, 138, 61, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.radar-trigger-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: skewX(-25deg);
+  transition: 0.75s;
+  opacity: 0;
+}
+
+.radar-trigger-btn:hover:not(:disabled)::before {
+  left: 125%;
+  opacity: 1;
+}
+
+.radar-trigger-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(181, 138, 61, 0.4);
+}
+
+.radar-trigger-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.radar-trigger-btn:disabled {
+  background: #CBD5E1;
+  color: #94A3B8;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.radar-results-card {
+  margin-top: 20px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+}
+
+.matrix-title-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  border-left: 3px solid #B58A3D;
+  padding-left: 12px;
+}
+.matrix-title-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.matrix-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.matrix-subtitle {
+  font-size: 12px;
+  color: #64748B;
+}
+
+.table-container {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+}
+
+.radar-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.radar-table th {
+  background: #F8FAFC;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #E2E8F0;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.radar-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #F1F5F9;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.radar-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.radar-table tbody tr:hover {
+  background: rgba(248, 250, 252, 0.5);
+}
+
+.node-cell {
+  white-space: nowrap;
+  color: #1E293B;
+}
+
+.vector-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: rgba(181, 138, 61, 0.08);
+  color: #8C621F;
+  border: 1px solid rgba(181, 138, 61, 0.2);
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.impact-value-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 120px;
+}
+
+.impact-text {
+  font-weight: 700;
+  color: #15803D;
+}
+
+.progress-bar-container {
+  height: 6px;
+  background: #E2E8F0;
+  border-radius: 3px;
+  overflow: hidden;
+  width: 100px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22C55E, #16A34A);
+  border-radius: 3px;
+}
+
+.plan-cell {
+  line-height: 1.5;
+  color: #475569;
+}
+
+.draft-btn {
+  background: #1E293B;
+  color: #FFFFFF;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.draft-btn:hover {
+  background: #0F172A;
+  transform: translateY(-1px);
+}
+
+/* Modal de Projet de Requête */
+.legal-draft-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.legal-draft-modal {
+  background: #FFFFFF;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  overflow: hidden;
+}
+
+.draft-body {
+  padding: 24px;
+  overflow-y: auto;
+  background: #FAF9F6;
+  flex: 1;
+}
+
+.draft-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+  gap: 16px;
+  color: #64748B;
+}
+
+.draft-loader p {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.typewriter-content {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1A1A1A;
+  white-space: pre-wrap;
+  margin: 0;
+  padding: 20px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  min-height: 300px;
+}
+
+.cursor {
+  display: inline-block;
+  margin-left: 2px;
+  font-weight: bold;
+  animation: blink 0.8s infinite;
+  color: #B58A3D;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.spinner-icon {
+  display: inline-block;
+  animation: rotate 1.5s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Plan Cell Clamp */
+.plan-cell-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px;
+}
+
+/* Selected row highlight */
+.radar-table tbody tr.row-selected {
+  background: rgba(181, 138, 61, 0.05) !important;
+  border-left: 3px solid #B58A3D;
+}
+
+/* Modals layout */
+.large-modal-overlay, .detail-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+}
+
+/* Glassmorphic Premium Modal styling */
+.glassmorphic-modal {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(181, 138, 61, 0.25);
+  border-radius: 20px;
+  box-shadow: 0 30px 70px rgba(181, 138, 61, 0.12), 0 10px 20px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalSlideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalSlideUp {
+  from {
+    transform: scale(0.96) translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.large-modal {
+  width: 92%;
+  max-width: 1200px;
+  max-height: 88vh;
+}
+
+.detail-modal {
+  width: 90%;
+  max-width: 700px;
+  max-height: 85vh;
+}
+
+.gold-border-bottom {
+  border-bottom: 1px solid rgba(181, 138, 61, 0.2);
+}
+
+.gold-border-top {
+  border-top: 1px solid rgba(181, 138, 61, 0.2);
+}
+
+.font-serif-gold {
+  color: #B58A3D;
+  font-family: 'Outfit', 'Georgia', serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.gold-border-btn {
+  border: 1px solid rgba(181, 138, 61, 0.3) !important;
+  color: #8C621F !important;
+  background: transparent !important;
+}
+
+.gold-border-btn:hover {
+  background: rgba(181, 138, 61, 0.05) !important;
+  border-color: #B58A3D !important;
+}
+
+/* Expanded Table styles */
+.large-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.matrix-description-text {
+  font-size: 13px;
+  color: #64748B;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.large-table-container {
+  border: 1px solid rgba(181, 138, 61, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.01);
+  background: #FFF;
+}
+
+.large-radar-table th {
+  background: #FDFDFB;
+  border-bottom: 1px solid rgba(181, 138, 61, 0.15);
+  color: #64748B;
+  padding: 14px 20px;
+  font-size: 11px;
+}
+
+.large-radar-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #F8FAFC;
+}
+
+.plan-cell-expanded {
+  line-height: 1.6;
+  color: #334155;
+  font-size: 13px;
+}
+
+.expand-matrix-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: #B58A3D;
+  border: 1px solid rgba(181, 138, 61, 0.4);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.expand-matrix-btn:hover {
+  background: rgba(181, 138, 61, 0.08);
+  border-color: #B58A3D;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(181, 138, 61, 0.15);
+}
+
+.detail-btn {
+  background: #F8FAFC;
+  color: #475569;
+  border: 1px solid #E2E8F0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.detail-btn:hover {
+  background: #F1F5F9;
+  color: #1E293B;
+  border-color: #CBD5E1;
+  transform: translateY(-1px);
+}
+
+/* Detail Modal specific styling */
+.detail-body-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.detail-card-header-pane {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  background: #FAF9F6;
+  border: 1px solid rgba(181, 138, 61, 0.1);
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.detail-meta-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-label-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94A3B8;
+  letter-spacing: 0.08em;
+}
+
+.detail-value-highlight {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.large-vector-badge {
+  font-size: 12px;
+  padding: 6px 12px;
+  width: fit-content;
+}
+
+/* Impact Card */
+.detail-impact-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: rgba(34, 197, 94, 0.03);
+  border: 1px solid rgba(34, 197, 94, 0.15);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.impact-radial-indicator {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  min-width: 140px;
+  border-right: 1px solid rgba(34, 197, 94, 0.15);
+  padding-right: 20px;
+}
+
+.impact-radial-text {
+  font-size: 18px;
+  font-weight: 800;
+  color: #16A34A;
+}
+
+.detail-progress-container {
+  height: 6px;
+  background: #E2E8F0;
+  border-radius: 3px;
+  overflow: hidden;
+  width: 100px;
+}
+
+.detail-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22C55E, #16A34A);
+}
+
+.impact-explanation {
+  flex: 1;
+}
+
+.detail-section-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1E293B;
+  margin-bottom: 4px;
+}
+
+.detail-section-desc {
+  font-size: 11px;
+  color: #64748B;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Plan / Roadmap Section */
+.detail-plan-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-section-label-gold {
+  font-size: 12px;
+  font-weight: 700;
+  color: #B58A3D;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-plan-card-body {
+  background: #FCFAF7;
+  border-left: 4px solid #B58A3D;
+  border-top: 1px solid rgba(181, 138, 61, 0.1);
+  border-bottom: 1px solid rgba(181, 138, 61, 0.1);
+  border-right: 1px solid rgba(181, 138, 61, 0.1);
+  padding: 16px 20px;
+  border-radius: 0 8px 8px 0;
+}
+
+.detail-plan-text {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #334155;
+  margin: 0;
+  text-align: justify;
+}
+
+/* Status Section */
+.detail-status-section {
+  margin-top: 4px;
+}
+
+.status-active-badge, .status-inactive-badge {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+
+.status-active-badge {
+  background: rgba(22, 163, 74, 0.05);
+  border: 1px solid rgba(22, 163, 74, 0.15);
+}
+
+.status-inactive-badge {
+  background: rgba(148, 163, 184, 0.05);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.status-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.status-active-badge .status-icon {
+  color: #16A34A;
+}
+
+.status-inactive-badge .status-icon {
+  color: #64748B;
+}
+
+.status-text-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.status-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.status-desc {
+  font-size: 11px;
+  color: #64748B;
+  line-height: 1.4;
+}
+
+/* Footer Actions */
+.modal-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background: #FFF;
+}
+
+.draft-btn-view {
+  background: #475569;
+  color: #FFF;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.draft-btn-view:hover {
+  background: #334155;
+  transform: translateY(-1px);
+}
+
+.draft-btn-generate {
+  background: #B58A3D;
+  color: #FFF;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.draft-btn-generate:hover {
+  background: #8C621F;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(181, 138, 61, 0.25);
+}
+
+/* Pulsing Gold animation for generate action */
+.pulsing-gold-btn {
+  animation: pulseGold 2s infinite;
+}
+
+@keyframes pulseGold {
+  0% {
+    box-shadow: 0 0 0 0 rgba(181, 138, 61, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(181, 138, 61, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(181, 138, 61, 0);
+  }
+}
+
+.select-badge-animate {
+  animation: badgePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background-color: #16A34A;
+  color: white;
+  margin-left: 4px;
+  font-size: 10px;
+}
+
+@keyframes badgePop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 </style>

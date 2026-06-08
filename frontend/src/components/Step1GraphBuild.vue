@@ -157,14 +157,15 @@
         
         <div class="card-content">
           <p class="api-note">POST /api/simulation/create</p>
-          <p class="description">{{ $t('step1.buildCompleteDesc') }}</p>
+          <p class="description">{{ props.projectData?.simulation_mode === 'legal' ? $t('step1.buildCompleteDescLegal') : $t('step1.buildCompleteDesc') }}</p>
           <button 
             class="action-btn" 
             :disabled="currentPhase < 2 || creatingSimulation"
             @click="handleEnterEnvSetup"
           >
             <span v-if="creatingSimulation" class="spinner-sm"></span>
-            {{ creatingSimulation ? $t('step1.creating') : $t('step1.enterEnvSetup') + ' ➝' }}
+            <span v-else-if="props.projectData?.simulation_mode === 'legal'">{{ $t('step1.enterLegalSim') }}</span>
+            <span v-else>{{ $t('step1.enterEnvSetup') }} ➝</span>
           </button>
         </div>
       </div>
@@ -216,6 +217,8 @@ const handleEnterEnvSetup = async () => {
     console.error('缺少项目或图谱信息')
     return
   }
+  
+  // We no longer redirect to /legal-simulator; legal mode follows the same 5-step pipeline.
   
   creatingSimulation.value = true
   
