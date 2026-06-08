@@ -882,6 +882,287 @@
                 width: 100%;
             }
         }
+
+        /* ==========================================================================
+           R&D and Scientific Foundations Section (PIE Architecture)
+           ========================================================================== */
+        .rd-section {
+            background-color: var(--bg-navy-dark);
+            border-top: 1px solid var(--border-glass);
+            border-bottom: 1px solid var(--border-glass);
+            padding: 8rem 0;
+            position: relative;
+        }
+
+        .rd-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 4rem;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .rd-grid {
+                grid-template-columns: 1fr;
+                gap: 3rem;
+            }
+        }
+
+        .rd-content-left {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .rd-badge {
+            background-color: rgba(128, 96, 13, 0.08);
+            border: 1px solid var(--gold-light);
+            color: var(--gold-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            align-self: flex-start;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .rd-desc-text {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        /* Tabs and Accordion for R&D Details */
+        .rd-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-glass);
+            margin-bottom: 2rem;
+            gap: 1.5rem;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .rd-tab-btn {
+            background: none;
+            border: none;
+            padding: 1rem 0;
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            position: relative;
+            transition: var(--transition-smooth);
+        }
+
+        .rd-tab-btn:hover {
+            color: var(--gold-primary);
+        }
+
+        .rd-tab-btn.active {
+            color: var(--gold-primary);
+            font-weight: 600;
+        }
+
+        .rd-tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--gold-primary);
+        }
+
+        .rd-tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 1.5rem;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .rd-tab-content.active {
+            display: flex;
+        }
+
+        .rd-card-premium {
+            background: rgba(255, 255, 255, 0.45);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+            transition: var(--transition-smooth);
+        }
+
+        .rd-card-premium:hover {
+            border-color: var(--border-glass-hover);
+            transform: translateY(-2px);
+        }
+
+        .rd-card-premium h3 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .rd-formula {
+            background: #FAF8F5;
+            border-left: 3px solid var(--gold-primary);
+            padding: 1.2rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+            font-family: monospace;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            margin: 1rem 0;
+            overflow-x: auto;
+            white-space: pre;
+            line-height: 1.5;
+        }
+
+        /* Metric cards and mini-charts */
+        .rd-metrics-container {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .rd-metric-card {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            transition: var(--transition-smooth);
+        }
+
+        .rd-metric-card:hover {
+            border-color: var(--border-glass-hover);
+            transform: translateY(-2px);
+        }
+
+        .rd-metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .rd-metric-value-huge {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--gold-primary);
+            line-height: 1;
+        }
+
+        .rd-metric-label-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Beautiful interactive-looking CSS graphs */
+        .rd-bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .chart-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .chart-row-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .chart-bar-container {
+            height: 12px;
+            background: rgba(128, 96, 13, 0.08);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chart-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--gold-light), var(--gold-primary));
+            border-radius: 10px;
+            width: 0%; /* Initial state for CSS trigger */
+        }
+
+        .chart-bar-fill.baseline {
+            background: rgba(74, 85, 104, 0.4);
+        }
+
+        .pipeline-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            margin-top: 1rem;
+        }
+
+        .pipeline-step {
+            background: rgba(250, 248, 245, 0.7);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 1.2rem;
+            display: flex;
+            gap: 1.2rem;
+            align-items: center;
+            transition: var(--transition-smooth);
+        }
+
+        .pipeline-step:hover {
+            background: #FAF8F5;
+            border-color: var(--border-glass-hover);
+        }
+
+        .pipeline-step-num {
+            background: var(--gold-primary);
+            color: #FFF;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .pipeline-step-text h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .pipeline-step-text p {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -907,7 +1188,7 @@
                 <div class="hero-content">
                     <div class="hero-tagline">Neuro-Symbolique & Analyse Cognitive</div>
                     <h1>Calculez votre victoire,<br><em>ne la supposez pas.</em></h1>
-                    <p class="subtitle">Les IA traditionnelles sont programmées pour être lisses et polies. Vos adversaires au tribunal, non. Testez vos plaidoiries face à des jumeaux numériques dotés d'ego, de rancune et de convictions. Découvrez le premier "simulateur de vol" pour avocats stratèges.</p>
+                    <p class="subtitle">À partir de vos dossiers et pièces de procédure, Lexior modélise et stresse vos stratégies juridiques en les confrontant aux jumeaux numériques des acteurs clés (juges, procureurs, témoins) dotés de leurs propres convictions, biais cognitifs et dynamiques comportementales.</p>
                     <div class="hero-cta">
                         <a href="https://lexiorsimulator-frontend.onrender.com" class="btn btn-gold">Démarrer une Simulation</a>
                         <a href="#interface" class="btn btn-outline">Voir l'Interface</a>
@@ -1116,6 +1397,173 @@
         </div>
     </section>
 
+    <!-- R&D and Scientific Foundations Section -->
+    <section id="rd-section" class="rd-section">
+        <div class="container">
+            <div class="section-header" style="margin-bottom: 5rem; text-align: center;">
+                <span class="rd-badge">Dossier R&D</span>
+                <h2 style="margin-top: 1.5rem;">Justification <em>Technique & Scientifique</em></h2>
+                <p style="max-width: 800px; margin: 0 auto;">L'Architecture Neuro-Symbolique PIE (Probabilistic Identity Engine) pour la modélisation de la continuité comportementale et la cohérence décisionnelle dans les systèmes multi-agents complexes.</p>
+            </div>
+
+            <div class="rd-grid">
+                <!-- Left Column: Tabs & Explanation -->
+                <div class="rd-content-left">
+                    <div class="rd-tabs">
+                        <button class="rd-tab-btn active" data-tab="verrous">Verrous Technologiques</button>
+                        <button class="rd-tab-btn" data-tab="formalisation">Modèle PIE & Tensions</button>
+                        <button class="rd-tab-btn" data-tab="surprise">Surprise & Dérive</button>
+                        <button class="rd-tab-btn" data-tab="pipeline">Pipeline de Calcul</button>
+                    </div>
+
+                    <!-- Tab 1: Verrous -->
+                    <div id="tab-verrous" class="rd-tab-content active">
+                        <div class="rd-card-premium">
+                            <h3>Les limites de l'état de l'art actuel</h3>
+                            <p class="rd-desc-text">Les architectures d'agents autonomes classiques basées sur les LLMs souffrent de verrous majeurs empêchant une simulation réaliste des procès :</p>
+                            <ul style="list-style-type: none; display: flex; flex-direction: column; gap: 1rem; color: var(--text-secondary); padding-left: 0.5rem; font-weight: 300;">
+                                <li>📌 <strong>Nature apatride (Stateless) :</strong> L'agent LLM ne dispose d'aucune dérive dynamique de son comportement basée sur son historique d'exécution. L'état d'évaluation s'effondre à chaque appel d'API.</li>
+                                <li>📌 <strong>Amnésie décisionnelle (Flip-Flop) :</strong> Lors de simulations de procès (Monte-Carlo), le juge change de verdict d'une itération à l'autre sans justification logique factuelle en raison du manque de persistance structurelle.</li>
+                                <li>📌 <strong>Saturation de mémoire (Prompt Bleeding) :</strong> L'accumulation des souvenirs sature le contexte actif du LLM, dégradant la latence (+5s par round) et provoquant des hallucinations identitaires.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Modèle -->
+                    <div id="tab-formalisation" class="rd-tab-content">
+                        <div class="rd-card-premium">
+                            <h3>Formalisation Mathématique des Tensions</h3>
+                            <p class="rd-desc-text">L'architecture PIE modélise l'identité de l'agent par un vecteur d'état hybride continu-discret <em>X<sub>t</sub> = &lang; T<sub>t</sub>, P<sub>t</sub>, S<sub>t</sub> &rang;</em>. Les tensions internes de régulation (ex. Procédure vs Équité, Offensive vs Négociation) sont recalculées après chaque action <em>a</em> :</p>
+                            <div class="rd-formula">T<sub>i</sub><sup>(t)</sup> = clip( T<sub>i</sub><sup>(t-1)</sup> + &alpha;<sub>i</sub> &bull; &Delta;<sub>a</sub> &bull; (1 - I<sub>i</sub><sup>(t)</sup>), 0, 1 )</div>
+                            <p class="rd-desc-text">Où l'inertie logique <em>I<sub>i</sub><sup>(t)</sup></em> est dérivée symboliquement de l'activation des souvenirs persistants dans le graphe relationnel de l'agent via un filtre de saturation à attracteur :</p>
+                            <div class="rd-formula">I<sub>i</sub><sup>(t)</sup> = tanh( &beta; &bull; &Sigma;<sub>m &isin; M<sub>active</sub></sub> A<sub>t</sub>(m) &bull; w<sub>m,T<sub>i</sub></sub> )</div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Surprise -->
+                    <div id="tab-surprise" class="rd-tab-content">
+                        <div class="rd-card-premium">
+                            <h3>Surprise Narrative & Hystérésis</h3>
+                            <p class="rd-desc-text">Afin d'éviter le déterminisme strict tout en modélisant l'intime conviction et les barrières psychologiques, nous calculons la <strong>Surprise Narrative</strong> par divergence de Kullback-Leibler (DKL) :</p>
+                            <div class="rd-formula">S(a) = D<sub>KL</sub>( P(a) || B<sub>t</sub> ) = &Sigma;<sub>s</sub> P(a|s) &bull; log( P(a|s) / B<sub>t</sub>(s) )</div>
+                            <p class="rd-desc-text">L'action finale est échantillonnée par une distribution de Boltzmann sur les énergies effectives calculées :</p>
+                            <div class="rd-formula">P(a<sub>i</sub>) = exp( -E(a<sub>i</sub>) / &Tau; ) / &Sigma;<sub>j</sub> exp( -E(a<sub>j</sub>) / &Tau; )</div>
+                            <p class="rd-desc-text">L'humeur <em>S<sub>t</sub></em> évolue selon une transition d'hystérésis (barrière de potentiel) pour simuler des attracteurs persistants (ex. un avocat devenant méfiant ou isolé).</p>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: Pipeline -->
+                    <div id="tab-pipeline" class="rd-tab-content">
+                        <div class="rd-card-premium">
+                            <h3>Pipeline Neuro-Symbolique d'Alignement</h3>
+                            <p class="rd-desc-text">La couche symbolique Python agit comme un arbitre externe régulant le modèle de langage stateless :</p>
+                            <div class="pipeline-container">
+                                <div class="pipeline-step">
+                                    <div class="pipeline-step-num">1</div>
+                                    <div class="pipeline-step-text">
+                                        <h4>Interception</h4>
+                                        <p>Python intercepte les propositions brutes d'actions générées par le LLM.</p>
+                                    </div>
+                                </div>
+                                <div class="pipeline-step">
+                                    <div class="pipeline-step-num">2</div>
+                                    <div class="pipeline-step-text">
+                                        <h4>Calcul Sémantique</h4>
+                                        <p>Calcul de la similarité cosinus (embeddings) et du gradient d'influence.</p>
+                                    </div>
+                                </div>
+                                <div class="pipeline-step">
+                                    <div class="pipeline-step-num">3</div>
+                                    <div class="pipeline-step-text">
+                                        <h4>Mise à Jour Cognitive</h4>
+                                        <p>Mise à jour des tensions (clip), de l'inertie (tanh) et du budget d'attention.</p>
+                                    </div>
+                                </div>
+                                <div class="pipeline-step">
+                                    <div class="pipeline-step-num">4</div>
+                                    <div class="pipeline-step-text">
+                                        <h4>Ancrage Contextuel</h4>
+                                        <p>Injection de l'état logique mis à jour sous forme d'ancrages structurés dans le prompt suivant.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Graphs / Visualizations -->
+                <div class="rd-metrics-container">
+                    <!-- Card 1 -->
+                    <div class="rd-metric-card">
+                        <div class="rd-metric-header">
+                            <span class="rd-metric-label-title">Fidélité & Cohérence Identitaire</span>
+                            <span class="rd-metric-value-huge">92%</span>
+                        </div>
+                        <p style="font-size: 0.9rem; line-height: 1.5; margin-bottom: 0.5rem;">Stabilité comportementale de l'agent sous stimuli répétés et contradictoires (mesurée sur Gemini 2.5 Flash).</p>
+                        <div class="rd-bar-chart">
+                            <div class="chart-row">
+                                <div class="chart-row-header">
+                                    <span>Baseline (LLM classique sans PIE)</span>
+                                    <span class="mono">35%</span>
+                                </div>
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-fill baseline" style="width: 35%;"></div>
+                                </div>
+                            </div>
+                            <div class="chart-row">
+                                <div class="chart-row-header" style="color: var(--gold-primary); font-weight: 600;">
+                                    <span>Framework PIE (Neuro-Symbolique)</span>
+                                    <span class="mono">92%</span>
+                                </div>
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-fill" style="width: 92%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="rd-metric-card">
+                        <div class="rd-metric-header">
+                            <span class="rd-metric-label-title">Efficacité Mémorielle (Latence Locale)</span>
+                            <span class="rd-metric-value-huge">-28%</span>
+                        </div>
+                        <p style="font-size: 0.9rem; line-height: 1.5; margin-bottom: 0.5rem;">Réduction de la latence de calcul par round en inférence locale (Ollama Qwen3 8B) grâce au filtre d'attention adaptative (limite à 2.5k tokens).</p>
+                        <div class="rd-bar-chart">
+                            <div class="chart-row">
+                                <div class="chart-row-header">
+                                    <span>Baseline (Contexte complet 4.0k)</span>
+                                    <span class="mono">9.40s</span>
+                                </div>
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-fill baseline" style="width: 100%;"></div>
+                                </div>
+                            </div>
+                            <div class="chart-row">
+                                <div class="chart-row-header" style="color: var(--gold-primary); font-weight: 600;">
+                                    <span>Framework PIE (Contexte filtré 2.5k)</span>
+                                    <span class="mono">6.79s</span>
+                                </div>
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-fill" style="width: 72%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="rd-metric-card" style="gap: 1rem;">
+                        <div class="rd-metric-header">
+                            <span class="rd-metric-label-title">Stabilité des Verdicts (Anti-Dérive)</span>
+                            <span class="rd-metric-value-huge">+160%</span>
+                        </div>
+                        <p style="font-size: 0.9rem; line-height: 1.5; margin-bottom: 0;">L'introduction de la boucle d'ancrage symbolique élimine les verdicts contradictoires oscillatoires (Flip-Flop) du Juge virtuel d'un round à l'autre en l'absence de fait nouveau majeur.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer>
         <div class="container">
@@ -1124,7 +1572,7 @@
             
             <div class="cta-group">
                 <a href="#" class="btn btn-gold" style="font-size: 1rem; padding: 1.25rem 3rem;">Demander un Accès Pilote Privé</a>
-                <a href="Dossier_R&D.md" class="btn btn-outline" style="font-size: 1rem; padding: 1.25rem 2rem;" target="_blank">📄 Lire le Livre Blanc R&D</a>
+                <a href="#rd-section" class="btn btn-outline" style="font-size: 1rem; padding: 1.25rem 2rem;">📄 Consulter la R&D du Simulateur</a>
             </div>
 
             <p class="copyright">© 2026 Lexior Simulator — Une suite professionnelle Intelliwork.<br>L'intelligence cognitive au service de la souveraineté technologique.</p>
@@ -1181,6 +1629,24 @@
                 if (e.key === 'Escape' && lightbox.classList.contains('active')) {
                     closeLightbox();
                 }
+            });
+
+            // R&D Tabs switching logic
+            const tabButtons = document.querySelectorAll('.rd-tab-btn');
+            const tabContents = document.querySelectorAll('.rd-tab-content');
+            
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetTab = btn.getAttribute('data-tab');
+                    
+                    // Remove active classes
+                    tabButtons.forEach(b => b.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to current btn & target content
+                    btn.classList.add('active');
+                    document.getElementById(`tab-${targetTab}`).classList.add('active');
+                });
             });
         });
     </script>
