@@ -18,9 +18,6 @@
           🔑 {{ $t('auth.signOut') }}
         </button>
         <LanguageSwitcher />
-        <a href="https://github.com/666ghj/MiroFish" target="_blank" class="github-link">
-          {{ $t('nav.visitGithub') }} <span class="arrow">↗</span>
-        </a>
       </div>
     </nav>
 
