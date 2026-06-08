@@ -253,7 +253,7 @@ class JurisprudenceGrounding:
                             if not is_hallucination:
                                 break
                             citation = r.get("citation_fr") or r.get("citation_en") or "Non disponible"
-                            url = r.get("url_fr") or r.get("url_en") or "https://www.canlii.org"
+                            url = r.get("url_fr") or r.get("url_en") or "https://a2aj.ca"
                             name = r.get("name_fr") or r.get("name_en") or "Arrêt canadien"
                             snippet = r.get("snippet", "")
                             

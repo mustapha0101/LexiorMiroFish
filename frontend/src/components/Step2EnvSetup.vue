@@ -17,7 +17,7 @@
         <div class="card-content">
           <p class="api-note">POST /api/simulation/create</p>
           <p class="description">
-            {{ isOasisOrSocial ? 'Création de l\'instance de simulation publique sur les réseaux sociaux.' : (isCivil ? 'Création de l\'instance de procès civil' : 'Création de l\'instance de procès criminel') }}
+            {{ isOasisOrSocial ? 'Création de l\'instance de simulation publique sur les réseaux sociaux.' : (simulationConfig?.litigation_type === 'civil' ? 'Création de l\'instance de procès civil.' : (simulationConfig?.litigation_type === 'criminal' ? 'Création de l\'instance de procès criminel.' : 'Création de l\'instance de procès.')) }}
           </p>
 
           <div v-if="simulationId" class="info-card">
@@ -58,7 +58,7 @@
         <div class="card-content">
           <p class="api-note">POST /api/simulation/prepare</p>
           <p class="description">
-            {{ isOasisOrSocial ? 'Initialisation des 8 acteurs et segments d\'opinion publique (Lanceur d\'alerte, Journaliste, Porte-parole, Expert, Citoyen moyen, Citoyen indigné, Sceptique, Consommateur) basés sur le dossier.' : (isCivil ? 'Initialisation des 5 acteurs clés du procès (Juge, Avocat du Demandeur, Avocat de la Défense, Défendeur, Greffier) basés sur le dossier.' : 'Initialisation des 5 acteurs clés du procès (Juge, Le Procureur, Avocat de la Défense, Le Prévenu, Greffier) basés sur le dossier.') }}
+            {{ isOasisOrSocial ? 'Initialisation des 8 acteurs et segments d\'opinion publique (Lanceur d\'alerte, Journaliste, Porte-parole, Expert, Citoyen moyen, Citoyen indigné, Sceptique, Consommateur) basés sur le dossier.' : (simulationConfig?.litigation_type === 'civil' ? 'Initialisation des 5 acteurs clés du procès (Juge, Avocat du Demandeur, Avocat de la Défense, Défendeur, Greffier) basés sur le dossier.' : (simulationConfig?.litigation_type === 'criminal' ? 'Initialisation des 5 acteurs clés du procès (Juge, Le Procureur, Avocat de la Défense, Le Prévenu, Greffier) basés sur le dossier.' : 'Initialisation des 5 acteurs clés du procès basés sur le dossier.')) }}
           </p>
 
           <!-- Profiles Stats -->

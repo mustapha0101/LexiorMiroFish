@@ -2041,6 +2041,7 @@ def get_simulation_history():
         }
     """
     try:
+        limit = request.args.get('limit', 20, type=int)
         user_id = request.headers.get('X-User-Id')
         manager = SimulationManager()
         simulations = manager.list_simulations(user_id=user_id)[:limit]
