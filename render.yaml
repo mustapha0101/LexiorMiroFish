@@ -6,7 +6,7 @@ services:
   # 1. Backend: Python Flask Web Service (Docker)
   # =========================================================================
   - type: web
-    name: lexior-backend
+    name: lexiorsimulator-backend
     env: docker
     dockerfilePath: backend/Dockerfile.backend
     dockerContext: .
@@ -23,7 +23,7 @@ services:
       - key: FLASK_DEBUG
         value: "false"
     disk:
-      name: lexior-uploads-data
+      name: lexiorsimulator-uploads-data
       mountPath: /app/backend/uploads
       sizeGB: 10
 
@@ -31,7 +31,7 @@ services:
   # 2. Frontend: Vue.js Single Page Application (Static Site)
   # =========================================================================
   - type: web
-    name: lexior-frontend
+    name: lexiorsimulator-frontend
     runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
@@ -39,7 +39,7 @@ services:
     envVars:
       # Automatically inject the public URL of the backend service
       - key: VITE_API_BASE_URL
-        value: https://lexior-backend.onrender.com # Replace with your actual backend Render URL if it differs
+        value: https://lexiorsimulator-backend.onrender.com # Replace with your actual backend Render URL if it differs
       # Enforce modern Node.js version
       - key: NODE_VERSION
         value: 20.0.0
