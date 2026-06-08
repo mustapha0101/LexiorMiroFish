@@ -15,9 +15,9 @@ services:
       - key: LLM_API_KEY
         sync: false # Prompts the user for the API key during deployment
       - key: LLM_BASE_URL
-        value: https://dashscope.aliyuncs.com/compatible-mode/v1 # Defaults to DashScope (Qwen), change if using OpenAI
+        value: https://generativelanguage.googleapis.com/v1beta/openai/ # Defaults to Gemini OpenAI compatible endpoint
       - key: LLM_MODEL_NAME
-        value: qwen-plus
+        value: gemini-1.5-flash # 1.5-flash allows 1500 req/day on the free tier (2.5-flash is limited to 20 req/day)
       - key: ZEP_API_KEY
         value: "" # Optional, leave blank if not using Zep Cloud
       - key: FLASK_DEBUG
