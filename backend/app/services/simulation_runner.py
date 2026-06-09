@@ -866,7 +866,10 @@ class SimulationRunner:
         graph_id: str = None,  # Zep图谱ID（启用图谱更新时必需）
         run_mode: str = "courtroom",
         force: bool = False,
-        initial_stimulus: str = None
+        initial_stimulus: str = None,
+        judge_type: str = "single",
+        selected_judge_personality: str = None,
+        selected_judges_personalities: list = None
     ) -> SimulationRunState:
         """
         启动模拟
@@ -879,7 +882,7 @@ class SimulationRunner:
             graph_id: Zep图谱ID（启用图谱更新时必需）
             run_mode: 模拟模式 (courtroom/oasis)
             force: 强制重新开始
-            initial_stimulus: 初始激活刺激（法律文档或请求草稿）
+            initial_stimulus: 初始激活刺激（法律文档 or 请求草稿）
             
         Returns:
             SimulationRunState
@@ -942,7 +945,7 @@ class SimulationRunner:
             # Start background thread to run iterations
             thread = threading.Thread(
                 target=cls._run_legal_courtroom_simulation,
-                args=(simulation_id, project.project_id, total_rounds)
+                args=(simulation_id, project.project_id, total_rounds, judge_type, selected_judge_personality, selected_judges_personalities)
             )
             thread.daemon = True
             cls._monitor_threads[simulation_id] = thread
@@ -1737,7 +1740,7 @@ class SimulationRunner:
                 process.wait(timeout=5)
     
     @classmethod
-    def _run_legal_courtroom_simulation(cls, simulation_id: str, project_id: str, total_rounds: int):
+    def _run_legal_courtroom_simulation(cls, simulation_id: str, project_id: str, total_rounds: int, judge_type: str = "single", selected_judge_personality: str = None, selected_judges_personalities: list = None):
         from ..models.project import ProjectManager
         from scripts.run_legal_simulation import LegalSimulationRunner
         from ..services.simulation_manager import SimulationManager, SimulationStatus
@@ -1871,7 +1874,14 @@ class SimulationRunner:
             except Exception as config_err:
                 logger.error(f"Error reading litigation_type from simulation config: {config_err}")
 
-            runner = LegalSimulationRunner(context=context, iterations=total_rounds, litigation_type=litigation_type)
+            runner = LegalSimulationRunner(
+                context=context, 
+                iterations=total_rounds, 
+                litigation_type=litigation_type,
+                judge_type=judge_type,
+                selected_judge_personality=selected_judge_personality,
+                selected_judges_personalities=selected_judges_personalities
+            )
             cls._legal_runners[simulation_id] = runner
             
             results = []
@@ -1890,6 +1900,8 @@ class SimulationRunner:
                     logger.info(f"Resuming courtroom simulation {simulation_id} from round {start_round} (existing results: {len(results)})")
                     if results:
                         runner.judge_personality = results[0].get("judge_personality")
+                        if runner.judge_personality == "Tribunal Collégial":
+                            runner.judge_type = "collegiate"
                 except Exception as resume_err:
                     logger.error(f"Error loading existing results for resume: {resume_err}")
 
@@ -2108,6 +2120,9 @@ class SimulationRunner:
                             "prompt_tokens": state.prompt_tokens,
                             "completion_tokens": state.completion_tokens,
                             "estimated_cost": state.estimated_cost,
+                            "judge_type": judge_type,
+                            "selected_judge_personality": selected_judge_personality,
+                            "selected_judges_personalities": selected_judges_personalities,
                             "details": results
                         }, f, ensure_ascii=False, indent=2)
                         
@@ -2313,6 +2328,9 @@ class SimulationRunner:
                     "prompt_tokens": state.prompt_tokens,
                     "completion_tokens": state.completion_tokens,
                     "estimated_cost": state.estimated_cost,
+                    "judge_type": judge_type,
+                    "selected_judge_personality": selected_judge_personality,
+                    "selected_judges_personalities": selected_judges_personalities,
                     "details": results
                 }, f, ensure_ascii=False, indent=2)
                 

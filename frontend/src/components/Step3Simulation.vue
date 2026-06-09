@@ -694,6 +694,12 @@ const props = defineProps({
     default: 'defense'
   },
   selectedDraft: String,
+  judgeType: {
+    type: String,
+    default: 'single'
+  },
+  selectedJudgePersonality: String,
+  selectedJudgesPersonalities: Array,
   projectData: Object,
   graphData: Object,
   systemLogs: Array
@@ -1236,7 +1242,10 @@ const doStartSimulation = async () => {
       force: !props.isResume,
       enable_graph_memory_update: true,  // 开启动态图谱更新
       run_mode: props.runMode,
-      client_side: props.clientSide || 'defense'
+      client_side: props.clientSide || 'defense',
+      judge_type: props.judgeType || 'single',
+      selected_judge_personality: props.selectedJudgePersonality,
+      selected_judges_personalities: props.selectedJudgesPersonalities
     }
     
     if (props.selectedDraft) {

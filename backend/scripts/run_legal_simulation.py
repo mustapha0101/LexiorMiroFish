@@ -24,11 +24,14 @@ logger = logging.getLogger('mirofish.run_legal_simulation')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class LegalSimulationRunner:
-    def __init__(self, context: str, iterations: int = 50, litigation_type: str = "civil"):
+    def __init__(self, context: str, iterations: int = 50, litigation_type: str = "civil", judge_type: str = "single", selected_judge_personality: str = None, selected_judges_personalities: list = None):
         self.context = context
         self.iterations = iterations
         self.litigation_type = litigation_type
         self.grounding = JurisprudenceGrounding()
+        self.judge_type = judge_type
+        self.selected_judge_personality = selected_judge_personality
+        self.selected_judges_personalities = selected_judges_personalities or []
         
         # Initialisation du client OpenAI pour les appels LLM (compatible LLM Local)
         api_key = Config.LLM_API_KEY or "local-no-key"
@@ -77,8 +80,15 @@ class LegalSimulationRunner:
     def run_single_simulation(self, iter_id: int, on_action_callback=None):
         # 1. Sélection aléatoire ou persistance d'une personnalité pour le juge
         if not getattr(self, 'judge_personality', None):
-            personalities = LegalAgents.get_judge_personalities()
-            self.judge_personality = random.choice(personalities)
+            if self.judge_type == "custom" and self.selected_judge_personality:
+                self.judge_personality = self.selected_judge_personality
+            elif self.judge_type == "collegiate":
+                self.judge_personality = "Tribunal Collégial"
+            elif self.selected_judge_personality:
+                self.judge_personality = self.selected_judge_personality
+            else:
+                personalities = LegalAgents.get_judge_personalities()
+                self.judge_personality = random.choice(personalities)
         current_personality = self.judge_personality
         logger.info(f"--- Itération {iter_id} | Juge: {current_personality} ---")
         
@@ -215,39 +225,70 @@ class LegalSimulationRunner:
             tour += 1
  
         # 3. Phase de Délibéré
-        logger.info("Délibéré du juge...")
-        judge_sys = LegalAgents.get_judge_prompt(self.filter_context(self.context, "judge"), current_personality, self.litigation_type)
-        judge_history = [{"role": "user", "content": "Voici la transcription du débat:\n" + "\n".join(transcript) + "\n\nQuel est votre verdict ?"}]
-        verdict = self._call_llm(judge_sys, judge_history)
-        transcript.append(f"JUGE: {verdict}")
-        if on_action_callback:
-            on_action_callback("VERDICT", "Le Juge", 0, verdict, result=verdict)
-        
         import re
-        verdict_upper = verdict.upper()
-        # Determine if defense won
-        if self.litigation_type == "civil":
-            has_responsible = "RESPONSABLE" in verdict_upper and not re.search(r'\bNON[- ]+RESPONSABLE\b', verdict_upper)
-            has_condemnation = False
-            if "CONDAMNE" in verdict_upper or "CONDAMNER" in verdict_upper:
-                has_condemnation = True
-            
-            if has_responsible or has_condemnation:
-                is_defense_win = False
+        
+        def evaluate_verdict(verdict_text: str) -> bool:
+            verdict_upper = verdict_text.upper()
+            if self.litigation_type == "civil":
+                has_responsible = "RESPONSABLE" in verdict_upper and not re.search(r'\bNON[- ]+RESPONSABLE\b', verdict_upper)
+                has_condemnation = any(k in verdict_upper for k in ["CONDAMNE", "CONDAMNER"])
+                if has_responsible or has_condemnation:
+                    return False
+                return any(k in verdict_upper for k in ["NON RESPONSABLE", "NON-RESPONSABLE", "REJETTE", "REJET", "DEBOUTE", "REFUSE", "SANS FONDEMENT"])
             else:
-                is_defense_win = any(k in verdict_upper for k in ["NON RESPONSABLE", "NON-RESPONSABLE", "REJETTE", "REJET", "DEBOUTE", "REFUSE", "SANS FONDEMENT"])
-        else:
-            # Criminal logic
-            has_guilty = "COUPABLE" in verdict_upper and not re.search(r'\bNON[- ]+COUPABLE\b', verdict_upper)
-            has_condemnation = False
-            if "CONDAMNE" in verdict_upper or "CONDAMNER" in verdict_upper:
-                if re.search(r'CONDAMNE(R)?\s+(?:[^.!?]*)(?:APEX|DÉFENDEUR|DÉFENDERESSE)', verdict_upper):
-                    has_condemnation = True
+                has_guilty = "COUPABLE" in verdict_upper and not re.search(r'\bNON[- ]+COUPABLE\b', verdict_upper)
+                has_condemnation = False
+                if "CONDAMNE" in verdict_upper or "CONDAMNER" in verdict_upper:
+                    if re.search(r'CONDAMNE(R)?\s+(?:[^.!?]*)(?:APEX|DÉFENDEUR|DÉFENDERESSE)', verdict_upper):
+                        has_condemnation = True
+                if has_guilty or has_condemnation:
+                    return False
+                return any(k in verdict_upper for k in ["NON COUPABLE", "RELAXE", "ACQUITTEMENT", "ACQUITTE", "NON-COUPABLE", "REJETTE", "REFUSE"])
 
-            if has_guilty or has_condemnation:
-                is_defense_win = False
-            else:
-                is_defense_win = any(k in verdict_upper for k in ["NON COUPABLE", "RELAXE", "ACQUITTEMENT", "ACQUITTE", "NON-COUPABLE", "REJETTE", "REFUSE"])
+        if self.judge_type == "collegiate":
+            logger.info("Délibéré du Tribunal Collégial (3 Juges)...")
+            judges_list = self.selected_judges_personalities if self.selected_judges_personalities else [
+                "Formaliste strict (applique la loi à la lettre sans pitié).",
+                "Sensible à l'équité (prend en compte les circonstances atténuantes et le contexte social).",
+                "Conservateur (favorise souvent l'accusation et l'ordre public)."
+            ]
+            collegiate_results = []
+            for idx, j_pers in enumerate(judges_list):
+                logger.info(f"Délibération du Juge {idx+1} ({j_pers})...")
+                judge_sys = LegalAgents.get_judge_prompt(self.filter_context(self.context, "judge"), j_pers, self.litigation_type)
+                judge_history = [{"role": "user", "content": "Voici la transcription du débat:\n" + "\n".join(transcript) + "\n\nQuel est votre verdict ?"}]
+                verdict_j = self._call_llm(judge_sys, judge_history)
+                is_win_j = evaluate_verdict(verdict_j)
+                collegiate_results.append({
+                    "personality": j_pers,
+                    "verdict": verdict_j,
+                    "is_defense_win": is_win_j
+                })
+            
+            wins_count = sum(1 for r in collegiate_results if r["is_defense_win"])
+            is_defense_win = wins_count >= 2
+            consensus_label = "Défense (Majorité)" if is_defense_win else (
+                "Poursuite (Majorité)" if self.litigation_type == "criminal" else "Demandeur (Majorité)"
+            )
+            
+            combined_verdict = f"[DÉCISION COLLÉGIALE - CONSENSUS : {consensus_label} ({wins_count}/3)]\n\n"
+            for idx, r in enumerate(collegiate_results):
+                j_name = r["personality"].split('(')[0].strip()
+                combined_verdict += f"- Juge {idx+1} ({j_name}) : {r['verdict']}\n\n"
+            
+            verdict = combined_verdict
+            transcript.append(f"JUGE: {verdict}")
+            if on_action_callback:
+                on_action_callback("VERDICT", "Le Tribunal Collégial", 0, verdict, result=verdict)
+        else:
+            logger.info("Délibéré du juge...")
+            judge_sys = LegalAgents.get_judge_prompt(self.filter_context(self.context, "judge"), current_personality, self.litigation_type)
+            judge_history = [{"role": "user", "content": "Voici la transcription du débat:\n" + "\n".join(transcript) + "\n\nQuel est votre verdict ?"}]
+            verdict = self._call_llm(judge_sys, judge_history)
+            transcript.append(f"JUGE: {verdict}")
+            is_defense_win = evaluate_verdict(verdict)
+            if on_action_callback:
+                on_action_callback("VERDICT", "Le Juge", 0, verdict, result=verdict)
         
         # 4. Phase de Greffier (Analyste)
         clerk_sys = LegalAgents.get_clerk_prompt(self.litigation_type)

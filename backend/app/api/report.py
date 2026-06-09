@@ -367,6 +367,10 @@ def _generate_legal_report(task_id, report_id, simulation_id, graph_id, simulati
                 agent_logger.warning(f"Impossible de reconstruire automatiquement les résultats pour le rapport : {e}")
                 
         run_mode = "courtroom"
+        judge_type = "single"
+        selected_judge_personality = "impartial"
+        selected_judges_personalities = []
+        
         if os.path.exists(results_path):
             try:
                 with open(results_path, 'r', encoding='utf-8') as f:
@@ -376,6 +380,9 @@ def _generate_legal_report(task_id, report_id, simulation_id, graph_id, simulati
                     defense_wins = res_data.get("defense_wins", 25)
                     details = res_data.get("details", [])
                     run_mode = res_data.get("run_mode", "courtroom")
+                    judge_type = res_data.get("judge_type", "single")
+                    selected_judge_personality = res_data.get("selected_judge_personality")
+                    selected_judges_personalities = res_data.get("selected_judges_personalities", [])
                     
                     verdicts = []
                     for idx, det in enumerate(details[:3]):
@@ -414,13 +421,24 @@ def _generate_legal_report(task_id, report_id, simulation_id, graph_id, simulati
         
         client_win_rate = (100.0 - win_rate) if client_side == "plaintiff" else win_rate
         
+        # Enrich simulation requirement with judge details
+        judge_config_info = ""
+        if judge_type == "collegiate":
+            judge_config_info = "Le tribunal était composé d'un tribunal collégial de 3 juges (Formaliste strict, Sensible à l'équité, Conservateur) délibérant à la majorité."
+        elif judge_type == "custom":
+            judge_config_info = f"Le procès a été présidé par un juge unique personnalisé avec les directives suivantes : '{selected_judge_personality}'."
+        else:
+            judge_config_info = f"Le procès a été présidé par un juge unique prédéfini avec la personnalité suivante : '{selected_judge_personality}'."
+            
+        enriched_requirement = simulation_requirement + f"\n\nConfiguration du Tribunal : {judge_config_info}"
+        
         if run_mode == "oasis":
             system_prompt = "Tu es le Greffier en chef, expert en analyse d'opinion publique, e-réputation et modélisation de tendances sur les réseaux sociaux (Twitter, Reddit)."
             prompt = f"""Rédige un rapport officiel d'analyse d'opinion publique et de stratégie de communication.
 Ce rapport est destiné à l'équipe de communication et de défense pour l'aider à évaluer l'impact réputationnel, à adapter sa stratégie sur les réseaux sociaux et à maximiser le soutien de l'opinion publique.
 
 Contexte de l'affaire et pièces du dossier :
-{simulation_requirement}
+{enriched_requirement}
 
 Statistiques cumulées de la simulation d'opinion publique :
 - Nombre de débats analysés : {iterations}
@@ -455,7 +473,7 @@ Ce rapport est destiné à un avocat praticien représentant le **Demandeur (ou 
 IMPORTANT : Vous devez vous baser UNIQUEMENT sur les statistiques réelles fournies ci-dessus. Il est STRICTEMENT INTERDIT d'inventer ou d'altérer les statistiques de la simulation (comme prétendre qu'il y a eu 50 itérations ou un taux différent de {client_win_rate}% si les chiffres fournis sont différents). Vous ne devez citer aucun numéro d'itération fictif (comme Itération 41 ou 45). Vous devez vous limiter strictement aux numéros d'itérations réels listés dans les exemples concrets fournis ci-dessous.
 
 Contexte de l'affaire et pièces du dossier :
-{simulation_requirement}
+{enriched_requirement}
 
 Statistiques cumulées de la simulation Monte-Carlo :
 - Nombre de procès simulés : {iterations}
@@ -490,7 +508,7 @@ Ce rapport est destiné à un avocat praticien représentant la **Défense** pou
 IMPORTANT : Vous devez vous baser UNIQUEMENT sur les statistiques réelles fournies ci-dessus. Il est STRICTEMENT INTERDIT d'inventer ou d'altérer les statistiques de la simulation (comme prétendre qu'il y a eu 50 itérations ou un taux différent de {win_rate}% si les chiffres fournis sont différents). Vous ne devez citer aucun numéro d'itération fictif (comme Itération 41 ou 45). Vous devez vous limiter strictement aux numéros d'itérations réels listés dans les exemples concrets fournis ci-dessous.
 
 Contexte de l'affaire et pièces du dossier :
-{simulation_requirement}
+{enriched_requirement}
 
 Statistiques cumulées de la simulation Monte-Carlo :
 - Nombre de procès simulés : {iterations}

@@ -467,6 +467,93 @@
               </div>
             </div>
 
+          <!-- Configuration du Juge / Tribunal (uniquement pour les projets judiciaires) -->
+          <div v-if="props.projectData?.simulation_mode === 'legal' && runMode === 'courtroom'" class="judge-config-section">
+            <span class="section-title">Configuration du Tribunal / Juge</span>
+            <span class="section-desc">Sélectionnez la structure délibérative : un juge unique (prédéfini ou personnalisé) ou un tribunal collégial (3 juges).</span>
+            
+            <div class="judge-type-selector">
+              <div 
+                class="judge-type-card" 
+                :class="{ active: judgeType === 'single' }" 
+                @click="judgeType = 'single'"
+              >
+                <div class="judge-type-header">
+                  <span class="judge-type-icon">👨‍⚖️</span>
+                  <span class="judge-type-name">Juge unique</span>
+                </div>
+                <p class="judge-type-desc">Simuler avec l'une des 5 personnalités de juge préconfigurées.</p>
+              </div>
+
+              <div 
+                class="judge-type-card" 
+                :class="{ active: judgeType === 'custom' }" 
+                @click="judgeType = 'custom'"
+              >
+                <div class="judge-type-header">
+                  <span class="judge-type-icon">✍️</span>
+                  <span class="judge-type-name">Juge personnalisé</span>
+                </div>
+                <p class="judge-type-desc">Définir des directives textuelles spécifiques pour le juge.</p>
+              </div>
+
+              <div 
+                class="judge-type-card" 
+                :class="{ active: judgeType === 'collegiate' }" 
+                @click="judgeType = 'collegiate'"
+              >
+                <div class="judge-type-header">
+                  <span class="judge-type-icon">🏛️</span>
+                  <span class="judge-type-name">Tribunal collégial</span>
+                </div>
+                <p class="judge-type-desc">Délibération à la majorité par un panel de 3 juges.</p>
+              </div>
+            </div>
+
+            <!-- Sous-options pour Juge Prédéfini -->
+            <div v-if="judgeType === 'single'" class="judge-options-panel select-panel">
+              <label class="options-label">Personnalité du Juge</label>
+              <select v-model="selectedJudgePersonality" class="judge-select-dropdown">
+                <option 
+                  v-for="pers in judgePersonalities" 
+                  :key="pers" 
+                  :value="pers"
+                >
+                  {{ pers }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Sous-options pour Juge Personnalisé -->
+            <div v-if="judgeType === 'custom'" class="judge-options-panel custom-panel">
+              <label class="options-label">Directives personnalisées pour le Juge</label>
+              <textarea 
+                v-model="customJudgePrompt" 
+                placeholder="Exemple : Juge très formaliste, pointilleux sur la forme, mais sensible aux préjudices financiers directs..."
+                class="judge-custom-textarea"
+              ></textarea>
+            </div>
+
+            <!-- Sous-options pour Tribunal Collégial -->
+            <div v-if="judgeType === 'collegiate'" class="judge-options-panel collegiate-panel">
+              <span class="options-label">Membres du Tribunal Collégial</span>
+              <div class="collegiate-members-list">
+                <div class="collegiate-member">
+                  <span class="member-role">Juge 1 (Président)</span>
+                  <span class="member-desc">Formaliste strict</span>
+                </div>
+                <div class="collegiate-member">
+                  <span class="member-role">Juge 2 (Assesseur)</span>
+                  <span class="member-desc">Sensible à l'équité</span>
+                </div>
+                <div class="collegiate-member">
+                  <span class="member-role">Juge 3 (Assesseur)</span>
+                  <span class="member-desc">Conservateur</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Radar d'Anticipation Tactique (Détecteur de Failles / Lignes de Force) -->
           <div v-if="props.projectData?.simulation_mode === 'legal' && runMode === 'courtroom'" class="radar-tactique-section">
             <div class="radar-header-inline">
@@ -584,29 +671,29 @@
                   <input 
                     type="range" 
                     v-model.number="customMaxRounds" 
-                    :min="isOasisOrSocial ? 5 : 1" 
-                    :max="isOasisOrSocial ? 25 : 50"
+                    :min="roundsMin" 
+                    :max="roundsMax"
                     :step="1"
                     class="minimal-slider"
-                    :style="{ '--percent': ((customMaxRounds - (isOasisOrSocial ? 5 : 1)) / ((isOasisOrSocial ? 25 : 50) - (isOasisOrSocial ? 5 : 1))) * 100 + '%' }"
+                    :style="{ '--percent': ((customMaxRounds - roundsMin) / Math.max(1, roundsMax - roundsMin)) * 100 + '%' }"
                   />
                   <div class="range-marks">
-                    <span>{{ isOasisOrSocial ? 5 : 1 }}</span>
+                    <span>{{ roundsMin }}</span>
                     <span 
                       v-if="!isOasisOrSocial"
                       class="mark-recommend" 
                       :class="{ active: customMaxRounds === recommendedRounds }"
                       @click="customMaxRounds = recommendedRounds"
-                      :style="{ position: 'absolute', left: `calc(${(recommendedRounds - 1) / 49 * 100}% - 30px)` }"
+                      :style="{ position: 'absolute', left: `calc(${(recommendedRounds - roundsMin) / Math.max(1, roundsMax - roundsMin) * 100}% - 35px)` }"
                     >{{ `${recommendedRounds} itér. (Recommandé)` }}</span>
                     <span 
                       v-else
                       class="mark-recommend" 
                       :class="{ active: customMaxRounds === 10 }"
                       @click="customMaxRounds = 10"
-                      :style="{ position: 'absolute', left: `calc(${(10 - 5) / 20 * 100}% - 30px)` }"
+                      :style="{ position: 'absolute', left: `calc(${(10 - roundsMin) / Math.max(1, roundsMax - roundsMin) * 100}% - 30px)` }"
                     >10 rounds (Recommandé)</span>
-                    <span>{{ isOasisOrSocial ? 25 : 50 }}</span>
+                    <span>{{ roundsMax }}</span>
                   </div>
                 </div>
               </div>
@@ -1107,6 +1194,39 @@ const phase = ref(0) // 0: 初始化, 1: 生成人设, 2: 生成配置, 3: 完�
 const runMode = ref('courtroom') // courtroom or oasis
 const clientSide = ref(props.projectData?.client_side || 'defense')
 
+const judgeType = ref('single') // single, custom, collegiate
+const judgePersonalities = [
+  "Formaliste strict (applique la loi à la lettre sans pitié).",
+  "Sensible à l'équité (prend en compte les circonstances atténuantes et le contexte social).",
+  "Conservateur (favorise souvent l'accusation et l'ordre public).",
+  "Progressiste (favorise la réhabilitation et est sceptique envers les mesures punitives sévères).",
+  "Imprévisible (change d'avis rapidement, se concentre sur les détails techniques mineurs)."
+]
+const selectedJudgePersonality = ref(judgePersonalities[0])
+const customJudgePrompt = ref('')
+const selectedJudgesPersonalities = computed(() => {
+  if (judgeType.value === 'collegiate') {
+    return [
+      "Formaliste strict (applique la loi à la lettre sans pitié).",
+      "Sensible à l'équité (prend en compte les circonstances atténuantes et le contexte social).",
+      "Conservateur (favorise souvent l'accusation et l'ordre public)."
+    ]
+  }
+  return []
+})
+
+const roundsMin = computed(() => {
+  if (isOasisOrSocial.value) return 5
+  if (judgeType.value === 'collegiate') return 3
+  return 5
+})
+
+const roundsMax = computed(() => {
+  if (isOasisOrSocial.value) return 25
+  if (judgeType.value === 'collegiate') return 15
+  return 50
+})
+
 watch(() => props.projectData?.client_side, (newVal) => {
   if (newVal) {
     clientSide.value = newVal
@@ -1316,6 +1436,10 @@ const customMaxRounds = ref(40)   // 默认推荐40轮
 const recommendedRounds = computed(() => {
   if (props.projectData?.simulation_mode !== 'legal') return 40;
   
+  if (judgeType.value === 'collegiate') {
+    return 5;
+  }
+  
   // Utiliser la complexité du graphe de connaissances si disponible
   const nodeCount = props.graphData?.nodes?.length || 0;
   if (nodeCount > 0) {
@@ -1345,6 +1469,16 @@ watch(runMode, (newVal) => {
       customMaxRounds.value = recommendedRounds.value
     } else {
       customMaxRounds.value = 10
+    }
+  }
+})
+
+watch(judgeType, (newType) => {
+  if (props.projectData?.simulation_mode === 'legal') {
+    if (newType === 'collegiate') {
+      customMaxRounds.value = 5
+    } else {
+      customMaxRounds.value = recommendedRounds.value
     }
   }
 })
@@ -1470,9 +1604,20 @@ const handleStartSimulation = () => {
   
   if (props.projectData?.simulation_mode === 'legal') {
     params.clientSide = clientSide.value
+    params.judge_type = judgeType.value
+    params.selected_judge_personality = judgeType.value === 'custom' 
+      ? customJudgePrompt.value 
+      : selectedJudgePersonality.value
+    params.selected_judges_personalities = selectedJudgesPersonalities.value
+
     if (runMode.value === 'courtroom') {
       params.maxRounds = useCustomRounds.value ? customMaxRounds.value : recommendedRounds.value
-      addLog(`Démarrage du procès d'audience avec ${params.maxRounds} simulations (Monte-Carlo).`)
+      const judgeDesc = judgeType.value === 'collegiate' 
+        ? 'Tribunal Collégial (3 Juges)' 
+        : judgeType.value === 'custom' 
+          ? 'Juge Personnalisé' 
+          : `Juge Unique Prédéfini (${selectedJudgePersonality.value.split('(')[0].trim()})`
+      addLog(`Démarrage du procès d'audience avec ${params.maxRounds} simulations (Monte-Carlo). Configuration : ${judgeDesc}.`)
     } else {
       params.maxRounds = useCustomRounds.value ? customMaxRounds.value : 10
       addLog(`Démarrage de la Simulation Publique Interactive avec ${params.maxRounds} rounds de débat public.`)
@@ -4587,5 +4732,154 @@ onUnmounted(() => {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+.judge-config-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.judge-type-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.judge-type-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.judge-type-card:hover {
+  border-color: #CBD5E1;
+  background: #F1F5F9;
+  transform: translateY(-1px);
+}
+
+.judge-type-card.active {
+  border-color: #B58A3D;
+  background: #FDFBF7;
+  box-shadow: 0 4px 10px rgba(181, 138, 61, 0.06);
+}
+
+.judge-type-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.judge-type-icon {
+  font-size: 18px;
+}
+
+.judge-type-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.judge-type-card.active .judge-type-name {
+  color: #8C621F;
+}
+
+.judge-type-desc {
+  font-size: 10px;
+  color: #64748B;
+  line-height: 1.4;
+}
+
+.judge-options-panel {
+  margin-top: 12px;
+  padding: 14px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.options-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.judge-select-dropdown {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #1E293B;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.judge-select-dropdown:focus {
+  border-color: #B58A3D;
+}
+
+.judge-custom-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #1E293B;
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.judge-custom-textarea:focus {
+  border-color: #B58A3D;
+}
+
+.collegiate-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.collegiate-member {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+}
+
+.member-role {
+  font-size: 11px;
+  font-weight: 600;
+  color: #B58A3D;
+}
+
+.member-desc {
+  font-size: 11px;
+  color: #475569;
 }
 </style>

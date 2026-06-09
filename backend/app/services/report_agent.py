@@ -1027,7 +1027,10 @@ class ReportAgent:
                         "sample_verdicts": sample_verdicts,
                         "run_mode": run_mode,
                         "client_side": client_side,
-                        "client_win_rate": client_win_rate
+                        "client_win_rate": client_win_rate,
+                        "judge_type": res_data.get("judge_type", "single"),
+                        "selected_judge_personality": res_data.get("selected_judge_personality"),
+                        "selected_judges_personalities": res_data.get("selected_judges_personalities", [])
                     }
         except Exception as e:
             logger.warning(f"Error initializing legal context for ReportAgent: {e}")
@@ -1421,10 +1424,22 @@ class ReportAgent:
         if getattr(self, 'simulation_mode', 'social') == 'legal':
             client_side_label = "le Demandeur" if self.legal_context.get("client_side") == "plaintiff" else "la Défense"
             sec_desc = getattr(self, '_legal_sections_desc', {}).get(section.title, "")
+            
+            judge_config_info = ""
+            j_type = self.legal_context.get("judge_type", "single")
+            if j_type == "collegiate":
+                judge_config_info = "Le tribunal était composé d'un tribunal collégial de 3 juges (Formaliste strict, Sensible à l'équité, Conservateur) délibérant à la majorité."
+            elif j_type == "custom":
+                j_pers = self.legal_context.get("selected_judge_personality", "personnalisé")
+                judge_config_info = f"Le procès a été présidé par un juge unique personnalisé avec les directives suivantes : '{j_pers}'."
+            else:
+                j_pers = self.legal_context.get("selected_judge_personality", "impartial")
+                judge_config_info = f"Le procès a été présidé par un juge unique prédéfini avec la personnalité suivante : '{j_pers}'."
+                
             system_prompt = LEGAL_SECTION_SYSTEM_PROMPT_TEMPLATE.format(
                 report_title=outline.title,
                 report_summary=outline.summary,
-                simulation_requirement=self.simulation_requirement,
+                simulation_requirement=self.simulation_requirement + f"\n\nConfiguration du Tribunal : {judge_config_info}",
                 iterations=self.legal_context.get("iterations", 50),
                 defense_wins=self.legal_context.get("defense_wins", 25),
                 win_rate=self.legal_context.get("win_rate", 50.0),

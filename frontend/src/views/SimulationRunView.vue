@@ -65,6 +65,9 @@
           :runMode="runMode"
           :clientSide="clientSide"
           :selectedDraft="selectedDraft"
+          :judgeType="judgeType"
+          :selectedJudgePersonality="selectedJudgePersonality"
+          :selectedJudgesPersonalities="selectedJudgesPersonalities"
           :minutesPerRound="minutesPerRound"
           :projectData="projectData"
           :graphData="graphData"
@@ -109,6 +112,9 @@ const maxRounds = ref(route.query.maxRounds ? parseInt(route.query.maxRounds) : 
 const runMode = ref(route.query.runMode || 'courtroom')
 const clientSide = ref(route.query.clientSide || 'defense')
 const selectedDraft = ref(route.query.selectedDraft || null)
+const judgeType = ref(route.query.judge_type || 'single')
+const selectedJudgePersonality = ref(route.query.selected_judge_personality || null)
+const selectedJudgesPersonalities = ref(route.query.selected_judges_personalities ? JSON.parse(route.query.selected_judges_personalities) : [])
 const minutesPerRound = ref(30) // 默认每轮30分钟
 const isResume = ref(route.query.resume === 'true')
 const projectData = ref(null)

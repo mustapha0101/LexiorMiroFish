@@ -196,6 +196,17 @@ const handleNextStep = (params = {}) => {
     routeParams.query.selectedDraft = params.selectedDraft
   }
   
+  // Transmettre la configuration du juge
+  if (params.judge_type) {
+    routeParams.query.judge_type = params.judge_type
+  }
+  if (params.selected_judge_personality) {
+    routeParams.query.selected_judge_personality = params.selected_judge_personality
+  }
+  if (params.selected_judges_personalities) {
+    routeParams.query.selected_judges_personalities = JSON.stringify(params.selected_judges_personalities)
+  }
+  
   // 跳转到 Step 3 页面
   router.push(routeParams)
 }

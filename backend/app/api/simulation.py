@@ -2813,6 +2813,9 @@ def start_simulation():
         force = data.get('force', False)  # 可选：强制重新开始
         run_mode = data.get('run_mode', 'courtroom')
         client_side = data.get('client_side', 'defense')
+        judge_type = data.get('judge_type', 'single')
+        selected_judge_personality = data.get('selected_judge_personality')
+        selected_judges_personalities = data.get('selected_judges_personalities')
 
         # 验证 max_rounds 参数
         if max_rounds is not None:
@@ -2936,7 +2939,10 @@ def start_simulation():
             graph_id=graph_id,
             run_mode=run_mode,
             force=force,
-            initial_stimulus=initial_stimulus
+            initial_stimulus=initial_stimulus,
+            judge_type=judge_type,
+            selected_judge_personality=selected_judge_personality,
+            selected_judges_personalities=selected_judges_personalities
         )
         
         # 更新模拟状态
@@ -4851,6 +4857,9 @@ def run_legal_simulation():
         data = request.get_json() or {}
         context = data.get('context')
         iterations = data.get('iterations', 10)
+        judge_type = data.get('judge_type', 'single')
+        selected_judge_personality = data.get('selected_judge_personality')
+        selected_judges_personalities = data.get('selected_judges_personalities')
         
         if not context:
             return jsonify({
@@ -4957,7 +4966,14 @@ Description du litige :
         def _run_in_background():
             try:
                 task_manager.update_task(task_id, status=TaskStatus.PROCESSING, progress=10, message="Démarrage...")
-                runner = LegalSimulationRunner(context=context, iterations=iterations, litigation_type=litigation_type)
+                runner = LegalSimulationRunner(
+                    context=context, 
+                    iterations=iterations, 
+                    litigation_type=litigation_type,
+                    judge_type=judge_type,
+                    selected_judge_personality=selected_judge_personality,
+                    selected_judges_personalities=selected_judges_personalities
+                )
                 outfile = runner.run_full_simulation()
                 task_manager.complete_task(task_id, result={"output_file": outfile})
             except Exception as e:
