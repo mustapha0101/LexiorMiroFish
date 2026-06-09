@@ -32,6 +32,12 @@ class LocalGraphDatabase:
         import random
 
         with self._LOCK:
+            # If the database is in cache but was closed (e.g. ref_count reached 0 previously), remove it
+            if self.graph_dir in self._KUZU_DATABASES:
+                entry = self._KUZU_DATABASES[self.graph_dir]
+                if isinstance(entry, dict) and entry.get("db") and entry["db"].is_closed:
+                    del self._KUZU_DATABASES[self.graph_dir]
+
             if self.graph_dir not in self._KUZU_DATABASES:
                 max_attempts = 15
                 db_instance = None
@@ -68,9 +74,22 @@ class LocalGraphDatabase:
                                 raise e
                         else:
                             raise e
-                self._KUZU_DATABASES[self.graph_dir] = db_instance
+                self._KUZU_DATABASES[self.graph_dir] = {
+                    "db": db_instance,
+                    "ref_count": 1
+                }
+            else:
+                entry = self._KUZU_DATABASES[self.graph_dir]
+                if isinstance(entry, dict):
+                    entry["ref_count"] += 1
+                else:
+                    self._KUZU_DATABASES[self.graph_dir] = {
+                        "db": entry,
+                        "ref_count": 2
+                    }
             
-            self.db = self._KUZU_DATABASES[self.graph_dir]
+            entry = self._KUZU_DATABASES[self.graph_dir]
+            self.db = entry["db"] if isinstance(entry, dict) else entry
             
         self.conn = kuzu.Connection(self.db)
         self._results = []
@@ -95,8 +114,31 @@ class LocalGraphDatabase:
                 self.conn = None
         except Exception:
             pass
-        # Do not close self.db here since it is cached globally and shared.
-        # This prevents other threads from encountering closed database issues.
+        
+        # Decrement ref_count and close database if it reaches 0
+        if hasattr(self, 'db') and self.db:
+            with self._LOCK:
+                if self.graph_dir in self._KUZU_DATABASES:
+                    entry = self._KUZU_DATABASES[self.graph_dir]
+                    if isinstance(entry, dict):
+                        entry["ref_count"] -= 1
+                        if entry["ref_count"] <= 0:
+                            try:
+                                if not entry["db"].is_closed:
+                                    entry["db"].close()
+                            except Exception as e:
+                                logger.error(f"Error closing Kuzu database: {e}")
+                            finally:
+                                del self._KUZU_DATABASES[self.graph_dir]
+                    else:
+                        try:
+                            if hasattr(entry, 'close') and not entry.is_closed:
+                                entry.close()
+                        except Exception:
+                            pass
+                        finally:
+                            del self._KUZU_DATABASES[self.graph_dir]
+            self.db = None
         
     def _execute(self, query: str, parameters: dict = None):
         if parameters is None:

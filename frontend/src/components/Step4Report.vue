@@ -2532,6 +2532,9 @@ const togglePlay = (type) => {
       if (audioOverviewRef.value && !audioOverviewRef.value.paused) {
         audioOverviewRef.value.pause()
       }
+      if (audio.readyState === 0) {
+        audio.load()
+      }
       audio.play().catch(err => console.log("Playback error:", err))
     }
   } else {
@@ -2542,6 +2545,9 @@ const togglePlay = (type) => {
     } else {
       if (audioDiscussionsRef.value && !audioDiscussionsRef.value.paused) {
         audioDiscussionsRef.value.pause()
+      }
+      if (audio.readyState === 0) {
+        audio.load()
       }
       audio.play().catch(err => console.log("Playback error:", err))
     }
@@ -2693,6 +2699,15 @@ watch(() => props.reportId, (newId) => {
     addLog(`Report Agent switched to: ${newId}`)
     startPolling()
     checkPodcastsStatus()
+    
+    nextTick(() => {
+      if (audioDiscussionsRef.value) {
+        audioDiscussionsRef.value.load()
+      }
+      if (audioOverviewRef.value) {
+        audioOverviewRef.value.load()
+      }
+    })
   }
 }, { immediate: true })
 

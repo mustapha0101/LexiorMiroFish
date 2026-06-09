@@ -131,15 +131,17 @@
         <button 
           v-if="phase === 2"
           class="action-btn secondary export-pdf-btn"
+          :disabled="isExportingPDF"
           @click="exportSimulationToPDF"
           style="background-color: #0F1E36; color: #C5A880; border-color: #C5A880; display: flex; align-items: center; gap: 6px;"
         >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+          <span v-if="isExportingPDF" class="loading-spinner-small"></span>
+          <svg v-else viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
-          <span>Exporter la simulation (PDF)</span>
+          <span>{{ isExportingPDF ? 'Exportation...' : 'Exporter la simulation (PDF)' }}</span>
         </button>
 
         <button 
@@ -663,7 +665,8 @@ import {
   getSimulationCognitiveStates,
   injectStimulus,
   liveChatWithCharacter,
-  getSimulationConfig
+  getSimulationConfig,
+  exportSimulationPDF
 } from '../api/simulation'
 import { generateReport } from '../api/report'
 import CognitiveStateVisualizer from './CognitiveStateVisualizer.vue'
@@ -885,6 +888,7 @@ const router = useRouter()
 // State
 const activeTab = ref('timeline')
 const isGeneratingReport = ref(false)
+const isExportingPDF = ref(false)
 const phase = ref(0) // 0: 未开始, 1: 运行中, 2: 已完成
 
 // Live Chat State
@@ -1529,34 +1533,22 @@ const formatActionTime = (timestamp) => {
 
 const exportSimulationToPDF = async () => {
   if (!props.simulationId) return
-  const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'
-  
-  let userId = ''
-  if (supabase) {
-    try {
-      const { data } = await supabase.auth.getSession()
-      if (data?.session?.user) {
-        userId = data.session.user.id
-      }
-    } catch (err) {
-      console.error('Error getting Supabase session for PDF export:', err)
-    }
+  isExportingPDF.value = true
+  try {
+    const res = await exportSimulationPDF(props.simulationId)
+    // Create blob link and trigger download
+    const blob = new Blob([res], { type: 'application/pdf' })
+    const link = document.createElement('a')
+    link.href = window.URL.createObjectURL(blob)
+    link.download = `simulation_${props.simulationId}_export.pdf`
+    link.click()
+    window.URL.revokeObjectURL(link.href)
+  } catch (err) {
+    console.error("Erreur export PDF simulation:", err)
+    emit('add-log', `Erreur d'exportation PDF: ${err.message || err}`)
+  } finally {
+    isExportingPDF.value = false
   }
-  
-  if (!userId) {
-    try {
-      const storedBypass = localStorage.getItem('lexior_bypass_session')
-      if (storedBypass) {
-        const bypassSession = JSON.parse(storedBypass)
-        if (bypassSession?.user?.id) {
-          userId = bypassSession.user.id
-        }
-      }
-    } catch (err) {}
-  }
-  
-  const url = `${baseURL}/api/simulation/${props.simulationId}/export-pdf?userId=${userId}`
-  window.open(url, '_blank')
 }
 
 const handleNextStep = async () => {
