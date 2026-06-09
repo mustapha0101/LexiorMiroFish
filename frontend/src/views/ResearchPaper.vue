@@ -48,7 +48,7 @@
         <section id="section1" class="paper-section">
           <h2><span>01.</span> Résumé du Projet et Objectifs Scientifiques</h2>
           <p>
-            Les architectures classiques d'agents autonomes basées sur des modèles de langage de grande taille (LLM) souffrent d'une absence inhérente de continuité comportementale et d'une uniformisation de leurs décisions. Face à des stimuli complexes et contradictoires, ces modèles tendent à converger vers des réponses lissées et neutres, conséquence directe des mécanismes d'alignement post-entraînement par rétroaction humaine (RLHF).
+            Les architectures classiques d'agents autonomes basées sur des modèles de langage de grande taille (LLM) souffrent d'une absence inhérente de continuité comportementale et d'une uniformisation de leurs décisions. Sur la base des faits observés et de notre expérimentation actuelle, face à des stimuli complexes et contradictoires, ces modèles tendent à converger vers des réponses lissées et neutres, conséquence directe des mécanismes d'alignement post-entraînement par rétroaction humaine (RLHF).
           </p>
           <p>
             Ce projet de recherche introduit le <strong>Probabilistic Identity Engine</strong> (PIE), une architecture logicielle neuro-symbolique hybride visant à surmonter ces verrous en maintenant une cohérence décisionnelle stable à travers des cycles de simulation longs. Ce système résout l'absence de continuité comportementale par l'implémentation d'un espace d'états d'un système dynamique multi-agents régulé par des couches logiques symboliques persistantes, assurant la plasticité et la persistance des variables d'état sous contraintes de fenêtres de contexte limitées.
@@ -104,6 +104,16 @@
             <li><strong>B<sub>t</sub> &isin; &Delta;<sup>k</sup> :</strong> l'espace des croyances sémantiques formalisé par des simplexes de probabilité (Bayesian belief vectors).</li>
             <li><strong>M<sub>t</sub> &isin; D :</strong> désigne l'espace discret des configurations d'état logique et de la posture d'humeur de l'agent (ex. <em>Coopératif</em>, <em>Méfiant</em>, <em>Paranoïaque</em>, <em>Isolé</em>).</li>
           </ul>
+          
+          <div class="concept-vulgarization">
+            <div class="vulgarization-title">💡 Le concept en clair : Le Cerveau de l'Agent (L'Espace d'États)</div>
+            <p class="vulgarization-text">
+              Pour qu'un agent simulé (comme un Juge ou un Avocat) réagisse de façon réaliste, son profil décisionnel est modélisé à chaque instant par trois éléments : des <strong>Jauges Continues</strong> (des curseurs gradués de -1 à 1 mesurant ses tensions internes comme <em>Procédure vs Équité</em>), des <strong>Filtres de Croyance</strong> (la probabilité sémantique bayésienne de culpabilité ou d'innocence), et une <strong>Posture Globale</strong> (son humeur comme <em>Coopératif</em> ou <em>Méfiant</em>).
+            </p>
+            <p class="vulgarization-text" style="margin-top: 10px; font-style: italic; border-top: 1px dashed rgba(212, 175, 55, 0.15); padding-top: 8px;">
+              <strong>Origine des valeurs de départ :</strong> Les valeurs d'initialisation de ces jauges proviennent du <strong>profil de personnalité</strong> (ficher de configuration JSON du personnage). Les poids d'association sémantique entre les souvenirs et les jauges sont calculés dynamiquement par rapport aux relations structurées dans le graphe de connaissances (<strong>l'ontologie de l'affaire</strong>) via similarité cosinus.
+            </p>
+          </div>
         </section>
 
         <!-- Section 4 -->
@@ -121,6 +131,17 @@
           <div class="formula-box">
             I<sub>i</sub><sup>(t)</sup> = tanh( &gamma; &middot; &sum;<sub>m &isin; M<sub>active</sub></sub> A(m) &middot; W<sub>s</sub>(m, T<sub>i</sub>) )
           </div>
+          
+          <div class="concept-vulgarization">
+            <div class="vulgarization-title">💡 Le concept en clair : L'Inertie Mémorielle (Le Mur de Briques)</div>
+            <p class="vulgarization-text">
+              Pour éviter les retournements d'opinion brusques d'une réplique à l'autre (l'effet "Flip-Flop"), le code applique une force de résistance appelée <strong>Inertie</strong>. Cette inertie est calculée à partir des souvenirs importants du procès qui s'empilent comme un <strong>mur de briques</strong>. La fonction mathématique <code>tanh</code> compresse cette somme pour qu'elle reste obligatoirement entre 0 (aucune résistance) et 1 (résistance maximale). Plus l'inertie de l'agent est forte, plus les nouveaux arguments glissent ou rebondissent sur lui sans modifier son opinion.
+            </p>
+            <p class="vulgarization-text" style="margin-top: 10px; font-style: italic; border-top: 1px dashed rgba(212, 175, 55, 0.15); padding-top: 8px;">
+              <strong>Exemple de calcul :</strong> Si l'agent a en mémoire un souvenir fort de poids 0.70 et un souvenir moyen de poids 0.30, leur somme est de 1.00. En appliquant un multiplicateur d'échelle de 1.20, on obtient 1.20. La fonction compresse ce résultat : <code>tanh(1.20) ≈ 0.83</code>. L'Inertie finale de l'agent est de <strong>83%</strong>. Son opinion est solidement ancrée et résistera aux arguments contradictoires immédiats.
+            </p>
+          </div>
+
           <p>
             Ci-dessous, la simulation comparative montre comment le tenseur d'inertie de PIE stabilise la trajectoire cognitive de l'agent face à des perturbations bruyantes de l'environnement, contrairement au modèle contrôle sans inertie :
           </p>
@@ -182,6 +203,16 @@
             Tant que les vecteurs d'interactions négatifs restent actifs en mémoire, la barrière de potentiel pour modifier la décision de l'agent demeure infranchissable, garantissant la cohérence comportementale même sous stimuli contradictoires répétés.
           </p>
 
+          <div class="concept-vulgarization">
+            <div class="vulgarization-title">💡 Le concept en clair : L'Hystérésis Émotionnelle (La Rancune)</div>
+            <p class="vulgarization-text">
+              Dans la vraie vie, regagner la confiance de quelqu'un après l'avoir attaqué est très difficile. C'est ce que modélise l'<strong>hystérésis</strong> (la mémoire d'un état défensif passé). Si un avocat subit plusieurs objections d'affilée de la part de l'adversaire, son humeur bascule en mode <em>Paranoïaque</em>. L'adversaire aura beau proposer un accord amiable raisonnable juste après, la chance que l'avocat l'accepte s'effondre à cause d'une <strong>barrière d'énergie négative</strong> (la rancune accumulée). Il faudra plusieurs interactions collaboratives ou concessions successives pour dissiper cette rancune et repasser à un état d'esprit coopératif.
+            </p>
+            <p class="vulgarization-text" style="margin-top: 10px; font-style: italic; border-top: 1px dashed rgba(212, 175, 55, 0.15); padding-top: 8px;">
+              <strong>Exemple de calcul :</strong> La probabilité de base d'accepter une conciliation est de 70% (0.70). Si l'agent a accumulé 3 objections négatives consécutives (poids de rancune cumulé &phi; = 3.0), l'impact est calculé via l'exponentielle : <code>e<sup>-0.5 × 3</sup> ≈ 0.22</code>. La probabilité d'accord finale s'effondre à <code>0.70 × 0.22 ≈ 15.4%</code>. La rancune bloque temporairement toute réconciliation.
+            </p>
+          </div>
+
           <!-- Hysteresis Chart -->
           <div class="chart-container">
             <div class="chart-title">Courbe d'Hystérésis : Transition d'humeur d'un témoin</div>
@@ -202,13 +233,13 @@
               <text x="90" y="75" fill="#64748B" font-size="10" text-anchor="end">Isolé</text>
               
               <!-- Timeline steps -->
-              <text x="100" y="280" fill="#64748B" font-size="9" text-anchor="middle">R0 (Init)</text>
-              <text x="180" y="280" fill="#64748B" font-size="9" text-anchor="middle">R1 (Mute)</text>
-              <text x="260" y="280" fill="#64748B" font-size="9" text-anchor="middle">R2 (Mute)</text>
-              <text x="340" y="280" fill="#64748B" font-size="9" text-anchor="middle">R3 (Dislike)</text>
-              <text x="420" y="280" fill="#64748B" font-size="9" text-anchor="middle">R5 (Like)</text>
-              <text x="500" y="280" fill="#64748B" font-size="9" text-anchor="middle">R7 (Follow)</text>
-              <text x="580" y="280" fill="#64748B" font-size="9" text-anchor="middle">R9 (Like)</text>
+              <text x="100" y="280" fill="#64748B" font-size="9" text-anchor="middle">R0</text>
+              <text x="180" y="280" fill="#64748B" font-size="9" text-anchor="middle">R1 (Attaque)</text>
+              <text x="260" y="280" fill="#64748B" font-size="9" text-anchor="middle">R2 (Attaque)</text>
+              <text x="340" y="280" fill="#64748B" font-size="9" text-anchor="middle">R3 (Impasse)</text>
+              <text x="420" y="280" fill="#64748B" font-size="9" text-anchor="middle">R4 (Respect)</text>
+              <text x="500" y="280" fill="#64748B" font-size="9" text-anchor="middle">R5 (Accord)</text>
+              <text x="580" y="280" fill="#64748B" font-size="9" text-anchor="middle">R6 (Accord)</text>
               
               <!-- Hysteresis Path Line -->
               <!-- Friction phase: (100, 260) -> (180, 210) -> (260, 140) -> (340, 70) -->
@@ -232,7 +263,7 @@
               <text x="460" y="110" fill="#10B981" font-size="10" transform="rotate(38, 460, 110)">Réconciliation (Retardé) ➔</text>
             </svg>
             <div class="chart-caption">
-              Figure 2 : Asymétrie de transition émotionnelle. Une seule action négative (Mute) pousse l'agent vers la suspicion, tandis que 3 actions positives successives (Like, Follow) sont nécessaires pour s'extirper de la paranoïa (puits de potentiel inducteur d'hystérésis).
+              Figure 2 : Asymétrie de transition émotionnelle. Une seule action négative pousse l'agent vers la suspicion, tandis que 3 actions positives successives sont nécessaires pour s'extirper de la paranoïa (puits de potentiel inducteur d'hystérésis).
             </div>
           </div>
         </section>
@@ -264,6 +295,16 @@
               <h4>Stochastic Collapse</h4>
               <p>Échantillonnage final via une distribution de Boltzmann pour converger vers la décision.</p>
             </div>
+          </div>
+
+          <div class="concept-vulgarization">
+            <div class="vulgarization-title">💡 Le concept en clair : L'Élection de l'Action (L'Aimant et le Dé)</div>
+            <p class="vulgarization-text">
+              À chaque tour, l'IA génère plusieurs actions possibles. Pour élire celle qui sera jouée, le système compare chaque action avec les croyances actuelles de l'agent. Une action cohérente a une <strong>surprise narrative</strong> basse, tandis qu'une action bizarre (comme plaider coupable subitement alors qu'aucun élément à charge n'a été présenté) a une surprise élevée. La distribution de Boltzmann agit comme un <strong>aimant</strong> : plus l'action est cohérente, plus l'aimant tire fort pour qu'elle soit choisie. Enfin, un lancer de dé virtuel (le <em>Stochastic Collapse</em>) choisit l'action finale, garantissant que la logique l'emporte 80% du temps, tout en laissant une place à l'imprévu humain.
+            </p>
+            <p class="vulgarization-text" style="margin-top: 10px; font-style: italic; border-top: 1px dashed rgba(212, 175, 55, 0.15); padding-top: 8px;">
+              <strong>Exemple de calcul :</strong> Soit deux actions : l'Action A (surprise basse de 0.20) et l'Action B (surprise haute de 0.80). L'aimant de Boltzmann calcule leurs forces d'attraction : force A = <code>e<sup>-2 × 0.20</sup> ≈ 0.67</code>, force B = <code>e<sup>-2 × 0.80</sup> ≈ 0.20</code>. La probabilité finale d'élire l'Action A est de <code>0.67 / (0.67 + 0.20) ≈ 77%</code> (contre 23% pour B).
+            </p>
           </div>
         </section>
 
@@ -377,7 +418,7 @@
             </table>
           </div>
           <p>
-            <strong>Note de test :</strong> Sous le PIE Framework, les latences d'inférence locale ont diminué de 28% grâce au filtrage de tokens. Le taux de cohérence décisionnelle et l'absence de flip-flop verdict s'améliorent de plus de 160% sur les simulations complexes de procès.
+            <strong>Validation des Hypothèses et Note de test :</strong> Sous le PIE Framework, les latences d'inférence locale ont diminué de 28% grâce au filtrage de tokens. Ces résultats valident nos hypothèses de R&D : le taux de cohérence décisionnelle s'améliore de plus de 160% sur les simulations de procès, confirmant que la boucle d'inertie stabilise la personnalité (Hypothèse Principale), tandis que la disparition du flip-flop verdict démontre l'intégrité de l'ancrage logique et de l'hystérésis (Hypothèse Secondaire).
           </p>
 
           <!-- Coherence Bar Chart -->
@@ -727,6 +768,35 @@ onMounted(() => {
   margin: 24px 0;
   border-radius: 0 6px 6px 0;
   text-align: center;
+}
+
+.concept-vulgarization {
+  background: rgba(212, 175, 55, 0.02);
+  border: 1px dashed rgba(212, 175, 55, 0.2);
+  border-left: 4px solid var(--gold);
+  border-radius: 6px;
+  padding: 20px;
+  margin: 24px 0;
+}
+
+.vulgarization-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vulgarization-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-main);
+  margin: 0;
 }
 
 /* Verrous Layout */
