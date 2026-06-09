@@ -644,14 +644,14 @@
                     <h3>4.1 Plasticité vs Inertie Logique</h3>
                     <p>Afin de prévenir des oscillations erratiques sous l'effet de stimuli contradictoires, nous implémentons un tenseur d'inertie <strong>I<sub>t</sub></strong>. La mise à jour d'une variable de tension <strong>T<sub>i</sub></strong> suite à une action <strong>a</strong> obéit à l'équation différentielle discrète suivante, régissant la plasticité du système :</p>
                     <div class="formula-box">
-                        T<sub>i</sub><sup>(t+1)</sup> = clip &Big( T<sub>i</sub><sup>(t)</sup> + &alpha;<sub>i</sub> &bull; &Delta;<sub>a</sub> &bull; (1 - I<sub>i</sub><sup>(t)</sup>), -1, 1 &Big)
+                        T<sub>i</sub><sup>(t+1)</sup> = clip( T<sub>i</sub><sup>(t)</sup> + &alpha;<sub>i</sub> &bull; &Delta;<sub>a</sub> &bull; (1 - I<sub>i</sub><sup>(t)</sup>), -1, 1 )
                     </div>
                     <p>Où <strong>&alpha;<sub>i</sub></strong> désigne le coefficient de plasticité intrinsèque attribué à l'agent, et <strong>&Delta;<sub>a</sub></strong> représente le gradient d'influence sémantique de l'action choisie sur la tension.</p>
                     
                     <h3>4.2 Calcul de l'Inertie Mémorielle</h3>
                     <p>L'inertie <strong>I<sub>i</sub><sup>(t)</sup></strong> est dérivée symboliquement de la densité de connexions sémantiques et de l'activation des souvenirs persistants dans le graphe relationnel de l'agent :</p>
                     <div class="formula-box">
-                        I<sub>i</sub><sup>(t)</sup> = tanh &Big( &gamma; &bull; &sum;<sub>m &isin; M<sub>active</sub></sub> w<sub>m</sub><sup>(t)</sup> &bull; cos(&theta;<sub>m, T<sub>i</sub></sub>) &Big)
+                        I<sub>i</sub><sup>(t)</sup> = tanh( &gamma; &bull; &sum;<sub>m &isin; M<sub>active</sub></sub> w<sub>m</sub><sup>(t)</sup> &bull; cos(&theta;<sub>m, T<sub>i</sub></sub>) )
                     </div>
                     <p>L'utilisation de la fonction non linéaire tangente hyperbolique (<strong>tanh</strong>) agit ici comme un filtre de saturation à attracteur, évitant la divergence du système lorsque la densité mémorielle croît.</p>
 
@@ -778,7 +778,7 @@
                         <li><strong>Génération d'Experts :</strong> Le modèle local génère en parallèle <em>K</em> propositions d'actions distinctes, représentant des axes stratégiques différents.</li>
                         <li><strong>Calcul de la Surprise Narrative :</strong> Le système évalue l'écart entre la croyance interne de l'agent <strong>P<sub>t</sub></strong> et chaque action proposée, en utilisant la divergence de Kullback-Leibler (DKL), opérationnalisant le principe d'énergie libre de <em>Friston (2010)</em> :
                             <div class="formula-box" style="margin: 1rem 0;">
-                                S(a) = D<sub>KL</sub>( P<sub>t</sub> || Q(a) ) = &sum; P<sub>t</sub>(x) &bull; log &Big( P<sub>t</sub>(x) / Q(a|x) &Big)
+                                S(a) = D<sub>KL</sub>( P<sub>t</sub> || Q(a) ) = &sum; P<sub>t</sub>(x) &bull; log( P<sub>t</sub>(x) / Q(a|x) )
                             </div>
                         </li>
                         <li><strong>Filtrage Attentionnel :</strong> Pondération des propositions selon les tensions actives <strong>T<sub>t</sub></strong> et les biais psychologiques configurés.</li>

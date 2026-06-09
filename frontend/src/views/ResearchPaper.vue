@@ -30,7 +30,7 @@
       <!-- Main Scientific Body -->
       <main class="scientific-body">
         <header class="paper-header">
-          <div class="rd-tag">DOSSIER DE JUSTIFICATION TECHNIQUE R&D</div>
+          <div class="rd-tag">PAPIER DE RECHERCHE</div>
           <h1 class="paper-title">
             Modélisation de la Continuité Identitaire et Cohérence Décisionnelle dans les Systèmes Multi-Agents Complexes
           </h1>
@@ -39,8 +39,8 @@
           </div>
           <div class="paper-meta">
             <span><strong>Date :</strong> Juin 2026</span>
-            <span><strong>Classification :</strong> RS&DE (Crédit d'impôt recherche)</span>
-            <span><strong>Auteur :</strong> Département R&D Lexior</span>
+            <span><strong>Classification :</strong> Papier de recherche</span>
+            <span><strong>Auteur :</strong> Intelliwork IA & Sciences Cognitives Appliquées</span>
           </div>
         </header>
 
@@ -51,7 +51,7 @@
             Les architectures classiques d'agents autonomes basées sur des modèles de langage de grande taille (LLM) souffrent d'une absence inhérente de continuité comportementale et d'une uniformisation de leurs décisions. Face à des stimuli complexes et contradictoires, ces modèles tendent à converger vers des réponses lissées et neutres, conséquence directe des mécanismes d'alignement post-entraînement par rétroaction humaine (RLHF).
           </p>
           <p>
-            Ce projet de R&D introduit le <strong>Probabilistic Identity Engine</strong> (PIE), une architecture logicielle neuro-symbolique hybride visant à surmonter ces verrous en maintenant une cohérence décisionnelle stable à travers des cycles de simulation longs. Ce système résout l'absence de continuité comportementale par l'implémentation d'un espace d'états d'un système dynamique multi-agents régulé par des couches logiques symboliques persistantes, assurant la plasticité et la persistance des variables d'état sous contraintes de fenêtres de contexte limitées.
+            Ce projet de recherche introduit le <strong>Probabilistic Identity Engine</strong> (PIE), une architecture logicielle neuro-symbolique hybride visant à surmonter ces verrous en maintenant une cohérence décisionnelle stable à travers des cycles de simulation longs. Ce système résout l'absence de continuité comportementale par l'implémentation d'un espace d'états d'un système dynamique multi-agents régulé par des couches logiques symboliques persistantes, assurant la plasticité et la persistance des variables d'état sous contraintes de fenêtres de contexte limitées.
           </p>
         </section>
 
@@ -104,13 +104,13 @@
             Afin de prévenir des oscillations erratiques sous l'effet de stimuli contradictoires, nous implémentons un tenseur d'inertie <strong>I<sub>t</sub></strong>. La mise à jour d'une variable de tension <strong>T<sub>i</sub></strong> suite à une action <strong>a</strong> obéit à l'équation différentielle discrète suivante :
           </p>
           <div class="formula-box">
-            T<sub>i</sub><sup>(t+1)</sup> = clip &Big( T<sub>i</sub><sup>(t)</sup> + &eta; &middot; (1 - I<sub>i</sub><sup>(t)</sup>) &middot; &nabla;<sub>a</sub> S(a), 0, 1 &Big)
+            T<sub>i</sub><sup>(t+1)</sup> = clip( T<sub>i</sub><sup>(t)</sup> + &eta; &middot; (1 - I<sub>i</sub><sup>(t)</sup>) &middot; &nabla;<sub>a</sub> S(a), 0, 1 )
           </div>
           <p>
             L'inertie mémorielle est dérivée symboliquement de la densité de connexions sémantiques et de l'activation des souvenirs persistants dans le graphe relationnel de l'agent :
           </p>
           <div class="formula-box">
-            I<sub>i</sub><sup>(t)</sup> = tanh &Big( &gamma; &middot; &sum;<sub>m &isin; M<sub>active</sub></sub> A(m) &middot; W<sub>s</sub>(m, T<sub>i</sub>) &Big)
+            I<sub>i</sub><sup>(t)</sup> = tanh( &gamma; &middot; &sum;<sub>m &isin; M<sub>active</sub></sub> A(m) &middot; W<sub>s</sub>(m, T<sub>i</sub>) )
           </div>
           <p>
             Ci-dessous, la simulation comparative montre comment le tenseur d'inertie de PIE stabilise la trajectoire cognitive de l'agent face à des perturbations bruyantes de l'environnement, contrairement au modèle contrôle sans inertie :
@@ -330,7 +330,7 @@ const router = useRouter()
 const activeSection = ref('section1')
 
 const sections = [
-  { id: 'section1', title: 'Résumé & Objectifs R&D' },
+  { id: 'section1', title: 'Résumé & Objectifs' },
   { id: 'section2', title: 'Verrous & État de l\'Art' },
   { id: 'section3', title: 'Espace d\'États PIE' },
   { id: 'section4', title: 'Algorithme d\'Inertie' },
