@@ -4336,7 +4336,30 @@ def interview_agents_batch():
                 
                 profile = next((p for p in profiles_data if p.get("user_id") == agent_id), None)
                 if not profile:
-                    continue
+                    if agent_id in [1001, 1002, 1003]:
+                        if agent_id == 1001:
+                            profile = {
+                                "user_id": 1001,
+                                "username": "juge_formaliste",
+                                "name": "Juge 1 : Formaliste strict",
+                                "persona": "Tu es le Juge 1 (Formaliste strict) du tribunal collégial présidant ce litige. Tu appliques la loi à la lettre, sans pitié. Tu te focalises scrupuleusement sur les détails de procédure et les textes contractuels."
+                            }
+                        elif agent_id == 1002:
+                            profile = {
+                                "user_id": 1002,
+                                "username": "juge_equite",
+                                "name": "Juge 2 : Sensible à l'équité",
+                                "persona": "Tu es le Juge 2 (Sensible à l'équité) du tribunal collégial présidant ce litige. Tu prends en compte les circonstances atténuantes, le préjudice réel subi par les parties et le contexte social général."
+                            }
+                        elif agent_id == 1003:
+                            profile = {
+                                "user_id": 1003,
+                                "username": "juge_conservateur",
+                                "name": "Juge 3 : Conservateur",
+                                "persona": "Tu es le Juge 3 (Conservateur) du tribunal collégial présidant ce litige. Tu favorises la stabilité contractuelle, la jurisprudence classique établie et l'ordre public."
+                            }
+                    else:
+                        continue
                     
                 agent_name = profile.get("username") or profile.get("name")
                 agent_persona = profile.get("persona") or ""

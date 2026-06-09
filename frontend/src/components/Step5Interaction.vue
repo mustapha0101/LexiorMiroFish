@@ -108,7 +108,7 @@
           </svg>
           <div class="action-bar-text">
             <span class="action-bar-title">{{ $t('step5.interactiveTools') }}</span>
-            <span class="action-bar-subtitle mono">{{ $t('step5.agentsAvailable', { count: profiles.length }) }}</span>
+            <span class="action-bar-subtitle mono">{{ $t('step5.agentsAvailable', { count: displayProfiles.length }) }}</span>
           </div>
         </div>
           <div class="action-bar-tabs">
@@ -122,7 +122,7 @@
               </svg>
               <span>{{ $t('step5.chatWithReportAgent') }}</span>
             </button>
-            <div class="agent-dropdown" v-if="profiles.length > 0 || projectData?.simulation_mode === 'legal'">
+            <div class="agent-dropdown" v-if="displayProfiles.length > 0 || projectData?.simulation_mode === 'legal'">
               <button 
                 class="tab-pill agent-pill"
                 :class="{ active: activeTab === 'chat' && (chatTarget === 'agent' || chatTarget === 'negotiation' || chatTarget === 'report_agent') }"
@@ -143,10 +143,10 @@
                 <div v-if="projectData?.simulation_mode === 'legal'" class="dropdown-section-title">Interroger les acteurs</div>
                 
                 <div 
-                  v-for="(agent, idx) in profiles" 
-                  :key="idx"
+                  v-for="(agent, idx) in displayProfiles" 
+                  :key="agent.user_id"
                   class="dropdown-item"
-                  @click="selectAgent(agent, idx)"
+                  @click="selectAgent(agent, agent.user_id)"
                 >
                   <div class="agent-avatar">{{ (agent.name || agent.username || 'A')[0] }}</div>
                   <div class="agent-info">
@@ -389,19 +389,19 @@
             <div class="setup-section">
               <div class="section-header">
                 <span class="section-title">{{ $t('step5.selectSurveyTarget') }}</span>
-                <span class="selection-count">{{ $t('step5.selectedCount', { selected: selectedAgents.size, total: profiles.length }) }}</span>
+                <span class="selection-count">{{ $t('step5.selectedCount', { selected: selectedAgents.size, total: displayProfiles.length }) }}</span>
               </div>
               <div class="agents-grid">
                 <label 
-                  v-for="(agent, idx) in profiles" 
-                  :key="idx"
+                  v-for="(agent, idx) in displayProfiles" 
+                  :key="agent.user_id"
                   class="agent-checkbox"
-                  :class="{ checked: selectedAgents.has(idx) }"
+                  :class="{ checked: selectedAgents.has(agent.user_id) }"
                 >
                   <input 
                     type="checkbox" 
-                    :checked="selectedAgents.has(idx)"
-                    @change="toggleAgentSelection(idx)"
+                    :checked="selectedAgents.has(agent.user_id)"
+                    @change="toggleAgentSelection(agent.user_id)"
                   >
                   <div class="checkbox-avatar">{{ (agent.username || 'A')[0] }}</div>
                   <div class="checkbox-info">
@@ -540,6 +540,57 @@ const profiles = ref([])
 
 // Legal Results State
 const legalResults = ref(null)
+
+const displayProfiles = computed(() => {
+  if (props.projectData?.simulation_mode !== 'legal') {
+    return profiles.value
+  }
+  const isCollegiate = legalResults.value?.judge_type === 'collegiate'
+  if (!isCollegiate) {
+    return profiles.value
+  }
+
+  // Les 3 juges du tribunal collégial
+  const collegiateJudges = [
+    {
+      user_id: 1001,
+      username: "juge_formaliste",
+      name: "Juge 1 : Formaliste strict",
+      profession: "Juge (Collégial)",
+      bio: "Magistrat d'expérience du tribunal collégial. Applique la loi à la lettre sans pitié.",
+      persona: "Tu es le Juge 1 (Formaliste strict) du tribunal collégial présidant ce litige. Tu appliques la loi à la lettre, sans pitié. Tu te focalises scrupuleusement sur les détails de procédure et les textes contractuels."
+    },
+    {
+      user_id: 1002,
+      username: "juge_equite",
+      name: "Juge 2 : Sensible à l'équité",
+      profession: "Juge (Collégial)",
+      bio: "Magistrat d'expérience du tribunal collégial. Prend en compte les circonstances atténuantes et le contexte social.",
+      persona: "Tu es le Juge 2 (Sensible à l'équité) du tribunal collégial présidant ce litige. Tu prends en compte les circonstances atténuantes, le préjudice réel subi par les parties et le contexte social général."
+    },
+    {
+      user_id: 1003,
+      username: "juge_conservateur",
+      name: "Juge 3 : Conservateur",
+      profession: "Juge (Collégial)",
+      bio: "Magistrat d'expérience du tribunal collégial. Favorise la stabilité contractuelle, l'ordre public et la jurisprudence établie.",
+      persona: "Tu es le Juge 3 (Conservateur) du tribunal collégial présidant ce litige. Tu favorises la stabilité contractuelle, la jurisprudence classique établie et l'ordre public."
+    }
+  ]
+
+  const list = []
+  // Ajouter les juges collégiaux au début
+  collegiateJudges.forEach(j => list.push(j))
+  
+  // Ajouter les autres acteurs en enlevant le juge individuel par défaut (user_id 0 ou username juge_court)
+  profiles.value.forEach(p => {
+    if (p.user_id !== 0 && p.username !== 'juge_court') {
+      list.push(p)
+    }
+  })
+  
+  return list
+})
 
 const clientSide = computed(() => {
   return props.projectData?.client_side || 'defense'
@@ -1018,19 +1069,19 @@ const scrollToBottom = () => {
 }
 
 // Survey Methods
-const toggleAgentSelection = (idx) => {
+const toggleAgentSelection = (userId) => {
   const newSet = new Set(selectedAgents.value)
-  if (newSet.has(idx)) {
-    newSet.delete(idx)
+  if (newSet.has(userId)) {
+    newSet.delete(userId)
   } else {
-    newSet.add(idx)
+    newSet.add(userId)
   }
   selectedAgents.value = newSet
 }
 
 const selectAllAgents = () => {
   const newSet = new Set()
-  profiles.value.forEach((_, idx) => newSet.add(idx))
+  displayProfiles.value.forEach(agent => newSet.add(agent.user_id))
   selectedAgents.value = newSet
 }
 
@@ -1045,8 +1096,8 @@ const submitSurvey = async () => {
   addLog(t('log.sendSurvey', { count: selectedAgents.value.size }))
   
   try {
-    const interviews = Array.from(selectedAgents.value).map(idx => ({
-      agent_id: idx,
+    const interviews = Array.from(selectedAgents.value).map(userId => ({
+      agent_id: userId,
       prompt: surveyQuestion.value.trim()
     }))
     
@@ -1065,30 +1116,30 @@ const submitSurvey = async () => {
       const surveyResultsList = []
       
       for (const interview of interviews) {
-        const agentIdx = interview.agent_id
-        const agent = profiles.value[agentIdx]
+        const agentId = interview.agent_id
+        const agent = displayProfiles.value.find(p => p.user_id === agentId)
         
         // 优先使用 reddit 平台回复，其次 twitter
         let responseContent = t('step5.noResponse')
 
         if (typeof resultsDict === 'object' && !Array.isArray(resultsDict)) {
-          const redditKey = `reddit_${agentIdx}`
-          const twitterKey = `twitter_${agentIdx}`
+          const redditKey = `reddit_${agentId}`
+          const twitterKey = `twitter_${agentId}`
           const agentResult = resultsDict[redditKey] || resultsDict[twitterKey]
           if (agentResult) {
             responseContent = agentResult.response || agentResult.answer || t('step5.noResponse')
           }
         } else if (Array.isArray(resultsDict)) {
           // 兼容数组格式
-          const matchedResult = resultsDict.find(r => r.agent_id === agentIdx)
+          const matchedResult = resultsDict.find(r => r.agent_id === agentId)
           if (matchedResult) {
             responseContent = matchedResult.response || matchedResult.answer || t('step5.noResponse')
           }
         }
         
         surveyResultsList.push({
-          agent_id: agentIdx,
-          agent_name: agent?.username || `Agent ${agentIdx}`,
+          agent_id: agentId,
+          agent_name: agent?.username || `Agent ${agentId}`,
           profession: agent?.profession,
           question: surveyQuestion.value.trim(),
           answer: responseContent
