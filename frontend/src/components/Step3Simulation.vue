@@ -750,6 +750,14 @@ let activeAudio = null
 const playBubbleTTS = async (action) => {
   const bubbleId = action._uniqueId || action.id || action.timestamp
   
+  // 1. Create and unlock the audio element synchronously in the user click frame
+  // This bypasses browser autoplay policies that block dynamic audio playback after await calls.
+  const localAudio = new Audio()
+  try {
+    localAudio.play().catch(() => {})
+    localAudio.pause()
+  } catch (e) {}
+
   // If clicked while currently loading, cancel loading
   if (currentlyLoadingId.value === bubbleId) {
     currentlyLoadingId.value = null
@@ -816,8 +824,16 @@ const playBubbleTTS = async (action) => {
     currentlyLoadingId.value = null
     currentlyPlayingId.value = bubbleId
     
-    activeAudio = new Audio(url)
-    activeAudio.play()
+    // Assign source to the already unlocked audio object
+    localAudio.src = url
+    activeAudio = localAudio
+    
+    const playPromise = activeAudio.play()
+    if (playPromise !== undefined) {
+      playPromise.catch(error => {
+        console.error('Playback was prevented or failed:', error)
+      })
+    }
     
     activeAudio.onended = () => {
       if (currentlyPlayingId.value === bubbleId) {
