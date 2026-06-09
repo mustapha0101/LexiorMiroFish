@@ -3539,31 +3539,78 @@ def get_cognitive_states(simulation_id: str):
         from app.services.cognitive_memory import CognitiveMemoryService
         from app.services.local_graph_database import LocalGraphDatabase
         
-        with LocalGraphDatabase(simulation_id, read_only=True) as db:
-            tables = db._get_all_tables()
-            if "Node_CognitiveState" not in tables:
-                return jsonify({
-                    "success": True,
-                    "data": []
-                })
-                
-            # Parcourir et renvoyer tous les nœuds CognitiveState
-            query = "MATCH (n:Node_CognitiveState) RETURN n.uuid, n.name, n.summary, n.attributes"
-            res = db._execute(query)
-            states = []
-            while res.has_next():
-                row = res.get_next()
-                attr = json.loads(row[3]) if row[3] else {}
-                states.append({
-                    "agent_id": row[0],
-                    "name": row[1],
-                    "meta_narrative": row[2],
-                    "personality": attr.get("personality", ""),
-                    "tensions": attr.get("tensions", {}),
-                    "beliefs": attr.get("beliefs", {}),
-                    "recent_reflection": attr.get("recent_reflection", "")
-                })
+        states = []
+        db_success = False
+        
+        try:
+            with LocalGraphDatabase(simulation_id, read_only=True) as db:
+                tables = db._get_all_tables()
+                if "Node_CognitiveState" in tables:
+                    query = "MATCH (n:Node_CognitiveState) RETURN n.uuid, n.name, n.summary, n.attributes"
+                    res = db._execute(query)
+                    while res.has_next():
+                        row = res.get_next()
+                        attr = json.loads(row[3]) if row[3] else {}
+                        states.append({
+                            "agent_id": row[0],
+                            "name": row[1],
+                            "meta_narrative": row[2],
+                            "personality": attr.get("personality", ""),
+                            "tensions": attr.get("tensions", {}),
+                            "beliefs": attr.get("beliefs", {}),
+                            "recent_reflection": attr.get("recent_reflection", "")
+                        })
+                    db_success = True
+                else:
+                    db_success = True  # Table not present, empty states list is correct
+        except Exception as db_err:
+            logger.warning(f"Kuzu DB busy/locked while getting cognitive states for {simulation_id}: {db_err}. Falling back to JSON cache.")
             
+        if not db_success:
+            # Fallback to local JSON cache file
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            cache_path = os.path.join(base_dir, 'uploads', 'simulations', simulation_id, 'cognitive_states_cache.json')
+            if os.path.exists(cache_path):
+                try:
+                    with open(cache_path, 'r', encoding='utf-8') as cf:
+                        cache_data = json.load(cf)
+                        states = list(cache_data.values())
+                        db_success = True
+                except Exception as cache_err:
+                    logger.error(f"Failed to read cognitive states cache file: {cache_err}")
+            
+            if not db_success:
+                # Secondary fallback: try to reconstruct from cognitive history in run_state.json
+                run_state_path = os.path.join(base_dir, 'uploads', 'simulations', simulation_id, 'run_state.json')
+                if os.path.exists(run_state_path):
+                    try:
+                        with open(run_state_path, 'r', encoding='utf-8') as sf:
+                            run_state_data = json.load(sf)
+                            history = run_state_data.get("cognitive_history", [])
+                            if history:
+                                last_record = history[-1]
+                                for agent_id, agent_info in last_record.get("agents", {}).items():
+                                    states.append({
+                                        "agent_id": agent_id,
+                                        "name": agent_info.get("name", ""),
+                                        "meta_narrative": "",
+                                        "personality": agent_info.get("personality", ""),
+                                        "tensions": {
+                                            "procedure_vs_equite": agent_info.get("procedure_vs_equite", 0.5),
+                                            "offensive_vs_negociation": agent_info.get("offensive_vs_negociation", 0.5),
+                                            "prudence_vs_rapidite": agent_info.get("prudence_vs_rapidite", 0.5)
+                                        },
+                                        "beliefs": {
+                                            "culpabilite_accuse": {
+                                                "coupable": agent_info.get("belief_coupable", 0.5)
+                                            }
+                                        },
+                                        "recent_reflection": ""
+                                    })
+                                db_success = True
+                    except Exception as hist_err:
+                        logger.error(f"Failed to read cognitive history from run_state: {hist_err}")
+
         return jsonify({
             "success": True,
             "data": states

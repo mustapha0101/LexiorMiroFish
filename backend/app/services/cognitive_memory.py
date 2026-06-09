@@ -64,22 +64,52 @@ class CognitiveMemoryService:
     @classmethod
     def save_agent_state(cls, simulation_id: str, agent_state: CognitiveAgentState):
         """Persiste l'état de l'agent (tensions, croyances, auto-narrations) dans Kuzu DB."""
+        agent_id = agent_state.agent_id
+        name = agent_state.name
+        summary = agent_state.meta_narrative
+        
+        attributes = {
+            "personality": agent_state.personality,
+            "tensions": agent_state.tensions,
+            "beliefs": agent_state.beliefs,
+            "recent_reflection": agent_state.recent_reflection,
+            "mood": agent_state.mood,
+            "negative_interactions_count": agent_state.negative_interactions_count,
+            "attention_budget": agent_state.attention_budget
+        }
+        
+        # Write to local cache first to ensure multi-process cross-worker visibility on Render
+        try:
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            cache_dir = os.path.join(base_dir, 'uploads', 'simulations', simulation_id)
+            os.makedirs(cache_dir, exist_ok=True)
+            cache_path = os.path.join(cache_dir, 'cognitive_states_cache.json')
+            
+            cache_data = {}
+            if os.path.exists(cache_path):
+                try:
+                    with open(cache_path, 'r', encoding='utf-8') as cf:
+                        cache_data = json.load(cf)
+                except Exception:
+                    pass
+            
+            cache_data[agent_id] = {
+                "agent_id": agent_id,
+                "name": name,
+                "meta_narrative": summary,
+                "personality": attributes.get("personality", ""),
+                "tensions": attributes.get("tensions", {}),
+                "beliefs": attributes.get("beliefs", {}),
+                "recent_reflection": attributes.get("recent_reflection", "")
+            }
+            
+            with open(cache_path, 'w', encoding='utf-8') as cf:
+                json.dump(cache_data, cf, ensure_ascii=False, indent=2)
+        except Exception as cache_err:
+            logger.warning(f"Failed to write cognitive states cache file: {cache_err}")
+
         with cls._get_db(simulation_id) as db:
             cls._init_tables_if_needed(db)
-            
-            agent_id = agent_state.agent_id
-            name = agent_state.name
-            summary = agent_state.meta_narrative
-            
-            attributes = {
-                "personality": agent_state.personality,
-                "tensions": agent_state.tensions,
-                "beliefs": agent_state.beliefs,
-                "recent_reflection": agent_state.recent_reflection,
-                "mood": agent_state.mood,
-                "negative_interactions_count": agent_state.negative_interactions_count,
-                "attention_budget": agent_state.attention_budget
-            }
             attr_str = json.dumps(attributes, ensure_ascii=False)
             
             # Merge de l'état cognitif

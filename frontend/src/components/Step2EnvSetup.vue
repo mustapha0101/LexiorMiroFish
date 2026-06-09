@@ -823,7 +823,23 @@
                   <span class="info-value">{{ selectedProfile.country || '-' }}</span>
                 </div>
                 <div class="info-item">
-                  <span class="info-label">{{ $t('step2.profileModalMbti') }}</span>
+                  <span class="info-label">
+                    {{ $t('step2.profileModalMbti') }}
+                    <span class="info-tooltip-container">
+                      <span class="info-trigger-i">ⓘ</span>
+                      <span class="info-tooltip-bubble">
+                        <strong>MBTI apparent :</strong> Décrit le style cognitif et comportemental du jumeau numérique dans la simulation.<br><br>
+                        <strong>Lettres clés :</strong><br>
+                        • <strong>I / E</strong> : Introversion (calme, réfléchi) / Extraversion (dynamique, expressif)<br>
+                        • <strong>S / N</strong> : Sensation (axé sur les faits et preuves) / Intuition (axé sur les théories et visions)<br>
+                        • <strong>T / F</strong> : Pensée (logique objective, règles) / Sentiment (empathie, valeurs)<br>
+                        • <strong>J / P</strong> : Jugement (méthodique, structuré) / Perception (adaptable, flexible)<br><br>
+                        <strong>Profils typiques :</strong><br>
+                        • <strong>ISTJ</strong> (Le Juge/Inspecteur) : Strict, factuel, respecte la procédure et la lettre du contrat.<br>
+                        • <strong>ENTJ</strong> (L'Avocat Déterminé) : Stratège, logique, fonceur, axé sur la persuasion.
+                      </span>
+                    </span>
+                  </span>
                   <span class="info-value mbti">{{ selectedProfile.mbti || '-' }}</span>
                 </div>
               </div>
@@ -2817,6 +2833,76 @@ onUnmounted(() => {
   font-family: 'JetBrains Mono', monospace;
   color: #FF5722;
 }
+
+/* Tooltip Style */
+.info-tooltip-container {
+  position: relative;
+  display: inline-block;
+  margin-left: 6px;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.info-trigger-i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.08);
+  color: #666;
+  font-size: 10px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.info-trigger-i:hover {
+  background: #D4AF37;
+  color: #FFF;
+}
+
+.info-tooltip-bubble {
+  visibility: hidden;
+  position: absolute;
+  top: 125%; /* point downwards to prevent overflow-y clipping on modal header */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 290px;
+  background-color: #0F172A; /* Slate 900 */
+  color: #F1F5F9;
+  text-align: left;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  text-transform: none; /* overrides uppercase of .info-label */
+  letter-spacing: normal;
+  font-weight: normal;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.info-tooltip-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: 100%; /* Arrow points up */
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent #0F172A transparent;
+}
+
+.info-tooltip-container:hover .info-tooltip-bubble {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(5px);
+}
+
 
 /* 模块区域 */
 .modal-section {
