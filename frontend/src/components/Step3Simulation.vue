@@ -994,6 +994,7 @@ const scrollContainer = ref(null)
 const cognitiveStates = ref([])
 const hoveredAgentId = ref(null)
 const hoveredAgentName = ref(null)
+const hoveredActionId = ref(null)
 
 const hoveredAgentState = computed(() => {
   if (hoveredAgentId.value === null && !hoveredAgentName.value) return null
@@ -1015,16 +1016,21 @@ const hoveredAgentState = computed(() => {
 const hoverAgent = (action) => {
   hoveredAgentId.value = (action.agent_id !== undefined && action.agent_id !== null) ? action.agent_id : null
   hoveredAgentName.value = action.agent_name || null
+  hoveredActionId.value = action._uniqueId || action.id || action.timestamp || null
 }
 
 const clearHover = () => {
   hoveredAgentId.value = null
   hoveredAgentName.value = null
+  hoveredActionId.value = null
 }
 
 const isActionAgentHovered = (action) => {
   if (hoveredAgentId.value === null && !hoveredAgentName.value) return false
   if (!hoveredAgentState.value) return false
+  
+  const currentActionId = action._uniqueId || action.id || action.timestamp || null
+  if (hoveredActionId.value !== currentActionId) return false
   
   if (hoveredAgentId.value !== null && action.agent_id !== undefined && action.agent_id !== null) {
     if (String(action.agent_id).trim() === String(hoveredAgentId.value).trim()) {
