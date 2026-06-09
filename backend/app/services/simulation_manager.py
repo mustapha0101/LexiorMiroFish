@@ -160,21 +160,19 @@ class SimulationManager:
     
     def _load_simulation_state(self, simulation_id: str) -> Optional[SimulationState]:
         """从文件加载模拟状态"""
-        if simulation_id in self._simulations:
-            return self._simulations[simulation_id]
-        
+        # Always reload from disk to ensure consistency across multiple Gunicorn worker processes.
         sim_dir = self._get_simulation_dir(simulation_id)
         state_file = os.path.join(sim_dir, "state.json")
         
         if not os.path.exists(state_file):
-            return None
+            return self._simulations.get(simulation_id)
         
         try:
             with open(state_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         except Exception as e:
             logger.warning(f"Error loading simulation state for {simulation_id}: {e}")
-            return None
+            return self._simulations.get(simulation_id)
         
         state = SimulationState(
             simulation_id=simulation_id,
