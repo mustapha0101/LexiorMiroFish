@@ -75,6 +75,35 @@ export const generatePodcast = (reportId, data) => {
   return service.post(`/api/report/${reportId}/podcast/generate`, data)
 }
 
+export const getActiveUserIdSync = () => {
+  try {
+    const storedBypass = localStorage.getItem('lexior_bypass_session')
+    if (storedBypass) {
+      const bypassSession = JSON.parse(storedBypass)
+      if (bypassSession?.user?.id) {
+        return bypassSession.user.id
+      }
+    }
+  } catch (err) {}
+
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        const value = localStorage.getItem(key)
+        if (value) {
+          const parsed = JSON.parse(value)
+          if (parsed?.user?.id) {
+            return parsed.user.id
+          }
+        }
+      }
+    }
+  } catch (err) {}
+
+  return null
+}
+
 /**
  * Get podcast play URL
  * @param {string} reportId
@@ -82,7 +111,9 @@ export const generatePodcast = (reportId, data) => {
  */
 export const getPodcastAudioUrl = (reportId, type) => {
   const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'
-  return `${baseURL}/api/report/${reportId}/podcast/download?type=${type}`
+  const userId = getActiveUserIdSync()
+  const userParam = userId ? `&userId=${userId}` : ''
+  return `${baseURL}/api/report/${reportId}/podcast/download?type=${type}${userParam}`
 }
 
 /**
