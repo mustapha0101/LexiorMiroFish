@@ -47,7 +47,7 @@ def check_report_authorization():
             report_id = request.values.get('report_id')
             
     if report_id or simulation_id:
-        user_id = request.headers.get('X-User-Id')
+        user_id = request.headers.get('X-User-Id') or request.args.get('X-User-Id') or request.args.get('user_id') or request.args.get('userId')
         
         project = None
         if simulation_id:

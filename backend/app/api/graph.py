@@ -55,7 +55,7 @@ def check_graph_authorization():
                 break
                 
     if project_id:
-        user_id = request.headers.get('X-User-Id')
+        user_id = request.headers.get('X-User-Id') or request.args.get('X-User-Id') or request.args.get('user_id') or request.args.get('userId')
         project = ProjectManager.get_project(project_id)
         if project and project.user_id:
             if not user_id or project.user_id != user_id:

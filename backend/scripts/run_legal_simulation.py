@@ -148,7 +148,10 @@ class LegalSimulationRunner:
                 if refs:
                     msg_proc += "\n\n**Sources officielles et citations :**\n"
                     for r in refs:
-                        msg_proc += f"- [{r['law_name']}]({r['url']}) (Citation: `{r['citation']}`)\n"
+                        msg_proc += f"- **[{r['law_name']}]({r['url']})** (Citation: `{r['citation']}`)\n"
+                        if r.get("summary"):
+                            desc = r['summary'].replace('\n', '\n  ')
+                            msg_proc += f"  *Description :* {desc}\n"
                 
             transcript.append(f"PROCUREUR: {msg_proc}")
             if on_action_callback:
@@ -197,7 +200,10 @@ class LegalSimulationRunner:
                 if refs:
                     msg_def += "\n\n**Sources officielles et citations :**\n"
                     for r in refs:
-                        msg_def += f"- [{r['law_name']}]({r['url']}) (Citation: `{r['citation']}`)\n"
+                        msg_def += f"- **[{r['law_name']}]({r['url']})** (Citation: `{r['citation']}`)\n"
+                        if r.get("summary"):
+                            desc = r['summary'].replace('\n', '\n  ')
+                            msg_def += f"  *Description :* {desc}\n"
                 
             transcript.append(f"DEFENSE: {msg_def}")
             if on_action_callback:

@@ -39,7 +39,7 @@ class TestSensitivityAnalysis(unittest.TestCase):
         mock_client.chat.completions.create.return_value = mock_response
         
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json_data = """
+        mock_response.choices[0].message.content = """
         [
             {
                 "node_name": "Sac en nylon",
@@ -56,6 +56,25 @@ class TestSensitivityAnalysis(unittest.TestCase):
         self.assertEqual(len(opportunities), 1)
         self.assertEqual(opportunities[0]["node_name"], "Sac en nylon")
         self.assertEqual(opportunities[0]["impact_value"], 45)
+
+    @patch('app.services.sensitivity_analysis.OpenAI')
+    def test_analyze_case_civil_fallback(self, mock_openai):
+        # Mock OpenAI to return client but fail on create call
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.side_effect = Exception("LLM connection error")
+        
+        # Set project to civil
+        self.project.simulation_requirement = "Litige contractuel concernant l'obligation de résultat et le devoir d'information de l'entrepreneur."
+        ProjectManager.save_project(self.project)
+        
+        opportunities = SensitivityAnalysisEngine.analyze_case(self.project_id, "defense")
+        self.assertTrue(len(opportunities) > 0)
+        self.assertIn("rejet de la demande", opportunities[0]["impact"].lower())
+
+        opportunities_plaintiff = SensitivityAnalysisEngine.analyze_case(self.project_id, "plaintiff")
+        self.assertTrue(len(opportunities_plaintiff) > 0)
+        self.assertIn("gain", opportunities_plaintiff[0]["impact"].lower())
 
     @patch('app.services.sensitivity_analysis.OpenAI')
     def test_generate_draft(self, mock_openai):
@@ -75,6 +94,27 @@ class TestSensitivityAnalysis(unittest.TestCase):
             request_type="expertise"
         )
         self.assertEqual(draft, "PROJET DE REQUÊTE FORMEL")
+
+    @patch('app.services.sensitivity_analysis.OpenAI')
+    def test_generate_draft_civil_fallback(self, mock_openai):
+        # Mock OpenAI to return client but fail on create call
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.side_effect = Exception("LLM connection error")
+        
+        # Set project to civil
+        self.project.simulation_requirement = "Infiltration d'eau et pontage pourri."
+        ProjectManager.save_project(self.project)
+
+        draft = SensitivityAnalysisEngine.generate_draft(
+            project_id=self.project_id,
+            client_side="defense",
+            node_name="Infiltration d'eau",
+            vector_name="Réfutation du Devoir d'Information",
+            request_type="production"
+        )
+        self.assertIn("CONTESTATION ÉCRITE", draft)
+        self.assertIn("Toiture Allaire inc.", draft)
 
 if __name__ == '__main__':
     unittest.main()

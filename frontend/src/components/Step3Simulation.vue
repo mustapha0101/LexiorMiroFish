@@ -667,6 +667,7 @@ import {
 } from '../api/simulation'
 import { generateReport } from '../api/report'
 import CognitiveStateVisualizer from './CognitiveStateVisualizer.vue'
+import { supabase } from '../utils/supabase'
 
 const { t } = useI18n()
 
@@ -1526,10 +1527,35 @@ const formatActionTime = (timestamp) => {
   }
 }
 
-const exportSimulationToPDF = () => {
+const exportSimulationToPDF = async () => {
   if (!props.simulationId) return
   const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'
-  const url = `${baseURL}/api/simulation/${props.simulationId}/export-pdf`
+  
+  let userId = ''
+  if (supabase) {
+    try {
+      const { data } = await supabase.auth.getSession()
+      if (data?.session?.user) {
+        userId = data.session.user.id
+      }
+    } catch (err) {
+      console.error('Error getting Supabase session for PDF export:', err)
+    }
+  }
+  
+  if (!userId) {
+    try {
+      const storedBypass = localStorage.getItem('lexior_bypass_session')
+      if (storedBypass) {
+        const bypassSession = JSON.parse(storedBypass)
+        if (bypassSession?.user?.id) {
+          userId = bypassSession.user.id
+        }
+      }
+    } catch (err) {}
+  }
+  
+  const url = `${baseURL}/api/simulation/${props.simulationId}/export-pdf?userId=${userId}`
   window.open(url, '_blank')
 }
 

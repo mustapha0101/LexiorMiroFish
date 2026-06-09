@@ -50,7 +50,7 @@ def check_simulation_authorization():
             project_id = request.values.get('project_id')
             
     if simulation_id or project_id:
-        user_id = request.headers.get('X-User-Id')
+        user_id = request.headers.get('X-User-Id') or request.args.get('X-User-Id') or request.args.get('user_id') or request.args.get('userId')
         
         project = None
         if project_id:
@@ -5515,24 +5515,45 @@ def run_sensitivity_analysis():
         # Caching logic
         radar_file = None
         if simulation_id:
-            manager = SimulationManager()
-            sim_dir = manager._get_simulation_dir(simulation_id)
-            radar_file = os.path.join(sim_dir, "radar_analysis.json")
-            if os.path.exists(radar_file):
-                try:
+            try:
+                manager = SimulationManager()
+                sim_dir = manager._get_simulation_dir(simulation_id)
+                radar_file = os.path.join(sim_dir, "radar_analysis.json")
+                
+                # Retrieve litigation_type for validation
+                litigation_type = "civil"
+                config_file = os.path.join(sim_dir, "simulation_config.json")
+                if os.path.exists(config_file):
+                    with open(config_file, 'r', encoding='utf-8') as f:
+                        config_data = json.load(f)
+                        litigation_type = config_data.get("litigation_type", "civil")
+                
+                if os.path.exists(radar_file):
                     with open(radar_file, 'r', encoding='utf-8') as f:
                         radar_data = json.load(f)
                         if radar_data.get(client_side):
-                            logger.info(f"Returning cached radar analysis for simulation {simulation_id} ({client_side})")
-                            return jsonify({
-                                "success": True,
-                                "data": radar_data[client_side]
-                            })
-                except Exception as e:
-                    logger.warning(f"Error reading radar_analysis.json cache: {e}")
+                            cached_list = radar_data[client_side]
+                            has_mismatch = False
+                            if isinstance(cached_list, list):
+                                for item in cached_list:
+                                    imp = str(item.get("impact", "")).lower()
+                                    if litigation_type == "civil" and ("acquittement" in imp or "condamnation" in imp):
+                                        has_mismatch = True
+                                        break
+                                    if litigation_type == "criminal" and ("rejet" in imp or "responsabilité" in imp):
+                                        has_mismatch = True
+                                        break
+                            if not has_mismatch:
+                                logger.info(f"Returning cached radar analysis for simulation {simulation_id} ({client_side})")
+                                return jsonify({
+                                    "success": True,
+                                    "data": cached_list
+                                })
+            except Exception as e:
+                logger.warning(f"Error reading/validating radar_analysis.json cache: {e}")
 
         from app.services.sensitivity_analysis import SensitivityAnalysisEngine
-        opportunities = SensitivityAnalysisEngine.analyze_case(project_id, client_side)
+        opportunities = SensitivityAnalysisEngine.analyze_case(project_id, client_side, simulation_id=simulation_id)
 
         # Cache the new results
         if simulation_id and radar_file:
@@ -5572,6 +5593,7 @@ def generate_legal_request():
         node_name = data.get('node_name')
         vector_name = data.get('vector_name')
         request_type = data.get('request_type', 'requete')
+        simulation_id = data.get('simulation_id')
 
         if not project_id or not node_name or not vector_name:
             return jsonify({
@@ -5585,7 +5607,8 @@ def generate_legal_request():
             client_side=client_side,
             node_name=node_name,
             vector_name=vector_name,
-            request_type=request_type
+            request_type=request_type,
+            simulation_id=simulation_id
         )
 
         return jsonify({

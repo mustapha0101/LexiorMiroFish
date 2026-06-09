@@ -188,13 +188,13 @@ class JurisprudenceGrounding:
                         "law_name": "Pièces et texte de la décision téléversée",
                         "citation": citation_str,
                         "url": "https://www.canlii.org",
-                        "summary": "Cette référence/citation est directement validée par les pièces et le texte du jugement téléversé dans le dossier."
+                        "summary": "Cette référence/citation est directement validée par les pièces et le texte du jugement téléversé dans le dossier.\nLien source pour validation : https://www.canlii.org"
                     })
             except Exception as context_check_err:
                 logger.error(f"Erreur lors de la vérification de l'argument par rapport au contexte: {context_check_err}")
         
         # 1. Vérification CCQ (Code Civil du Québec)
-        is_ccq = any(term in agent_argument.lower() for term in ["ccq", "code civil", "québec"])
+        is_ccq = any(term in agent_argument.lower() for term in ["ccq", "c.c.q.", "c.c.q", "code civil", "québec"])
         
         art_match = re.search(r'(?:article|art\.?)\s*(\d+(?:\.\d+)?)', agent_argument, re.IGNORECASE)
         art_str = art_match.group(1) if art_match else ""
@@ -212,11 +212,12 @@ class JurisprudenceGrounding:
                         # Validation par LLM
                         if self._verify_with_llm(agent_argument, articles_text):
                             is_hallucination = False
+                            url = f"https://www.canlii.org/fr/qc/legis/lois/rlrq-c-ccq-1991/derniere/rlrq-c-ccq-1991.html#art{art_num}"
                             found_references.append({
                                 "law_name": f"Code civil du Québec - Article {art_num}",
                                 "citation": f"art. {art_num} C.c.Q.",
-                                "url": f"https://www.canlii.org/fr/qc/legis/lois/rlrq-c-ccq-1991/derniere/rlrq-c-ccq-1991.html#art{art_num}",
-                                "summary": articles_text[:200] + "..." if len(articles_text) > 200 else articles_text
+                                "url": url,
+                                "summary": (articles_text[:200] + "..." if len(articles_text) > 200 else articles_text) + f"\nLien source pour validation : {url}"
                             })
                 except Exception as e:
                     logger.error(f"Erreur lors de la vérification CCQ de l'article {art_str}: {e}")
@@ -235,11 +236,12 @@ class JurisprudenceGrounding:
                             single_art_text = self._call_ccq_mcp_tool("get_ccq_articles", {"start_article": art_num})
                             if single_art_text and self._verify_with_llm(agent_argument, single_art_text):
                                 is_hallucination = False
+                                url = f"https://www.canlii.org/fr/qc/legis/lois/rlrq-c-ccq-1991/derniere/rlrq-c-ccq-1991.html#art{art_num}"
                                 found_references.append({
                                     "law_name": f"Code civil du Québec - Article {art_num}",
                                     "citation": f"art. {art_num} C.c.Q.",
-                                    "url": f"https://www.canlii.org/fr/qc/legis/lois/rlrq-c-ccq-1991/derniere/rlrq-c-ccq-1991.html#art{art_num}",
-                                    "summary": f"Article {art_num} trouvé par recherche du mot-clé '{search_kw}'"
+                                    "url": url,
+                                    "summary": f"Article {art_num} trouvé par recherche du mot-clé '{search_kw}'\nLien source pour validation : {url}"
                                 })
    
         # 2. Vérification A2AJ (Jurisprudence et lois canadiennes)
@@ -264,7 +266,7 @@ class JurisprudenceGrounding:
                                     "law_name": name,
                                     "citation": citation,
                                     "url": url,
-                                    "summary": snippet
+                                    "summary": f"{snippet}\nLien source pour validation : {url}"
                                 })
                 except Exception as e:
                     logger.error(f"Erreur lors de la requête de recherche A2AJ : {e}")
@@ -325,6 +327,29 @@ class JurisprudenceGrounding:
         matched_cases = []
         is_hallucination = True
         
+        def process_local_results(rows):
+            processed = []
+            for r in rows:
+                law_name = r[0]
+                citation = r[1]
+                summary = r[2]
+                url = "https://www.canlii.org"
+                
+                # Check if CCQ
+                if "c.c.q." in law_name.lower() or "c.c.q." in citation.lower() or "code civil" in law_name.lower():
+                    art_match = re.search(r'(?:article|art\.?)\s*(\d+)', f"{law_name} {citation}", re.IGNORECASE)
+                    if art_match:
+                        art_num = art_match.group(1)
+                        url = f"https://www.canlii.org/fr/qc/legis/lois/rlrq-c-ccq-1991/derniere/rlrq-c-ccq-1991.html#art{art_num}"
+                
+                processed.append({
+                    "law_name": law_name,
+                    "citation": citation,
+                    "url": url,
+                    "summary": f"{summary}\nLien source pour validation : {url}"
+                })
+            return processed
+
         try:
             fts_query = " OR ".join([f'"{k}"' for k in keywords[:5]])
             cursor.execute('''
@@ -337,7 +362,7 @@ class JurisprudenceGrounding:
             results = cursor.fetchall()
             if results:
                 is_hallucination = False
-                matched_cases = [{"law_name": r[0], "citation": r[1], "url": "https://www.canlii.org", "summary": r[2]} for r in results]
+                matched_cases = process_local_results(results)
                 
         except Exception:
             like_query = f"%{keywords[0]}%"
@@ -351,7 +376,7 @@ class JurisprudenceGrounding:
             results = cursor.fetchall()
             if results:
                 is_hallucination = False
-                matched_cases = [{"law_name": r[0], "citation": r[1], "url": "https://www.canlii.org", "summary": r[2]} for r in results]
+                matched_cases = process_local_results(results)
         finally:
             conn.close()
             

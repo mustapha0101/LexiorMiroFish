@@ -490,7 +490,7 @@
             <div v-if="radarResults" class="radar-results-card">
               <div class="matrix-title-row">
                 <div class="matrix-title-info">
-                  <span class="matrix-title">Matrice d'Anticipation Stratégique ({{ clientSide === 'defense' ? 'Défense' : 'Poursuite' }})</span>
+                  <span class="matrix-title">Matrice d'Anticipation Stratégique ({{ clientSide === 'defense' ? 'Défense' : (isCivil ? 'Demandeur' : 'Poursuite') }})</span>
                   <span class="matrix-subtitle">Opportunités tactiques classées par impact sémantique potentiel</span>
                 </div>
                 <button class="expand-matrix-btn" @click="showExpandedMatrix = true" title="Agrandir la matrice dans une grande fenêtre">
