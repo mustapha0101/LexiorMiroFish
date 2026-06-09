@@ -47,6 +47,11 @@
             <p class="slogan-text">
               {{ $t('home.slogan') }}<span class="blinking-cursor">_</span>
             </p>
+            <div class="demo-hero-container">
+              <button class="demo-load-btn" @click="loadDemoData">
+                {{ $t('home.loadDemoBtn') }}
+              </button>
+            </div>
           </div>
            
           <div class="decoration-square"></div>
@@ -65,7 +70,7 @@
       </section>
 
       <!-- 下半部分：双栏布局 -->
-      <section class="dashboard-section">
+      <section ref="dashboardSection" class="dashboard-section">
         <!-- 左栏：状态与步骤 -->
         <div class="left-panel">
           <div class="panel-header">
@@ -224,7 +229,7 @@
 
                 <div 
                   class="mode-card" 
-                  :class="{ active: formData.simulationMode === 'legal' }"
+                  :class="{ active: formData.simulationMode === 'legal', 'legal-card-active': formData.simulationMode === 'legal' }"
                   @click="formData.simulationMode = 'legal'"
                 >
                   <div class="mode-card-header">
@@ -262,6 +267,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
 import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import LoginGate from '../components/LoginGate.vue'
@@ -270,6 +276,7 @@ import { getSimulationHistory } from '../api/simulation'
 const router = useRouter()
 const loginGate = ref(null)
 const session = ref(null)
+const { t } = useI18n()
 
 const stats = ref({
   totalSimulations: 0,
@@ -298,7 +305,23 @@ const handleSessionChange = (newSession) => {
   session.value = newSession
 }
 
+const dashboardSection = ref(null)
 
+const loadDemoData = () => {
+  const demoFileName = t('home.demoFileName')
+  const demoFileContent = t('home.demoFileContent')
+  const demoRequirement = t('home.demoRequirement')
+
+  const blob = new Blob([demoFileContent], { type: 'text/plain' })
+  const demoFile = new File([blob], demoFileName, { type: 'text/plain' })
+  
+  files.value = [demoFile]
+  formData.value.simulationRequirement = demoRequirement
+  
+  if (dashboardSection.value) {
+    dashboardSection.value.scrollIntoView({ behavior: 'smooth' })
+  }
+}
 
 // 表单数据
 const formData = ref({
@@ -806,7 +829,6 @@ const startSimulation = () => {
   font-size: 1.2rem;
   line-height: 1;
 }
-
 .workflow-list {
   display: flex;
   flex-direction: column;
@@ -847,8 +869,11 @@ const startSimulation = () => {
 }
 
 .console-box {
-  border: 1px solid #CCC; /* 外部实线 */
-  padding: 8px; /* 内边距形成双重边框感 */
+  background: #0B1220; /* Deep blue background matching navbar & premium dark theme */
+  border: 1px solid var(--orange);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(11, 18, 32, 0.3);
 }
 
 .console-section {
@@ -865,19 +890,29 @@ const startSimulation = () => {
   margin-bottom: 15px;
   font-family: var(--font-mono);
   font-size: 0.75rem;
-  color: #666;
+  color: #94A3B8; /* Light gray text for readability */
+}
+
+.console-label {
+  color: var(--orange);
+  font-weight: 600;
+}
+
+.console-meta {
+  color: #64748B;
 }
 
 .upload-zone {
-  border: 1px dashed #CCC;
+  border: 1.5px dashed rgba(197, 168, 128, 0.4);
   height: 200px;
   overflow-y: auto;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s;
-  background: #FAFAFA;
+  transition: all 0.3s ease;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 4px;
 }
 
 .upload-zone.has-files {
@@ -885,8 +920,8 @@ const startSimulation = () => {
 }
 
 .upload-zone:hover {
-  background: #F0F0F0;
-  border-color: #999;
+  background: rgba(197, 168, 128, 0.05);
+  border-color: var(--orange);
 }
 
 .upload-placeholder {
@@ -896,24 +931,33 @@ const startSimulation = () => {
 .upload-icon {
   width: 40px;
   height: 40px;
-  border: 1px solid #DDD;
+  border: 1px solid rgba(197, 168, 128, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 15px;
-  color: #999;
+  color: var(--orange);
+  border-radius: 50%;
+  font-size: 1.25rem;
+  transition: all 0.3s;
+}
+
+.upload-zone:hover .upload-icon {
+  background: var(--orange);
+  color: #0B1220;
 }
 
 .upload-title {
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.9rem;
+  color: #FFFFFF;
   margin-bottom: 5px;
 }
 
 .upload-hint {
   font-family: var(--font-mono);
   font-size: 0.75rem;
-  color: #999;
+  color: #64748B;
 }
 
 .file-list {
@@ -927,16 +971,19 @@ const startSimulation = () => {
 .file-item {
   display: flex;
   align-items: center;
-  background: var(--white);
+  background: rgba(15, 23, 42, 0.8);
   padding: 8px 12px;
-  border: 1px solid #EEE;
+  border: 1px solid rgba(197, 168, 128, 0.2);
   font-family: var(--font-mono);
   font-size: 0.85rem;
+  color: #E2E8F0;
+  border-radius: 4px;
 }
 
 .file-name {
   flex: 1;
   margin: 0 10px;
+  color: #E2E8F0;
 }
 
 .remove-btn {
@@ -944,13 +991,18 @@ const startSimulation = () => {
   border: none;
   cursor: pointer;
   font-size: 1.2rem;
-  color: #999;
+  color: #64748B;
+  transition: color 0.2s;
+}
+
+.remove-btn:hover {
+  color: #EF4444;
 }
 
 .console-divider {
   display: flex;
   align-items: center;
-  margin: 10px 0;
+  margin: 20px 0;
 }
 
 .console-divider::before,
@@ -958,21 +1010,28 @@ const startSimulation = () => {
   content: '';
   flex: 1;
   height: 1px;
-  background: #EEE;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .console-divider span {
   padding: 0 15px;
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  color: #BBB;
+  font-size: 0.75rem;
+  color: var(--orange);
   letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .input-wrapper {
   position: relative;
-  border: 1px solid #DDD;
-  background: #FAFAFA;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 4px;
+  transition: border-color 0.3s;
+}
+
+.input-wrapper:focus-within {
+  border-color: var(--orange);
 }
 
 .code-input {
@@ -986,6 +1045,7 @@ const startSimulation = () => {
   resize: vertical;
   outline: none;
   min-height: 150px;
+  color: #E2E8F0;
 }
 
 .model-badge {
@@ -994,18 +1054,21 @@ const startSimulation = () => {
   right: 15px;
   font-family: var(--font-mono);
   font-size: 0.7rem;
-  color: #AAA;
+  color: #64748B;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 6px;
+  border-radius: 2px;
 }
 
 .start-engine-btn {
   width: 100%;
-  background: var(--black);
-  color: var(--white);
-  border: none;
-  padding: 20px;
-  font-family: var(--font-mono);
+  background: var(--orange);
+  color: #0B1220;
+  border: 1px solid var(--orange);
+  padding: 16px 20px;
+  font-family: var(--font-sans);
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1014,18 +1077,20 @@ const startSimulation = () => {
   letter-spacing: 1px;
   position: relative;
   overflow: hidden;
+  border-radius: 4px;
+  text-transform: uppercase;
 }
 
-/* 可点击状态（非禁用） */
 .start-engine-btn:not(:disabled) {
-  background: var(--black);
-  border: 1px solid var(--black);
+  background: var(--orange);
+  border: 1px solid var(--orange);
   animation: pulse-border 2s infinite;
 }
 
 .start-engine-btn:hover:not(:disabled) {
-  background: var(--orange);
-  border-color: var(--orange);
+  background: #D4AF37;
+  border-color: #D4AF37;
+  box-shadow: 0 6px 20px rgba(197, 168, 128, 0.35);
   transform: translateY(-2px);
 }
 
@@ -1034,21 +1099,19 @@ const startSimulation = () => {
 }
 
 .start-engine-btn:disabled {
-  background: #E5E5E5;
-  color: #999;
+  background: #1E293B;
+  color: #64748B;
   cursor: not-allowed;
   transform: none;
-  border: 1px solid #E5E5E5;
+  border: 1px solid #334155;
 }
 
-/* 引导动画：微妙的边框脉冲 */
 @keyframes pulse-border {
-  0% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.2); }
-  70% { box-shadow: 0 0 0 6px rgba(0, 0, 0, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(197, 168, 128, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(197, 168, 128, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(197, 168, 128, 0); }
 }
 
-/* 响应式适配 */
 @media (max-width: 1024px) {
   .dashboard-section {
     flex-direction: column;
@@ -1069,9 +1132,6 @@ const startSimulation = () => {
   }
 }
 
-
-
-/* Mode Selector Grid & Card Styles */
 .mode-selector-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1080,7 +1140,7 @@ const startSimulation = () => {
 }
 
 .mode-card {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   padding: 12px 14px;
@@ -1091,14 +1151,30 @@ const startSimulation = () => {
 }
 
 .mode-card:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(197, 168, 128, 0.3);
 }
 
 .mode-card.active {
-  background: rgba(212, 175, 55, 0.06);
-  border-color: #D4AF37;
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.08);
+  background: rgba(197, 168, 128, 0.08);
+  border-color: var(--orange);
+  box-shadow: 0 0 15px rgba(197, 168, 128, 0.1);
+}
+
+.mode-card.active.legal-card-active {
+  background: linear-gradient(135deg, #B58A3D 0%, #D4AF37 50%, #B58A3D 100%) !important;
+  border-color: #D4AF37 !important;
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4);
+}
+
+.mode-card.active.legal-card-active .mode-title {
+  color: #0B1220 !important;
+  font-weight: 700;
+}
+
+.mode-card.active.legal-card-active .mode-desc {
+  color: #0B1220 !important;
+  font-weight: 600;
 }
 
 .mode-card-header {
@@ -1116,13 +1192,13 @@ const startSimulation = () => {
   font-family: 'Playfair Display', Georgia, serif;
   font-weight: 600;
   font-size: 0.85rem;
-  color: #FFFFFF;
+  color: #E2E8F0;
   letter-spacing: 0.3px;
   transition: color 0.2s;
 }
 
 .mode-card.active .mode-title {
-  color: #D4AF37;
+  color: var(--orange);
 }
 
 .mode-desc {
@@ -1191,5 +1267,43 @@ html[lang="en"] .workflow-list .step-desc {
 
 html[lang="en"] .workflow-list {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.demo-hero-container {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 25px;
+  max-width: 320px;
+}
+
+.demo-trigger-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+.demo-load-btn {
+  background: var(--orange);
+  border: 1px solid var(--orange);
+  color: #0B1220;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  text-align: center;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(197, 168, 128, 0.15);
+}
+
+.demo-load-btn:hover {
+  background: rgba(197, 168, 128, 0.05);
+  color: var(--orange);
+  box-shadow: 0 6px 20px rgba(197, 168, 128, 0.1);
+  transform: translateY(-2px);
 }
 </style>

@@ -1289,7 +1289,9 @@ class ReportAgent:
                     ("3. Points de Bascule de l'Opinion & Triggers de Contamination", 
                      "Quels ont été les arguments décisifs ou événements déclencheurs constatés pendant les rounds de simulation ?"),
                     ("4. Recommandations en Communication de Crise et Stratégie d'Influence", 
-                     "Recommandations tactiques pour la communication de crise face aux comptes critiques et éléments de langage clés.")
+                     "Recommandations tactiques pour la communication de crise face aux comptes critiques et éléments de langage clés."),
+                    ("5. Résumé des discussions de la simulation",
+                     "Synthèse détaillée des arguments échangés par les différents profils d'utilisateurs et de l'évolution des discussions au fil des rounds de simulation.")
                 ]
             else:
                 side_label = "le Demandeur" if client_side == "plaintiff" else "la Défense"
@@ -1303,7 +1305,9 @@ class ReportAgent:
                     ("3. Débats à l'Audience & Points de Bascule (Triggers Cognitifs)", 
                      "Quels ont été les arguments décisifs (points de bascule) constatés pendant les simulations pour la conviction du juge."),
                     ("4. Recommandations Tactiques et Feuille de Route pour l'Avocat", 
-                     "Recommandations tactiques pour l'avocat face aux profils de juges, consolidation de preuves et opportunité de règlement.")
+                     "Recommandations tactiques pour l'avocat face aux profils de juges, consolidation de preuves et opportunité de règlement."),
+                    ("5. Résumé des discussions de la simulation",
+                     "Synthèse chronologique des débats à l'audience lors des rounds de simulation, résumant les arguments clés des parties (Avocat Bob, Procureur/Avocat adverse Voisin) et l'évolution des états cognitifs des agents.")
                 ]
                 
             sections = [ReportSection(title=s[0], content="") for s in sections_desc]

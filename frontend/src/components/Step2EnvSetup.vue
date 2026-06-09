@@ -46,7 +46,7 @@
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">02</span>
-            <span class="step-title">{{ isOasisOrSocial ? 'Génération des personas d\'opinion publique' : 'Génération des Acteurs du Tribunal' }}</span>
+            <span class="step-title">{{ isOasisOrSocial ? 'Génération des personas d\'opinion publique' : 'Génération des acteurs clés' }}</span>
           </div>
           <div class="step-status">
             <span v-if="phase > 1" class="badge success">{{ $t('common.completed') }}</span>
@@ -58,7 +58,7 @@
         <div class="card-content">
           <p class="api-note">POST /api/simulation/prepare</p>
           <p class="description">
-            {{ isOasisOrSocial ? 'Initialisation des 8 acteurs et segments d\'opinion publique (Lanceur d\'alerte, Journaliste, Porte-parole, Expert, Citoyen moyen, Citoyen indigné, Sceptique, Consommateur) basés sur le dossier.' : (simulationConfig?.litigation_type === 'civil' ? 'Initialisation des 5 acteurs clés du procès (Juge, Avocat du Demandeur, Avocat de la Défense, Défendeur, Greffier) basés sur le dossier.' : (simulationConfig?.litigation_type === 'criminal' ? 'Initialisation des 5 acteurs clés du procès (Juge, Le Procureur, Avocat de la Défense, Le Prévenu, Greffier) basés sur le dossier.' : 'Initialisation des 5 acteurs clés du procès basés sur le dossier.')) }}
+            {{ isOasisOrSocial ? 'Initialisation des acteurs et segments d\'opinion publique (Lanceur d\'alerte, Journaliste, Porte-parole, Expert, Citoyen moyen, Citoyen indigné, Sceptique, Consommateur) basés sur le dossier.' : (simulationConfig?.litigation_type === 'civil' ? 'Initialisation des acteurs clés du procès (Juge, Avocat du Demandeur, Avocat de la Défense, Défendeur, Greffier) basés sur le dossier.' : (simulationConfig?.litigation_type === 'criminal' ? 'Initialisation des acteurs clés du procès (Juge, Le Procureur, Avocat de la Défense, Le Prévenu, Greffier) basés sur le dossier.' : 'Initialisation des acteurs clés du procès basés sur le dossier.')) }}
           </p>
 
           <!-- Profiles Stats -->
@@ -548,7 +548,7 @@
             <div class="mode-cards-grid">
               <div 
                 class="mode-select-card" 
-                :class="{ active: runMode === 'courtroom' }" 
+                :class="{ active: runMode === 'courtroom', 'legal-card-active': runMode === 'courtroom' }" 
                 @click="runMode = 'courtroom'"
               >
                 <div class="mode-icon">⚖️</div>
@@ -3519,6 +3519,22 @@ onUnmounted(() => {
   border-color: #3B82F6;
   background: #EFF6FF;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+
+.mode-select-card.active.legal-card-active {
+  background: linear-gradient(135deg, #B58A3D 0%, #D4AF37 50%, #B58A3D 100%) !important;
+  border-color: #D4AF37 !important;
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4) !important;
+}
+
+.mode-select-card.active.legal-card-active .mode-name {
+  color: #0B1220 !important;
+  font-weight: 700;
+}
+
+.mode-select-card.active.legal-card-active .mode-description {
+  color: #0B1220 !important;
+  font-weight: 600;
 }
 
 .mode-icon {

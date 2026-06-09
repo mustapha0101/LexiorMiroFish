@@ -284,3 +284,13 @@ export const getRadarAnalysis = (simulationId) => {
   return service.get(`/api/simulation/${simulationId}/radar-analysis`)
 }
 
+/**
+ * Exporte le déroulement complet de la simulation en PDF (Blob)
+ * @param {string} simulationId
+ */
+export const exportSimulationPDF = (simulationId) => {
+  return service.get(`/api/simulation/${simulationId}/export-pdf`, {
+    responseType: 'blob'
+  })
+}
+

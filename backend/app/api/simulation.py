@@ -22,6 +22,52 @@ from ..models.project import ProjectManager
 logger = get_logger('mirofish.api.simulation')
 
 
+@simulation_bp.before_request
+def check_simulation_authorization():
+    # Allow OPTIONS requests (CORS preflight)
+    if request.method == 'OPTIONS':
+        return
+
+    # Allow history and list endpoints to handle their own user_id filtering
+    if request.path.endswith('/simulation/history') or request.path.endswith('/simulation/list'):
+        return
+        
+    # Allow public benchmark endpoints
+    if '/benchmark/' in request.path:
+        return
+
+    # Extract simulation_id or project_id
+    simulation_id = request.view_args.get('simulation_id') if request.view_args else None
+    project_id = request.view_args.get('project_id') if request.view_args else None
+    
+    if not simulation_id and not project_id:
+        if request.is_json:
+            data = request.get_json(silent=True) or {}
+            simulation_id = data.get('simulation_id')
+            project_id = data.get('project_id')
+        else:
+            simulation_id = request.values.get('simulation_id')
+            project_id = request.values.get('project_id')
+            
+    if simulation_id or project_id:
+        user_id = request.headers.get('X-User-Id')
+        
+        project = None
+        if project_id:
+            project = ProjectManager.get_project(project_id)
+        elif simulation_id:
+            state = SimulationManager().get_simulation(simulation_id)
+            if state:
+                project = ProjectManager.get_project(state.project_id)
+                
+        if project and project.user_id:
+            if not user_id or project.user_id != user_id:
+                return jsonify({
+                    "success": False,
+                    "error": "Accès non autorisé"
+                }), 403
+
+
 # Interview prompt 优化前缀
 # 添加此前缀可以避免Agent调用工具，直接用文本回复
 INTERVIEW_PROMPT_PREFIX = "结合你的人设、所有的过往记忆与行动，不调用任何工具直接用文本回复我："

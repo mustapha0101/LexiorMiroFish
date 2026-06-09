@@ -149,39 +149,166 @@
             </div>
           </div>
 
-          <!-- Next Step & Regenerate Buttons - 在完成后显示 -->
-          <div class="action-buttons-group">
-            <button v-if="isComplete" class="next-step-btn-grouped" @click="goToInteraction">
+          <div class="action-buttons-container" v-if="isComplete">
+            <div class="action-section-header">Actions & Rapports</div>
+
+            <!-- Primary Action -->
+            <button class="btn-primary" @click="goToInteraction">
               <span>{{ $t('step4.goToInteraction') }}</span>
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
               </svg>
             </button>
-            <button v-if="isComplete" class="export-pdf-btn" @click="exportToPDF">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
-              </svg>
-              <span>{{ $t('step4.exportPDF') }}</span>
-            </button>
-            <button v-if="isComplete" class="export-simulation-pdf-btn" @click="exportSimulationToPDF" style="background-color: #0F1E36; color: #C5A880; border: 1px solid #1E293B; border-radius: 6px; padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; height: 38px;">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              <span>Exporter le journal de simulation (PDF)</span>
-            </button>
-            <button class="regenerate-report-btn" :disabled="isRegenerating" @click="handleRegenerateReport">
-              <svg :class="{ 'spinning': isRegenerating }" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+
+            <!-- PDF Exports Row -->
+            <div class="btn-row">
+              <button class="btn-secondary" @click="exportToPDF">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+                <span>{{ $t('step4.exportPDF') }}</span>
+              </button>
+              
+              <button class="btn-secondary" @click="exportSimulationToPDF">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Journal (PDF)</span>
+              </button>
+            </div>
+
+            <!-- Podcasts Row -->
+            <div class="btn-row">
+              <!-- Discussion Audio / Player -->
+              <div v-if="podcastDiscussionsReady && !isGeneratingPodcastDiscussions" class="inline-player" :class="{ 'is-playing': isPlayingDiscussions }">
+                <button class="inline-player-btn" @click="togglePlay('discussions')" title="Play/Pause">
+                  <svg v-if="!isPlayingDiscussions" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <polygon points="6 3 20 12 6 21 6 3"></polygon>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16"></rect>
+                    <rect x="14" y="4" width="4" height="16"></rect>
+                  </svg>
+                </button>
+                <div class="inline-player-info">
+                  <span class="inline-player-label">{{ $t('step4.summaryLabel') }}</span>
+                  <input 
+                    type="range" 
+                    class="inline-player-slider" 
+                    min="0" 
+                    :max="durationDiscussions || 100" 
+                    :value="currentTimeDiscussions" 
+                    @input="seekAudio('discussions', $event)" 
+                  />
+                  <span class="inline-player-time">{{ formatTimeMinSec(currentTimeDiscussions) }}</span>
+                </div>
+                <div class="inline-player-actions">
+                  <a :href="getPodcastAudioUrl(props.reportId, 'discussions')" download class="inline-player-action-btn" title="Télécharger le MP3">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                  </a>
+                  <button class="inline-player-action-btn" @click="handleGeneratePodcast('discussions')" title="Régénérer l'audio">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <button v-else class="btn-audio btn-audio--generate" :disabled="isGeneratingPodcastDiscussions" @click="handleGeneratePodcast('discussions')">
+                <svg v-if="isGeneratingPodcastDiscussions" class="spinning" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+                </svg>
+                <svg v-else viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                  <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 19v4M8 23h8"></path>
+                </svg>
+                <span>{{ isGeneratingPodcastDiscussions ? $t('step4.podcastGenerating') : $t('step4.podcastDiscussions') }}</span>
+              </button>
+
+              <!-- Overview Audio / Player -->
+              <div v-if="podcastOverviewReady && !isGeneratingPodcastOverview" class="inline-player" :class="{ 'is-playing': isPlayingOverview }">
+                <button class="inline-player-btn" @click="togglePlay('overview')" title="Play/Pause">
+                  <svg v-if="!isPlayingOverview" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <polygon points="6 3 20 12 6 21 6 3"></polygon>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16"></rect>
+                    <rect x="14" y="4" width="4" height="16"></rect>
+                  </svg>
+                </button>
+                <div class="inline-player-info">
+                  <span class="inline-player-label">{{ $t('step4.podcastLabel') }}</span>
+                  <input 
+                    type="range" 
+                    class="inline-player-slider" 
+                    min="0" 
+                    :max="durationOverview || 100" 
+                    :value="currentTimeOverview" 
+                    @input="seekAudio('overview', $event)" 
+                  />
+                  <span class="inline-player-time">{{ formatTimeMinSec(currentTimeOverview) }}</span>
+                </div>
+                <div class="inline-player-actions">
+                  <a :href="getPodcastAudioUrl(props.reportId, 'overview')" download class="inline-player-action-btn" title="Télécharger le MP3">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                  </a>
+                  <button class="inline-player-action-btn" @click="handleGeneratePodcast('overview')" title="Régénérer l'audio">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <button v-else class="btn-audio btn-audio--generate" :disabled="isGeneratingPodcastOverview" @click="handleGeneratePodcast('overview')">
+                <svg v-if="isGeneratingPodcastOverview" class="spinning" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+                </svg>
+                <svg v-else viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                  <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 19v4M8 23h8"></path>
+                </svg>
+                <span>{{ isGeneratingPodcastOverview ? $t('step4.podcastGenerating') : $t('step4.podcastOverview') }}</span>
+              </button>
+            </div>
+
+            <!-- Regenerate Button -->
+            <button class="btn-regenerate" :disabled="isRegenerating" @click="handleRegenerateReport">
+              <svg :class="{ 'spinning': isRegenerating }" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
               </svg>
               <span>{{ isRegenerating ? 'Régénération...' : 'Régénérer le rapport' }}</span>
             </button>
+
+            <!-- Hidden Audio Elements -->
+            <audio 
+              ref="audioDiscussionsRef" 
+              :src="getPodcastAudioUrl(props.reportId, 'discussions')" 
+              @play="isPlayingDiscussions = true"
+              @pause="isPlayingDiscussions = false"
+              @timeupdate="currentTimeDiscussions = $event.target.currentTime"
+              @loadedmetadata="durationDiscussions = $event.target.duration"
+            ></audio>
+            <audio 
+              ref="audioOverviewRef" 
+              :src="getPodcastAudioUrl(props.reportId, 'overview')" 
+              @play="isPlayingOverview = true"
+              @pause="isPlayingOverview = false"
+              @timeupdate="currentTimeOverview = $event.target.currentTime"
+              @loadedmetadata="durationOverview = $event.target.duration"
+            ></audio>
           </div>
 
           <div class="workflow-divider"></div>
@@ -449,6 +576,17 @@
         </div>
       </div>
     </div>
+    <!-- PDF Export Loading Overlay -->
+    <div v-if="isExportingPDF" class="pdf-export-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(11, 19, 41, 0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; backdrop-filter: blur(8px); transition: all 0.3s ease;">
+      <div class="logo-animation-wrapper" style="position: relative; width: 180px; height: 180px; display: flex; align-items: center; justify-content: center;">
+        <div class="glow-ring" style="position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 2px solid rgba(181, 138, 61, 0.2); border-top: 2px solid #B58A3D; animation: spin 2s linear infinite;"></div>
+        <img src="/logo.png" alt="Lexior Logo" style="width: 110px; height: auto; z-index: 10; filter: drop-shadow(0 0 15px rgba(181, 138, 61, 0.6)); animation: pulseGlow 2s ease-in-out infinite;" />
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <span style="font-size: 18px; font-weight: 700; color: #FAF8F5; letter-spacing: 0.05em; font-family: Georgia, serif;">LEXIOR SIMULATOR</span>
+        <span style="font-size: 13px; color: #94A3B8; font-weight: 500; letter-spacing: 0.02em;">{{ $t('step4.exportingPDF') }}</span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -456,8 +594,8 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { getAgentLog, getConsoleLog, generateReport } from '../api/report'
-import { getLegalResults } from '../api/simulation'
+import { getAgentLog, getConsoleLog, generateReport, getPodcastStatus, generatePodcast, getPodcastAudioUrl } from '../api/report'
+import { getLegalResults, exportSimulationPDF } from '../api/simulation'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -2364,15 +2502,141 @@ const handleRegenerateReport = async () => {
   }
 }
 
+// Podcast states
+const isGeneratingPodcastDiscussions = ref(false)
+const isGeneratingPodcastOverview = ref(false)
+const podcastDiscussionsReady = ref(false)
+const podcastOverviewReady = ref(false)
+const currentAudioUrl = ref('')
+const currentAudioType = ref('') // 'discussions' or 'overview'
+
+// Inline custom audio player controls
+const audioDiscussionsRef = ref(null)
+const audioOverviewRef = ref(null)
+
+const isPlayingDiscussions = ref(false)
+const currentTimeDiscussions = ref(0)
+const durationDiscussions = ref(0)
+
+const isPlayingOverview = ref(false)
+const currentTimeOverview = ref(0)
+const durationOverview = ref(0)
+
+const togglePlay = (type) => {
+  if (type === 'discussions') {
+    const audio = audioDiscussionsRef.value
+    if (!audio) return
+    if (isPlayingDiscussions.value) {
+      audio.pause()
+    } else {
+      if (audioOverviewRef.value && !audioOverviewRef.value.paused) {
+        audioOverviewRef.value.pause()
+      }
+      audio.play().catch(err => console.log("Playback error:", err))
+    }
+  } else {
+    const audio = audioOverviewRef.value
+    if (!audio) return
+    if (isPlayingOverview.value) {
+      audio.pause()
+    } else {
+      if (audioDiscussionsRef.value && !audioDiscussionsRef.value.paused) {
+        audioDiscussionsRef.value.pause()
+      }
+      audio.play().catch(err => console.log("Playback error:", err))
+    }
+  }
+}
+
+const seekAudio = (type, event) => {
+  const audio = type === 'discussions' ? audioDiscussionsRef.value : audioOverviewRef.value
+  if (!audio) return
+  audio.currentTime = parseFloat(event.target.value)
+}
+
+const formatTimeMinSec = (time) => {
+  if (isNaN(time) || !isFinite(time)) return "00:00"
+  const mins = Math.floor(time / 60)
+  const secs = Math.floor(time % 60)
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+}
+
+// PDF export loading state
+const isExportingPDF = ref(false)
+
+const checkPodcastsStatus = async () => {
+  if (!props.reportId) return
+  try {
+    const res = await getPodcastStatus(props.reportId)
+    if (res.success && res.data) {
+      podcastDiscussionsReady.value = res.data.discussions_ready
+      podcastOverviewReady.value = res.data.overview_ready
+    }
+  } catch (err) {
+    console.error("Erreur check podcast status:", err)
+  }
+}
+
+const handleGeneratePodcast = async (type) => {
+  if (!props.reportId) return
+  const isDiscussions = type === 'discussions'
+  if (isDiscussions) {
+    isGeneratingPodcastDiscussions.value = true
+  } else {
+    isGeneratingPodcastOverview.value = true
+  }
+  
+  try {
+    const res = await generatePodcast(props.reportId, { type })
+    if (res.success) {
+      await checkPodcastsStatus()
+      currentAudioUrl.value = getPodcastAudioUrl(props.reportId, type)
+      currentAudioType.value = type
+      // Auto-play the newly generated podcast in the inline player
+      nextTick(() => {
+        const audio = type === 'discussions' ? audioDiscussionsRef.value : audioOverviewRef.value
+        if (audio) {
+          audio.load()
+          if (type === 'discussions' && audioOverviewRef.value) audioOverviewRef.value.pause()
+          if (type === 'overview' && audioDiscussionsRef.value) audioDiscussionsRef.value.pause()
+          audio.play().catch(err => console.log("Auto-play blocked", err))
+        }
+      })
+    }
+  } catch (err) {
+    console.error("Erreur generation podcast:", err)
+    emit('add-log', `Erreur lors de la génération du podcast: ${err.message}`)
+  } finally {
+    if (isDiscussions) {
+      isGeneratingPodcastDiscussions.value = false
+    } else {
+      isGeneratingPodcastOverview.value = false
+    }
+  }
+}
+
 const exportToPDF = () => {
   window.print()
 }
 
-const exportSimulationToPDF = () => {
+const exportSimulationToPDF = async () => {
   if (!props.simulationId) return
-  const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'
-  const url = `${baseURL}/api/simulation/${props.simulationId}/export-pdf`
-  window.open(url, '_blank')
+  isExportingPDF.value = true
+  try {
+    const res = await exportSimulationPDF(props.simulationId)
+    // Create blob link and trigger download
+    const blob = new Blob([res], { type: 'application/pdf' })
+    const link = document.createElement('a')
+    link.href = window.URL.createObjectURL(blob)
+    link.download = `simulation_${props.simulationId}_export.pdf`
+    link.click()
+    window.URL.revokeObjectURL(link.href)
+  } catch (err) {
+    console.error("Erreur export PDF simulation:", err)
+    emit('add-log', `Erreur d'exportation PDF: ${err.message}`)
+  } finally {
+    isExportingPDF.value = false
+  }
 }
 
 // Lifecycle
@@ -2380,6 +2644,7 @@ onMounted(() => {
   if (props.reportId) {
     addLog(`Report Agent initialized: ${props.reportId}`)
     startPolling()
+    checkPodcastsStatus()
   }
 })
 
@@ -2403,7 +2668,15 @@ watch(() => props.reportId, (newId) => {
     startTime.value = null
     legalResults.value = null
     
+    // Clear podcast state
+    podcastDiscussionsReady.value = false
+    podcastOverviewReady.value = false
+    currentAudioUrl.value = ''
+    currentAudioType.value = ''
+    
+    addLog(`Report Agent switched to: ${newId}`)
     startPolling()
+    checkPodcastsStatus()
   }
 }, { immediate: true })
 
@@ -3615,130 +3888,328 @@ watch(() => props.projectData, (newProj) => {
   font-size: 14px;
 }
 
-.next-step-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: calc(100% - 40px);
-  margin: 4px 20px 0 20px;
-  padding: 14px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #FFFFFF;
-  background: #1F2937;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.next-step-btn:hover {
-  background: #374151;
-}
-
-.next-step-btn svg {
-  transition: transform 0.2s ease;
-}
-
-.next-step-btn:hover svg {
-  transform: translateX(4px);
-}
-
-.action-buttons-group {
+/* Action Buttons Container & Premium Layout */
+.action-buttons-container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   width: calc(100% - 40px);
-  margin: 12px 20px 0 20px;
+  margin: 20px 20px 0 20px;
+  padding: 16px;
+  background: #0A1424;
+  border: 1px solid rgba(197, 168, 128, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(10, 20, 36, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-sizing: border-box;
 }
 
-.next-step-btn-grouped {
+.action-section-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: #C5A880;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-section-header::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(197, 168, 128, 0.2), transparent);
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.btn-row > button,
+.btn-row > div {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Button styles */
+.btn-primary {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 14px 20px;
-  font-size: 14px;
+  padding: 12px 20px;
+  font-size: 13px;
   font-weight: 600;
   color: #FFFFFF;
-  background: #1F2937;
+  text-shadow: 0 1px 2px rgba(15, 30, 54, 0.5);
+  background: linear-gradient(135deg, #C5A880 0%, #B58A3D 100%);
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(181, 138, 61, 0.2);
   transition: all 0.2s ease;
+  height: 38px;
+  box-sizing: border-box;
 }
 
-.next-step-btn-grouped:hover {
-  background: #374151;
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(181, 138, 61, 0.35);
+  filter: brightness(1.1);
 }
 
-.next-step-btn-grouped svg {
+.btn-primary svg {
   transition: transform 0.2s ease;
 }
 
-.next-step-btn-grouped:hover svg {
+.btn-primary:hover svg {
   transform: translateX(4px);
 }
 
-.regenerate-report-btn {
+.btn-secondary {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 14px 20px;
-  font-size: 14px;
+  gap: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
   font-weight: 600;
-  color: #C5A880;
-  background: transparent;
-  border: 1px solid #C5A880;
-  border-radius: 8px;
+  color: #FAF8F5;
+  background: #111B30;
+  border: 1px solid #1E293B;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  height: 38px;
+  box-sizing: border-box;
 }
 
-.regenerate-report-btn:hover:not(:disabled) {
+.btn-secondary:hover:not(:disabled) {
+  background: #1A2642;
+  border-color: #C5A880;
+  color: #C5A880;
+}
+
+.btn-audio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  height: 38px;
+  box-sizing: border-box;
+}
+
+.btn-audio--generate {
+  color: #C5A880;
+  background: #0D1626;
+  border: 1px solid #1E293B;
+}
+
+.btn-audio--generate:hover:not(:disabled) {
   background: rgba(197, 168, 128, 0.1);
-  color: #D9BE96;
-  border-color: #D9BE96;
+  border-color: #C5A880;
 }
 
-.regenerate-report-btn:disabled {
+.btn-audio--play {
+  color: #FAF8F5;
+  background: #B58A3D;
+  border: 1px solid #B58A3D;
+}
+
+.btn-audio--play:hover {
+  background: #9D732A;
+  border-color: #9D732A;
+  box-shadow: 0 4px 10px rgba(181, 138, 61, 0.2);
+}
+
+.btn-audio--play.active {
+  background: #FAF8F5;
+  color: #B58A3D;
+  border-color: #FAF8F5;
+}
+
+.btn-regenerate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #8A9CAE;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+.btn-regenerate:hover:not(:disabled) {
+  color: #FAF8F5;
+}
+
+.btn-regenerate:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.regenerate-report-btn svg {
+.btn-regenerate svg {
   transition: transform 0.3s ease;
 }
 
-.regenerate-report-btn:hover:not(:disabled) svg {
+.btn-regenerate:hover:not(:disabled) svg {
   transform: rotate(45deg);
 }
 
-.export-pdf-btn {
+/* Inline Player Widget */
+.inline-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(17, 27, 48, 0.7);
+  border: 1px solid rgba(197, 168, 128, 0.25);
+  border-radius: 6px;
+  padding: 8px 12px;
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.inline-player:hover {
+  border-color: rgba(197, 168, 128, 0.5);
+  background: rgba(26, 42, 74, 0.85);
+}
+
+.inline-player.is-playing {
+  border-color: #C5A880;
+  box-shadow: 0 0 10px rgba(197, 168, 128, 0.15);
+}
+
+.inline-player-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 14px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #10B981;
-  background: transparent;
-  border: 1px solid #10B981;
-  border-radius: 8px;
+  width: 22px;
+  height: 22px;
+  background: #C5A880;
+  color: #0F1E36;
+  border: none;
+  border-radius: 50%;
   cursor: pointer;
+  flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
-.export-pdf-btn:hover:not(:disabled) {
-  background: rgba(16, 185, 129, 0.1);
-  color: #34D399;
-  border-color: #34D399;
+.inline-player-btn:hover {
+  background: #B58A3D;
+  transform: scale(1.05);
+}
+
+.inline-player-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.inline-player-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #FAF8F5;
+  white-space: nowrap;
+}
+
+.inline-player-slider {
+  flex: 1;
+  min-width: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  outline: none;
+  border: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+
+.inline-player-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 3px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 1.5px;
+}
+
+.inline-player-slider::-webkit-slider-thumb {
+  height: 9px;
+  width: 9px;
+  border-radius: 50%;
+  background: #C5A880;
+  cursor: pointer;
+  -webkit-appearance: none;
+  margin-top: -3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  transition: transform 0.1s;
+}
+
+.inline-player-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+}
+
+.inline-player-time {
+  font-size: 10px;
+  color: #8A9CAE;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+.inline-player-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.inline-player-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  color: #8A9CAE;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.inline-player-action-btn:hover {
+  color: #C5A880;
+  background: rgba(197, 168, 128, 0.1);
 }
 
 .spinning {
@@ -5581,5 +6052,14 @@ watch(() => props.projectData, (newProj) => {
 /* English locale: smaller report title */
 html[lang="en"] .report-header-block .main-title {
   font-size: 28px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes pulseGlow {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(181, 138, 61, 0.4)); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(181, 138, 61, 0.8)); }
 }
 </style>

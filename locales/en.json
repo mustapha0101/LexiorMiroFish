@@ -75,6 +75,10 @@
     "engineBadge": "Engine: Lexior Cognitive PIE",
     "startEngine": "Start Engine",
     "initializing": "Initializing...",
+    "loadDemoBtn": "✨ Load Demo Case",
+    "demoFileName": "case_file_caron_v_allaire_roofing_2023.txt",
+    "demoFileContent": "CARON V. TOITURE ALLAIRE INC., 2023 QCCQ 10466 (CANLII)\n\nJUDGMENT - SMALL CLAIMS DIVISION\n\nPlaintiff: France Caron\nDefendant: Toiture Allaire inc.\n\nFACTS AND CASE HISTORY:\n1. In 2019, Ms. France Caron hired Toiture Allaire inc. to reroof her house with new asphalt shingles.\n2. A first water infiltration occurred in the year following the work, and a second infiltration in the third year, causing water damage inside her house.\n3. Ms. Caron hired an expert inspector, Mr. Laforest. His report revealed that Toiture Allaire inc. installed the new shingles over a rotten and sagging wooden roof deck, making it impossible to ensure water tightness.\n4. Ms. Caron claimed reimbursement for corrective repairs paid under protest ($2,586.81), inspector fees ($569.13), estimated interior repairs ($1,974.12), lost wages of $785.22, and $1,000 for stress and trouble.\n\nPLAINTIFF'S ARGUMENTS (CARON):\n- Toiture Allaire inc. had an obligation of result regarding water tightness (art. 2100 C.c.Q.) and breached its duty of information by failing to refuse to perform work on a rotten deck.\n- The company must honor its 5-year warranty on labor (art. 1458 C.c.Q.).\n\nDEFENDANT'S ARGUMENTS (TOITURE ALLAIRE INC.):\n- The company claims it verbally advised replacing the roof deck, but Ms. Caron refused to save money.\n- It pleads force majeure to deny liability for the leaks.",
+    "demoRequirement": "Analyze the contractual dispute between France Caron and Toiture Allaire inc. Determine whether the contractor breached its obligation of result and duty of information (art. 2100 C.c.Q.) by installing asphalt shingles over a rotten wooden roof deck, and evaluate the financial claims for corrective repairs ($2,586.81), inspection fees ($569.13), and inconvenience.",
     "simulationMode": "Simulation Mode",
     "modeSocial": "Public Social Network (with PIE)",
     "modeSocialDesc": "Simulation of public opinion and impact propagation on social networks (Twitter / Reddit) integrated with the PIE cognitive integrity engine.",
@@ -220,6 +224,12 @@
     "generatingReportBtn": "Starting..."
   },
   "step4": {
+    "podcastDiscussions": "Executive Summary (Audio)",
+    "podcastOverview": "Report Podcast (Audio)",
+    "podcastGenerating": "Generating audio...",
+    "summaryLabel": "Executive Summary",
+    "podcastLabel": "Podcast",
+    "exportingPDF": "Generating and exporting PDF...",
     "generatingSection": "Generating {title}...",
     "goToInteraction": "Enter Deep Interaction",
     "exportPDF": "Export to PDF",

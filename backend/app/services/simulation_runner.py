@@ -2168,10 +2168,26 @@ class SimulationRunner:
                             if litigation_type == "criminal" else
                             f"Le demandeur a démontré de manière prépondérante la présence d'un vice caché au round {round_idx}."
                         )
+                        
+                        # Dynamically customize recent reflections based on the litigation context to avoid hallucinations (e.g. server issues vs water backup)
+                        context_lower = context.lower()
+                        is_water_plumbing = any(kw in context_lower for kw in ["eau", "refoulement", "plomberie", "plombier", "tuyau", "tuyauterie", "drain", "inondation", "dégât", "syndicat", "copropriété"])
+                        is_server_it = any(kw in context_lower for kw in ["serveur", "hébergement", "logiciel", "informatique", "cloud", "panne"])
+                        
+                        if is_water_plumbing:
+                            civil_judge_reflection = "Le refoulement d'eau récurrent ou le défaut d'entretien de la tuyauterie constitue un vice caché rendant le bien impropre à son usage."
+                            civil_proc_reflection = "J'ai mis en évidence le défaut d'entretien des parties communes et les refoulements pour prouver la faute des défendeurs."
+                        elif is_server_it:
+                            civil_judge_reflection = "Le défaut de capacité des serveurs constitue un vice caché rendant le bien impropre à son usage."
+                            civil_proc_reflection = "J'ai mis en évidence le défaut critique des serveurs pour prouver le manquement contractuel."
+                        else:
+                            civil_judge_reflection = "Le défaut technique ou le vice caché affectant le bien le rend impropre à l'usage auquel il est destiné."
+                            civil_proc_reflection = "J'ai mis en évidence le vice caché technique pour prouver la responsabilité du défendeur."
+
                         state_judge.recent_reflection = (
                             "Le respect de la loi et la répression des infractions guident ma décision."
                             if litigation_type == "criminal" else
-                            "Le défaut de capacité des serveurs constitue un vice caché rendant le bien impropre à son usage."
+                            civil_judge_reflection
                         )
                         
                     state_proc.meta_narrative = (
@@ -2182,7 +2198,7 @@ class SimulationRunner:
                     state_proc.recent_reflection = (
                         "Ma plaidoirie s'est concentrée sur la matérialité des faits et l'application de la jurisprudence."
                         if litigation_type == "criminal" else
-                        "J'ai mis en évidence le défaut critique des serveurs pour prouver le manquement contractuel."
+                        civil_proc_reflection
                     )
                     
                     state_def.meta_narrative = f"Rétrospection après le round {round_idx}. La tension délibérative reste palpable."

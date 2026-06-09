@@ -7,6 +7,7 @@ import ReportView from '../views/ReportView.vue'
 import InteractionView from '../views/InteractionView.vue'
 import LegalSimulationView from '../views/LegalSimulationView.vue'
 import ResearchPaper from '../views/ResearchPaper.vue'
+import { supabase } from '../utils/supabase'
 
 const routes = [
   {
@@ -59,6 +60,38 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+router.beforeEach(async (to, from, next) => {
+  // Allow public access ONLY to the Research page. All other pages require auth.
+  if (to.name !== 'Research') {
+    let session = null
+    if (supabase) {
+      try {
+        const { data } = await supabase.auth.getSession()
+        session = data?.session
+      } catch (e) {
+        console.error('Error in router session check:', e)
+      }
+    }
+    
+    // Check developer bypass fallback
+    if (!session) {
+      const storedBypass = localStorage.getItem('lexior_bypass_session')
+      if (storedBypass) {
+        try {
+          session = JSON.parse(storedBypass)
+        } catch (e) {}
+      }
+    }
+    
+    // If not authenticated, redirect to Login / Home (except if already going to Home)
+    if (!session && to.name !== 'Home') {
+      next({ name: 'Home' })
+      return
+    }
+  }
+  next()
 })
 
 export default router

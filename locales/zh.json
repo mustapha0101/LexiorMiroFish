@@ -73,6 +73,9 @@
     "engineBadge": "引擎: Lexior Cognitive PIE",
     "startEngine": "启动引擎",
     "initializing": "初始化中...",
+    "loadDemoBtn": "✨ 加载演示案例",
+    "demoFileContent": "法律纠纷案件卷宗 - 污水倒灌及漏水事故\n被保险人：Bob（302室业主）\n被告：Jardins du Ruisseau 业主联合会（Syndicate）\n\n事实陈述：\n1. 2025年10月15日，大楼公共排水主管发生严重污水倒灌，导致污水溢入302室（Bob的物业）的浴室和客厅。\n2. 实木地板、石膏板墙面和家具的财物损失评估为12,000美元。\n3. Bob在清洁和重建期间（持续14天）的临时安置费用为3,000美元。\n4. 索赔总额：15,000美元。\n\n原告 Bob 的主张：\n- 倒灌源自大楼的公共管道系统，根据法律（《魁北克民法典》第1077条），业主联合会应承担法定责任。\n- 业主联合会未按建议进行年度排水管网清理维护。\n\n被告 业主联合会 的主张：\n- 倒灌是由于某未具名住户向管道中投放湿纸巾所致（不可抗力/第三方行为）。\n- 联合会在收到报案后立即做出了响应并采取了应急措施。",
+    "demoRequirement": "关于被保险人 Bob 的公寓污水倒灌和漏水问题的纠纷。业主联合会拒绝承担任何责任，主张属于不可抗力且有住户错误使用排水管道。被保险人要求赔偿 15,000 美元的财产损失及临时安置费。",
     "simulationMode": "模拟模式",
     "modeSocial": "公共社交网络（带 PIE 引擎）",
     "modeLegal": "司法诉讼（法庭）"
@@ -216,6 +219,12 @@
     "generatingReportBtn": "启动中..."
   },
   "step4": {
+    "podcastDiscussions": "执行摘要 (音频)",
+    "podcastOverview": "报告播客 (音频)",
+    "podcastGenerating": "音频生成中...",
+    "summaryLabel": "执行摘要",
+    "podcastLabel": "播客",
+    "exportingPDF": "正在生成并导出 PDF...",
     "generatingSection": "正在生成{title}...",
     "goToInteraction": "进入深度互动",
     "exportPDF": "导出为 PDF",

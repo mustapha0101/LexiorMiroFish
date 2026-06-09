@@ -23,6 +23,52 @@ from ..utils.locale import t, get_locale, set_locale
 logger = get_logger('mirofish.api.report')
 
 
+@report_bp.before_request
+def check_report_authorization():
+    # Allow OPTIONS requests (CORS preflight)
+    if request.method == 'OPTIONS':
+        return
+
+    # Allow report list endpoint to handle its own user_id filtering
+    if request.path.endswith('/report/list'):
+        return
+
+    # Extract report_id or simulation_id
+    report_id = request.view_args.get('report_id') if request.view_args else None
+    simulation_id = request.view_args.get('simulation_id') if request.view_args else None
+    
+    if not report_id and not simulation_id:
+        if request.is_json:
+            data = request.get_json(silent=True) or {}
+            simulation_id = data.get('simulation_id')
+            report_id = data.get('report_id')
+        else:
+            simulation_id = request.values.get('simulation_id')
+            report_id = request.values.get('report_id')
+            
+    if report_id or simulation_id:
+        user_id = request.headers.get('X-User-Id')
+        
+        project = None
+        if simulation_id:
+            state = SimulationManager().get_simulation(simulation_id)
+            if state:
+                project = ProjectManager.get_project(state.project_id)
+        elif report_id:
+            report = ReportManager.get_report(report_id)
+            if report:
+                state = SimulationManager().get_simulation(report.simulation_id)
+                if state:
+                    project = ProjectManager.get_project(state.project_id)
+                    
+        if project and project.user_id:
+            if not user_id or project.user_id != user_id:
+                return jsonify({
+                    "success": False,
+                    "error": "Accès non autorisé"
+                }), 403
+
+
 def _generate_mock_benchmark_report(task_id, report_id, simulation_id, graph_id, simulation_requirement, task_manager):
     import time
     from datetime import datetime
@@ -230,7 +276,7 @@ def ensure_string_content(content) -> str:
     return str(content) if content is not None else ""
 
 
-def extract_json(text: str) -> dict:
+def extract_json(text: str):
     import json
     import re
     text = text.strip()
@@ -251,21 +297,33 @@ def extract_json(text: str) -> dict:
     except json.JSONDecodeError:
         pass
         
-    # Look for the first { and the last }
+    # Look for the first '{' or '[' and matching last '}' or ']'
     first_brace = text.find('{')
-    last_brace = text.rfind('}')
-    if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
-        json_str = text[first_brace:last_brace + 1]
-        try:
-            return json.loads(json_str)
-        except json.JSONDecodeError:
-            # Strip control characters
-            cleaned_json_str = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', json_str)
+    first_bracket = text.find('[')
+    
+    start_idx = -1
+    end_char = ''
+    if first_brace != -1 and (first_bracket == -1 or first_brace < first_bracket):
+        start_idx = first_brace
+        end_char = '}'
+    elif first_bracket != -1:
+        start_idx = first_bracket
+        end_char = ']'
+        
+    if start_idx != -1:
+        end_idx = text.rfind(end_char)
+        if end_idx != -1 and end_idx > start_idx:
+            json_str = text[start_idx:end_idx + 1]
             try:
-                return json.loads(cleaned_json_str)
+                return json.loads(json_str)
             except json.JSONDecodeError:
-                pass
-                
+                # Strip control characters
+                cleaned_json_str = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', json_str)
+                try:
+                    return json.loads(cleaned_json_str)
+                except json.JSONDecodeError:
+                    pass
+                    
     raise ValueError("Impossible d'extraire un objet JSON valide.")
 
 
@@ -865,20 +923,6 @@ def get_generate_status():
 def get_report(report_id: str):
     """
     获取报告详情
-    
-    返回：
-        {
-            "success": true,
-            "data": {
-                "report_id": "report_xxxx",
-                "simulation_id": "sim_xxxx",
-                "status": "completed",
-                "outline": {...},
-                "markdown_content": "...",
-                "created_at": "...",
-                "completed_at": "..."
-            }
-        }
     """
     try:
         report = ReportManager.get_report(report_id)
@@ -889,9 +933,19 @@ def get_report(report_id: str):
                 "error": t('api.reportNotFound', id=report_id)
             }), 404
         
+        report_data = report.to_dict()
+        
+        # Attach user_id to report data for frontend checks
+        sim_manager = SimulationManager()
+        state = sim_manager.get_simulation(report.simulation_id)
+        if state:
+            project = ProjectManager.get_project(state.project_id)
+            if project:
+                report_data["user_id"] = project.user_id
+                
         return jsonify({
             "success": True,
-            "data": report.to_dict()
+            "data": report_data
         })
         
     except Exception as e:
@@ -907,15 +961,6 @@ def get_report(report_id: str):
 def get_report_by_simulation(simulation_id: str):
     """
     根据模拟ID获取报告
-    
-    返回：
-        {
-            "success": true,
-            "data": {
-                "report_id": "report_xxxx",
-                ...
-            }
-        }
     """
     try:
         report = ReportManager.get_report_by_simulation(simulation_id)
@@ -926,10 +971,20 @@ def get_report_by_simulation(simulation_id: str):
                 "error": t('api.noReportForSim', id=simulation_id),
                 "has_report": False
             }), 404
+            
+        report_data = report.to_dict()
+        
+        # Attach user_id to report data
+        sim_manager = SimulationManager()
+        state = sim_manager.get_simulation(simulation_id)
+        if state:
+            project = ProjectManager.get_project(state.project_id)
+            if project:
+                report_data["user_id"] = project.user_id
         
         return jsonify({
             "success": True,
-            "data": report.to_dict(),
+            "data": report_data,
             "has_report": True
         })
         
@@ -1761,3 +1816,298 @@ Directives de négociation et de jeu de rôle :
             "error": str(e),
             "traceback": traceback.format_exc()
         }), 500
+
+
+# ============== Podcast Generation and Retrieval ==============
+
+def clean_markdown(text: str) -> str:
+    import re
+    # Remove headers
+    text = re.sub(r'#+\s+', '', text)
+    # Remove bold/italic formatting
+    text = re.sub(r'\*+', '', text)
+    # Remove blockquote formatting
+    text = re.sub(r'^>\s*', '', text, flags=re.MULTILINE)
+    # Remove list bullet points
+    text = re.sub(r'^-\s+', '', text, flags=re.MULTILINE)
+    # Strip multiple newlines
+    text = re.sub(r'\n+', '\n', text)
+    
+    # Round decimal numbers to at most 1 decimal place to avoid robotic reading of trailing decimals
+    # Matches numbers like 66.6666667 or 1310.77, but preserves simple labels like 1.2 or 0.8
+    def round_decimals(match):
+        val = float(match.group(0))
+        rounded = round(val, 1)
+        if rounded.is_integer():
+            return str(int(rounded))
+        return str(rounded)
+        
+    text = re.sub(r'\b\d+\.\d+\b', round_decimals, text)
+    return text.strip()
+
+
+def generate_edge_tts(text: str, voice: str, outfile: str):
+    """
+    Generate high-quality human-like neural TTS audio using Microsoft Edge TTS.
+    """
+    import asyncio
+    import edge_tts
+    import logging
+    
+    logger = logging.getLogger("app.podcast")
+    
+    async def _save():
+        communicate = edge_tts.Communicate(text, voice)
+        await communicate.save(outfile)
+        
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(_save())
+        loop.close()
+    except Exception as e:
+        logger.error(f"Error running edge_tts in event loop: {e}")
+        asyncio.run(_save())
+
+
+@report_bp.route('/<report_id>/podcast/status', methods=['GET'])
+def get_podcast_status(report_id: str):
+    """
+    Check if the podcasts for a report exist.
+    """
+    try:
+        report = ReportManager.get_report(report_id)
+        if not report:
+            return jsonify({
+                "success": False,
+                "error": t('api.reportNotFound', id=report_id)
+            }), 404
+            
+        folder = ReportManager._get_report_folder(report_id)
+        discussions_path = os.path.join(folder, "podcast_discussions.mp3")
+        overview_path = os.path.join(folder, "podcast_report.mp3")
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "discussions_ready": os.path.exists(discussions_path),
+                "overview_ready": os.path.exists(overview_path)
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error checking podcast status: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/podcast/generate', methods=['POST'])
+def generate_podcast(report_id: str):
+    """
+    Generate the podcast of the report (either 'discussions' or 'overview') on demand.
+    """
+    try:
+        data = request.get_json() or {}
+        podcast_type = data.get('type')  # 'discussions' or 'overview'
+        
+        if podcast_type not in ['discussions', 'overview']:
+            return jsonify({
+                "success": False,
+                "error": "Type de podcast invalide. Doit être 'discussions' ou 'overview'."
+            }), 400
+            
+        report = ReportManager.get_report(report_id)
+        if not report:
+            return jsonify({
+                "success": False,
+                "error": t('api.reportNotFound', id=report_id)
+            }), 404
+            
+        folder = ReportManager._ensure_report_folder(report_id)
+        
+        api_key = Config.LLM_API_KEY or "local-no-key"
+        base_url = Config.LLM_BASE_URL
+        model_name = getattr(Config, 'LLM_MODEL_NAME', 'gpt-4o-mini')
+        
+        from openai import OpenAI
+        if base_url:
+            client = OpenAI(api_key=api_key, base_url=base_url)
+        else:
+            client = OpenAI(api_key=api_key)
+
+        import tempfile
+        
+        if podcast_type == 'discussions':
+            dest_path = os.path.join(folder, "podcast_discussions.mp3")
+            
+            # Fetch overall report content for the executive summary
+            report_content = report.markdown_content
+            if not report_content or not report_content.strip():
+                # Fallback to outline summary
+                report_content = report.outline.summary if report.outline else ""
+                
+            if not report_content.strip():
+                return jsonify({
+                    "success": False,
+                    "error": "Le contenu du rapport est vide."
+                }), 400
+                
+            # Generate script using LLM to sound like an expert legal assistant briefing a lawyer/decision-maker
+            prompt = f"""Tu es un assistant juridique expert. Rédige un texte de résumé exécutif condensé, objectif et très professionnel destiné à présenter le bilan de la simulation et du rapport à un avocat associé ou à un décideur.
+Ce résumé doit faire la synthèse factuelle de l'ensemble du dossier et du rapport suivant :
+{report_content}
+
+Directives de rédaction impératives :
+1. Le ton doit être celui d'un assistant juridique professionnel : solennel, précis, neutre, objectif, clair et extrêmement rigoureux.
+2. Présente le résumé comme le résumé exécutif ou la synthèse de dossier du rapport de simulation Lexior.
+3. CONCENTRE-TOI EXCLUSIVEMENT SUR LA PRÉSENTATION DES FAITS, des arguments clés des parties, et du bilan factuel des débats. Exclus toute salutation ou transition de type podcast ou radio.
+4. NE FAIS AUCUN COMMENTAIRE NI JUGEMENT sur les décisions des juges. Reste strictement descriptif.
+5. Arrondis systématiquement tous les pourcentages et les montants financiers pour une lecture orale fluide (par exemple, 66.66% devient 67%, 1310.77 $ devient 1311 dollars). Ne mets jamais plus d'un chiffre après la virgule.
+6. Le texte doit durer environ 1 minute à 1 minute 30 de lecture (environ 150 à 250 mots).
+7. Renvoyer le résultat sous la forme d'un objet JSON contenant une seule clé "text" avec le texte du résumé en français.
+
+Exemple de format attendu :
+{{
+  "text": "Ce résumé exécutif présente le bilan de la simulation Lexior Simulator dans l'affaire..."
+}}
+
+Renvoie uniquement le JSON valide sans texte d'introduction ni de conclusion."""
+
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": "Tu es un assistant expert en production de résumés exécutifs juridiques."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7
+            )
+            llm_text = response.choices[0].message.content.strip()
+            result_data = extract_json(llm_text)
+            
+            # Extract summary text and clean it
+            text_to_speak = clean_markdown(result_data.get('text', ''))
+            if not text_to_speak:
+                return jsonify({
+                    "success": False,
+                    "error": "Échec de génération du résumé exécutif."
+                }), 500
+                
+            # Generate speech using high-quality neural voice (Henri)
+            generate_edge_tts(text_to_speak, 'fr-FR-HenriNeural', dest_path)
+            
+        else: # overview
+            dest_path = os.path.join(folder, "podcast_report.mp3")
+            
+            prompt = f"""Tu es un réalisateur de podcasts professionnels. Rédige un script de podcast court, objectif et très professionnel sous forme de dialogue entre deux journalistes :
+- **Host A (Alex)** : Présentateur principal du podcast Lexior Simulator, précis, rigoureux et posé.
+- **Host B (Camille)** : Analyste stratégique et expert juridique, axée sur les faits et les arguments légaux présentés par les parties.
+ 
+Le podcast doit résumer et analyser de manière factuelle les points clés du rapport suivant :
+{report.markdown_content}
+
+Directives de rédaction impératives :
+1. Le ton doit être dynamique mais professionnel, neutre, objectif et extrêmement rigoureux.
+2. CONCENTRE-TOI EXCLUSIVEMENT SUR LA PRÉSENTATION DES FAITS, des arguments clés des parties, et du déroulement factuel de la simulation.
+3. NE FAIS AUCUN COMMENTAIRE NI JUGEMENT sur les décisions des juges. Reste strictement descriptif.
+4. Le podcast doit être un dialogue fluide et alterné entre Alex et Camille.
+5. Chaque réplique doit être courte, percutante et naturelle pour la radio.
+6. Arrondis systématiquement tous les pourcentages et les montants financiers pour une lecture orale fluide (par exemple, 66.66% devient 67%, 1310.77 $ devient 1311 dollars). Ne mets jamais plus d'un chiffre après la virgule.
+7. Renvoyer le résultat sous la forme d'une liste JSON d'objets, où chaque objet représente une réplique avec les clés "speaker" (soit "Alex", soit "Camille") et "text" (le texte à lire).
+
+Exemple de format attendu :
+[
+  {{
+    "speaker": "Alex",
+    "text": "Bonjour à tous et bienvenue dans ce nouvel épisode de Lexior Simulator."
+  }},
+  {{
+    "speaker": "Camille",
+    "text": "Bonjour Alex. Aujourd'hui nous analysons le rapport de simulation..."
+  }}
+]
+
+Renvoie uniquement la liste JSON valide sans texte d'introduction ni de conclusion."""
+
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": "Tu es un assistant expert en production de scripts de podcast."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7
+            )
+            llm_text = response.choices[0].message.content.strip()
+            script_data = extract_json(llm_text)
+            
+            # Generate each replica using Microsoft Edge Neural TTS and concatenate
+            temp_files = []
+            try:
+                for idx, turn in enumerate(script_data):
+                    speaker = turn.get('speaker', 'Alex')
+                    text = clean_markdown(turn.get('text', ''))
+                    if not text:
+                        continue
+                        
+                    voice = 'fr-FR-HenriNeural' if speaker == 'Alex' else 'fr-CA-SylvieNeural'
+                    
+                    with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_f:
+                        temp_f_path = temp_f.name
+                        
+                    generate_edge_tts(text, voice, temp_f_path)
+                    temp_files.append(temp_f_path)
+                    
+                # Concatenate all temp files to dest_path
+                with open(dest_path, 'wb') as outfile:
+                    for temp_f_path in temp_files:
+                        with open(temp_f_path, 'rb') as infile:
+                            outfile.write(infile.read())
+            finally:
+                # Clean up temp files
+                for temp_f_path in temp_files:
+                    try:
+                        os.remove(temp_f_path)
+                    except Exception:
+                        pass
+        return jsonify({
+            "success": True,
+            "message": f"Podcast {podcast_type} généré avec succès.",
+            "data": {
+                "type": podcast_type,
+                "url": f"/api/report/{report_id}/podcast/download?type={podcast_type}"
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating podcast: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/podcast/download', methods=['GET'])
+def download_podcast(report_id: str):
+    """
+    Serve the generated podcast file.
+    """
+    try:
+        podcast_type = request.args.get('type')
+        if podcast_type not in ['discussions', 'overview']:
+            return jsonify({
+                "success": False,
+                "error": "Type de podcast invalide."
+            }), 400
+            
+        folder = ReportManager._get_report_folder(report_id)
+        filename = "podcast_discussions.mp3" if podcast_type == "discussions" else "podcast_report.mp3"
+        file_path = os.path.join(folder, filename)
+        
+        if not os.path.exists(file_path):
+            return jsonify({
+                "success": False,
+                "error": "Le podcast n'est pas encore généré. Veuillez le générer d'abord."
+            }), 404
+            
+        return send_file(
+            file_path,
+            mimetype="audio/mpeg",
+            as_attachment=False
+        )
+    except Exception as e:
+        logger.error(f"Error serving podcast: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500

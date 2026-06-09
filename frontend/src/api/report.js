@@ -57,3 +57,30 @@ export const chatWithReport = (data) => {
 export const negotiateWithOpponent = (data) => {
   return requestWithRetry(() => service.post('/api/report/negotiate', data), 3, 1000)
 }
+
+/**
+ * Get podcast generation status
+ * @param {string} reportId
+ */
+export const getPodcastStatus = (reportId) => {
+  return service.get(`/api/report/${reportId}/podcast/status`)
+}
+
+/**
+ * Generate a podcast (type: 'discussions' or 'overview')
+ * @param {string} reportId
+ * @param {Object} data - { type: 'discussions' | 'overview' }
+ */
+export const generatePodcast = (reportId, data) => {
+  return service.post(`/api/report/${reportId}/podcast/generate`, data)
+}
+
+/**
+ * Get podcast play URL
+ * @param {string} reportId
+ * @param {string} type - 'discussions' | 'overview'
+ */
+export const getPodcastAudioUrl = (reportId, type) => {
+  const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'
+  return `${baseURL}/api/report/${reportId}/podcast/download?type=${type}`
+}
