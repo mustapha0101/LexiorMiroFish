@@ -1009,12 +1009,14 @@ class ReportAgent:
                             defense_wins = res_data.get("defense_wins", 25)
                             details = res_data.get("details", [])
                             run_mode = res_data.get("run_mode", "courtroom")
+                            j_type = res_data.get("judge_type", "single")
                             
                             verdicts = []
                             for idx, det in enumerate(details[:3]):
                                 verdict_txt = det.get('verdict')
                                 if verdict_txt:
-                                    verdicts.append(f"Itération {idx+1} (Juge : {det.get('judge_personality')}): {verdict_txt[:300]}...")
+                                    v_limit = 1500 if j_type == "collegiate" else 300
+                                    verdicts.append(f"Itération {idx+1} (Juge : {det.get('judge_personality')}): {verdict_txt[:v_limit]}...")
                             sample_verdicts = "\n\n".join(verdicts)
                             
                     client_side = getattr(project, "client_side", "defense")

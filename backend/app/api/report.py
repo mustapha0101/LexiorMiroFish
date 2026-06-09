@@ -386,7 +386,9 @@ def _generate_legal_report(task_id, report_id, simulation_id, graph_id, simulati
                     
                     verdicts = []
                     for idx, det in enumerate(details[:3]):
-                        verdicts.append(f"Itération {idx+1} (Juge : {det.get('judge_personality')}): {det.get('verdict')[:300]}...")
+                        v_limit = 1500 if judge_type == "collegiate" else 300
+                        v_text = det.get('verdict') or ""
+                        verdicts.append(f"Itération {idx+1} (Juge : {det.get('judge_personality')}): {v_text[:v_limit]}...")
                     sample_verdicts = "\n\n".join(verdicts)
             except Exception as e:
                 agent_logger.warning(f"Impossible de lire le fichier de résultats de simulation: {e}")
