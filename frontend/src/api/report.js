@@ -84,3 +84,11 @@ export const getPodcastAudioUrl = (reportId, type) => {
   const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'
   return `${baseURL}/api/report/${reportId}/podcast/download?type=${type}`
 }
+
+/**
+ * Exporte le rapport en PDF
+ * @param {string} reportId
+ */
+export const exportReportPDF = (reportId) => {
+  return service.get(`/api/report/${reportId}/export-pdf`, { responseType: 'blob' })
+}

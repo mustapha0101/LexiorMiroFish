@@ -594,7 +594,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { getAgentLog, getConsoleLog, generateReport, getPodcastStatus, generatePodcast, getPodcastAudioUrl } from '../api/report'
+import { getAgentLog, getConsoleLog, generateReport, getPodcastStatus, generatePodcast, getPodcastAudioUrl, exportReportPDF } from '../api/report'
 import { getLegalResults, exportSimulationPDF } from '../api/simulation'
 
 const router = useRouter()
@@ -2615,8 +2615,24 @@ const handleGeneratePodcast = async (type) => {
   }
 }
 
-const exportToPDF = () => {
-  window.print()
+const exportToPDF = async () => {
+  if (!props.reportId) return
+  isExportingPDF.value = true
+  try {
+    const res = await exportReportPDF(props.reportId)
+    // Create blob link and trigger download
+    const blob = new Blob([res], { type: 'application/pdf' })
+    const link = document.createElement('a')
+    link.href = window.URL.createObjectURL(blob)
+    link.download = `rapport_${props.reportId}_export.pdf`
+    link.click()
+    window.URL.revokeObjectURL(link.href)
+  } catch (err) {
+    console.error("Erreur export PDF rapport:", err)
+    emit('add-log', `Erreur d'exportation PDF du rapport: ${err.message}`)
+  } finally {
+    isExportingPDF.value = false
+  }
 }
 
 const exportSimulationToPDF = async () => {

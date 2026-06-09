@@ -1083,6 +1083,29 @@ def download_report(report_id: str):
         }), 500
 
 
+@report_bp.route('/<report_id>/export-pdf', methods=['GET'])
+def export_report_pdf(report_id: str):
+    """
+    Exporte le rapport d'analyse prédictive complet en PDF.
+    """
+    try:
+        from app.services.pdf_exporter import ReportPDFExporter
+        pdf_path = ReportPDFExporter.generate_pdf(report_id)
+        
+        return send_file(
+            pdf_path,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"rapport_{report_id}_export.pdf"
+        )
+    except Exception as e:
+        logger.error(f"Erreur lors de l'export PDF du rapport : {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
 @report_bp.route('/<report_id>', methods=['DELETE'])
 def delete_report(report_id: str):
     """删除报告"""

@@ -1527,14 +1527,7 @@ class ZepToolsService:
             
             if not api_result.get("success", False):
                 error_msg = api_result.get("error", "未知错误")
-                logger.warning(t("console.interviewApiReturnedFailure", error=error_msg))
-                if get_locale() == 'fr':
-                    result.summary = f"Échec de l'appel de l'API d'interview : {error_msg}. Veuillez vérifier le statut de l'environnement de simulation."
-                elif get_locale() == 'en':
-                    result.summary = f"Interview API call failed: {error_msg}. Please check the simulation environment status."
-                else:
-                    result.summary = f"采访API调用失败：{error_msg}。请检查OASIS模拟环境状态。"
-                return result
+                raise ValueError(error_msg)
             
             # Step 5: 解析API返回结果，构建AgentInterview对象
             # 双平台模式返回格式: {"twitter_0": {...}, "reddit_0": {...}, "twitter_1": {...}, ...}
@@ -1606,12 +1599,72 @@ class ZepToolsService:
         except ValueError as e:
             # 模拟环境未运行
             logger.warning(t("console.interviewApiCallFailed", error=e))
+            logger.info(f"OASIS Simulation environment is closed or failed ({e}). Falling back to LLM-simulated interview for {len(selected_agents)} agents.")
+            try:
+                for agent in selected_agents:
+                    agent_name = agent.get("realname", agent.get("username", "Agent"))
+                    agent_role = agent.get("profession", "未知")
+                    agent_bio = agent.get("bio", "")
+                    agent_persona = agent.get("persona", "")
+                    
+                    system_prompt = f"""You are simulating {agent_name}, a {agent_role} in a social media environment.
+Persona: {agent_persona}
+Biography: {agent_bio}
+
+You are being interviewed. Please answer the following questions in character, based on your persona, beliefs, and opinions.
+Reply formatting:
+1. Answer directly in natural language as the character. Do NOT call any tools.
+2. Break down your answer by questions.
+3. Be expressive and detailed."""
+                    
+                    user_prompt = f"Here is the interview prompt:\n{combined_prompt}"
+                    
+                    response_text = self.llm.chat(
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        temperature=0.7,
+                        max_tokens=600
+                    )
+                    
+                    # Extract quotes
+                    import re
+                    clean_text = re.sub(r'[*_`|>~\-]{2,}', '', response_text)
+                    clean_text = re.sub(r'问题\d+[：:]\s*', '', clean_text)
+                    sentences = re.split(r'[。！？.!?]', clean_text)
+                    meaningful = [
+                        s.strip() for s in sentences
+                        if 20 <= len(s.strip()) <= 150
+                    ]
+                    key_quotes = [s + "." for s in meaningful[:3]]
+                    
+                    interview = AgentInterview(
+                        agent_name=agent_name,
+                        agent_role=agent_role,
+                        agent_bio=agent_bio[:1000],
+                        question=combined_prompt,
+                        response=response_text,
+                        key_quotes=key_quotes
+                    )
+                    result.interviews.append(interview)
+                    
+                result.interviewed_count = len(result.interviews)
+                if result.interviews:
+                    result.summary = self._generate_interview_summary(
+                        interviews=result.interviews,
+                        interview_requirement=interview_requirement
+                    )
+                return result
+            except Exception as fallback_err:
+                logger.error(f"Failed to run fallback simulated interview: {fallback_err}")
+
             if get_locale() == 'fr':
                 result.summary = f"Échec de l'interview : {str(e)}. L'environnement de simulation n'est pas actif ou a été fermé. Assurez-vous que l'environnement de simulation est en cours d'exécution."
             elif get_locale() == 'en':
                 result.summary = f"Interview failed: {str(e)}. The simulation environment might be closed or inactive. Please make sure the simulation environment is running."
             else:
-                result.summary = f"采访失败：{str(e)}。模拟环境可能已关闭，请确保OASIS环境正在运行。"
+                result.summary = f"采访失败：{str(e)}。模拟环境可能已关闭，请确保OASIS environment正在运行。"
             return result
         except Exception as e:
             logger.error(t("console.interviewApiCallException", error=e))

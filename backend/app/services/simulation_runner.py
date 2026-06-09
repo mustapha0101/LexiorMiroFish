@@ -368,25 +368,57 @@ class SimulationRunner:
             return
             
         try:
-            litigation_type = "civil"
-            config_path = os.path.join(cls.RUN_STATE_DIR, simulation_id, "simulation_config.json")
-            if os.path.exists(config_path):
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    config_data = json.load(f)
-                    litigation_type = config_data.get("litigation_type", "civil")
-            agent1_name = "Le Procureur" if litigation_type == "criminal" else "Avocat du Demandeur"
+            # Try to load all dynamic agents from cache first
+            sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+            cache_path = os.path.join(sim_dir, 'cognitive_states_cache.json')
+            agents_records = {}
+            entropy = 0.0
+            
+            if os.path.exists(cache_path):
+                try:
+                    with open(cache_path, 'r', encoding='utf-8') as cf:
+                        cache_data = json.load(cf)
+                    
+                    for agent_id, a_data in cache_data.items():
+                        agents_records[agent_id] = {
+                            "name": a_data.get("name", f"Agent_{agent_id}"),
+                            "personality": a_data.get("personality", ""),
+                            # Courtroom tensions
+                            "procedure_vs_equite": a_data.get("tensions", {}).get("procedure_vs_equite", 0.5),
+                            "offensive_vs_negociation": a_data.get("tensions", {}).get("offensive_vs_negociation", 0.5),
+                            "prudence_vs_rapidite": a_data.get("tensions", {}).get("prudence_vs_rapidite", 0.5),
+                            # Social tensions
+                            "exploration_vs_security": a_data.get("tensions", {}).get("exploration_vs_security", 0.5),
+                            "cooperation_vs_domination": a_data.get("tensions", {}).get("cooperation_vs_domination", 0.5),
+                            "truth_vs_social_survival": a_data.get("tensions", {}).get("truth_vs_social_survival", 0.5),
+                            
+                            # Beliefs and metareflections
+                            "beliefs": a_data.get("beliefs", {}),
+                            "belief_coupable": a_data.get("beliefs", {}).get("culpabilite_accuse", {}).get("coupable", 0.5),
+                            "meta_narrative": a_data.get("meta_narrative", ""),
+                            "recent_reflection": a_data.get("recent_reflection", "")
+                        }
+                except Exception as cache_err:
+                    logger.error(f"Error reading cache for cognitive history: {cache_err}")
+            
+            # Fallback to default courtroom agents if cache is missing/empty
+            if not agents_records:
+                litigation_type = "civil"
+                config_path = os.path.join(cls.RUN_STATE_DIR, simulation_id, "simulation_config.json")
+                if os.path.exists(config_path):
+                    with open(config_path, 'r', encoding='utf-8') as f:
+                        config_data = json.load(f)
+                        litigation_type = config_data.get("litigation_type", "civil")
+                agent1_name = "Le Procureur" if litigation_type == "criminal" else "Avocat du Demandeur"
 
-            state_judge = CognitiveMemoryService.get_agent_state(simulation_id, "0", "Le Juge")
-            state_proc = CognitiveMemoryService.get_agent_state(simulation_id, "1", agent1_name)
-            state_def = CognitiveMemoryService.get_agent_state(simulation_id, "2", "Avocat de la Défense")
-            
-            # Compute Shannon-based Narrative Entropy
-            entropy = cls._calculate_narrative_entropy(state_judge, state_proc, state_def, objections_count, total_stimuli)
-            
-            record = {
-                "round": round_num,
-                "entropy": entropy,
-                "agents": {
+                state_judge = CognitiveMemoryService.get_agent_state(simulation_id, "0", "Le Juge")
+                state_proc = CognitiveMemoryService.get_agent_state(simulation_id, "1", agent1_name)
+                state_def = CognitiveMemoryService.get_agent_state(simulation_id, "2", "Avocat de la Défense")
+                
+                # Compute Shannon-based Narrative Entropy
+                entropy = cls._calculate_narrative_entropy(state_judge, state_proc, state_def, objections_count, total_stimuli)
+                
+                agents_records = {
                     "0": {
                         "name": state_judge.name,
                         "personality": getattr(state_judge, 'personality', ''),
@@ -418,6 +450,21 @@ class SimulationRunner:
                         "recent_reflection": getattr(state_def, 'recent_reflection', '')
                     }
                 }
+            else:
+                # Compute dynamic social entropy
+                if getattr(state, 'run_mode', 'courtroom') != 'courtroom':
+                    t_sum = 0.0
+                    for a_rec in agents_records.values():
+                        t_sum += a_rec.get("truth_vs_social_survival", 0.5)
+                    entropy = round(t_sum / max(1, len(agents_records)), 3)
+                else:
+                    # Courtroom cache fallback
+                    entropy = 0.5
+            
+            record = {
+                "round": round_num,
+                "entropy": entropy,
+                "agents": agents_records
             }
             
             if not hasattr(state, 'cognitive_history') or state.cognitive_history is None:
@@ -1565,6 +1612,16 @@ class SimulationRunner:
                                     # 总体轮次取两个平台的最大值
                                     if round_num > state.current_round:
                                         state.current_round = round_num
+                                        # Enregistrer l'état cognitif à la fin de cette itération
+                                        try:
+                                            cls._record_cognitive_state_history(
+                                                state.simulation_id,
+                                                round_num=state.current_round,
+                                                objections_count=0,
+                                                total_stimuli=len(state.injected_stimuli) if hasattr(state, 'injected_stimuli') and state.injected_stimuli else 0
+                                            )
+                                        except Exception as rec_err:
+                                            logger.error(f"Erreur de sauvegarde de l'historique cognitif: {rec_err}")
                                     # 总体时间取两个平台的最大值
                                     state.simulated_hours = max(state.twitter_simulated_hours, state.reddit_simulated_hours)
                                 

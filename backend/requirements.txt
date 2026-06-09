@@ -42,3 +42,7 @@ huggingface-hub>=0.20.0
 # ============= Kuzu Local Graph Database =============
 kuzu==0.8.2
 
+# ============= TTS (Text To Speech) =============
+edge-tts>=6.1.3
+
+
