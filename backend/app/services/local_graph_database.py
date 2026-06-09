@@ -13,6 +13,7 @@ class LocalGraphDatabase:
     """
     import threading
     _KUZU_DATABASES = {}
+    _LOCK = threading.Lock()
 
     def __init__(self, graph_id: str, base_path: str = None, read_only: bool = False):
         if base_path is None:
@@ -30,44 +31,46 @@ class LocalGraphDatabase:
         import time
         import random
 
-        max_attempts = 15
-        for attempt in range(max_attempts):
-            try:
-                # If read_only is requested, try opening read_only first
-                if self.read_only:
-                    self.db = kuzu.Database(self.graph_dir, read_only=True, max_db_size=1024 * 1024 * 1024)
-                else:
-                    self.db = kuzu.Database(self.graph_dir, read_only=False, max_db_size=1024 * 1024 * 1024)
-                break
-            except RuntimeError as e:
-                err_str = str(e).lower()
-                if "lock" in err_str or "descriptor" in err_str:
-                    if attempt < max_attempts - 1:
-                        # Sleep a random short interval before retrying
-                        time.sleep(0.1 + random.random() * 0.2)
-                        continue
-                    else:
-                        # Fallback to read-only if we cannot acquire the lock
-                        try:
-                            self.db = kuzu.Database(self.graph_dir, read_only=True, max_db_size=1024 * 1024 * 1024)
-                            break
-                        except RuntimeError:
-                            raise e
-                elif "wal" in err_str or "recovery" in err_str or "corrupt" in err_str:
-                    logger.warning(f"Corrupted Kuzu WAL/DB detected! Resetting directory {self.graph_dir}")
-                    import shutil
-                    shutil.rmtree(self.graph_dir, ignore_errors=True)
-                    os.makedirs(self.graph_dir, exist_ok=True)
+        with self._LOCK:
+            if self.graph_dir not in self._KUZU_DATABASES:
+                max_attempts = 15
+                db_instance = None
+                for attempt in range(max_attempts):
                     try:
-                        self.db = kuzu.Database(self.graph_dir, read_only=False, max_db_size=1024 * 1024 * 1024)
+                        # Open in read-write mode so both readers and writers can share the same database instance
+                        db_instance = kuzu.Database(self.graph_dir, read_only=False, max_db_size=1024 * 1024 * 1024)
                         break
-                    except RuntimeError:
-                        if attempt < max_attempts - 1:
-                            time.sleep(0.1 + random.random() * 0.2)
-                            continue
-                        raise e
-                else:
-                    raise e
+                    except RuntimeError as e:
+                        err_str = str(e).lower()
+                        if "lock" in err_str or "descriptor" in err_str:
+                            if attempt < max_attempts - 1:
+                                time.sleep(0.1 + random.random() * 0.2)
+                                continue
+                            else:
+                                # Fallback to read-only if we cannot acquire the lock (e.g. locked by another process)
+                                try:
+                                    db_instance = kuzu.Database(self.graph_dir, read_only=True, max_db_size=1024 * 1024 * 1024)
+                                    break
+                                except RuntimeError:
+                                    raise e
+                        elif "wal" in err_str or "recovery" in err_str or "corrupt" in err_str:
+                            logger.warning(f"Corrupted Kuzu WAL/DB detected! Resetting directory {self.graph_dir}")
+                            import shutil
+                            shutil.rmtree(self.graph_dir, ignore_errors=True)
+                            os.makedirs(self.graph_dir, exist_ok=True)
+                            try:
+                                db_instance = kuzu.Database(self.graph_dir, read_only=False, max_db_size=1024 * 1024 * 1024)
+                                break
+                            except RuntimeError:
+                                if attempt < max_attempts - 1:
+                                    time.sleep(0.1 + random.random() * 0.2)
+                                    continue
+                                raise e
+                        else:
+                            raise e
+                self._KUZU_DATABASES[self.graph_dir] = db_instance
+            
+            self.db = self._KUZU_DATABASES[self.graph_dir]
             
         self.conn = kuzu.Connection(self.db)
         self._results = []
@@ -92,12 +95,8 @@ class LocalGraphDatabase:
                 self.conn = None
         except Exception:
             pass
-        try:
-            if hasattr(self, 'db') and self.db:
-                self.db.close()
-                self.db = None
-        except Exception:
-            pass
+        # Do not close self.db here since it is cached globally and shared.
+        # This prevents other threads from encountering closed database issues.
         
     def _execute(self, query: str, parameters: dict = None):
         if parameters is None:

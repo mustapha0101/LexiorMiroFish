@@ -300,6 +300,19 @@
                         </div>
                       </div>
                     </div>
+                    
+                    <!-- Audio TTS Button -->
+                    <button 
+                      v-if="action.action_args?.content || action.result"
+                      class="tts-play-btn" 
+                      @click="playBubbleTTS(action)" 
+                      :title="currentlyPlayingId === (action._uniqueId || action.id || action.timestamp) ? 'Arrêter' : (currentlyLoadingId === (action._uniqueId || action.id || action.timestamp) ? 'Génération...' : 'Lire à voix haute')"
+                      :class="{ playing: currentlyPlayingId === (action._uniqueId || action.id || action.timestamp), loading: currentlyLoadingId === (action._uniqueId || action.id || action.timestamp) }"
+                    >
+                      <span v-if="currentlyLoadingId === (action._uniqueId || action.id || action.timestamp)" class="tts-spinner"></span>
+                      <span v-else-if="currentlyPlayingId === (action._uniqueId || action.id || action.timestamp)">⏸️</span>
+                      <span v-else>🔊</span>
+                    </button>
                   </div>
                   
                   <div class="header-meta">
@@ -317,27 +330,39 @@
                   <!-- Legal courtroom action blocks -->
                   <template v-if="props.projectData?.simulation_mode === 'legal'">
                     <div v-if="action.action_type === 'SPEECH_PROSECUTOR'" class="courtroom-speech prosecutor">
-                      <span class="actor-label">⚖️ {{ isCivil ? 'Avocat du Demandeur' : 'Ministère Public' }} :</span>
+                      <div class="courtroom-speech-header">
+                        <span class="actor-label">⚖️ {{ isCivil ? 'Avocat du Demandeur' : 'Ministère Public' }} :</span>
+                      </div>
                       <div class="speech-text-content" v-html="renderMarkdown(action.action_args?.content || action.result)"></div>
                     </div>
                     <div v-else-if="action.action_type === 'SPEECH_DEFENSE'" class="courtroom-speech defense">
-                      <span class="actor-label">🛡️ Avocat de la Défense :</span>
+                      <div class="courtroom-speech-header">
+                        <span class="actor-label">🛡️ Avocat de la Défense :</span>
+                      </div>
                       <div class="speech-text-content" v-html="renderMarkdown(action.action_args?.content || action.result)"></div>
                     </div>
                     <div v-else-if="action.action_type === 'SPEECH_ACCUSED'" class="courtroom-speech accused">
-                      <span class="actor-label">👤 {{ isCivil ? 'Défendeur' : 'Prévenu (Accusé)' }} :</span>
+                      <div class="courtroom-speech-header">
+                        <span class="actor-label">👤 {{ isCivil ? 'Défendeur' : 'Prévenu (Accusé)' }} :</span>
+                      </div>
                       <div class="speech-text-content" v-html="renderMarkdown(action.action_args?.content || action.result)"></div>
                     </div>
                     <div v-else-if="action.action_type === 'VERDICT' || action.action_type === 'DECISION'" class="courtroom-speech verdict">
-                      <span class="actor-label">🏛️ Verdict du Juge :</span>
+                      <div class="courtroom-speech-header">
+                        <span class="actor-label">🏛️ Verdict du Juge :</span>
+                      </div>
                       <div class="speech-text-content" v-html="renderMarkdown(action.action_args?.content || action.result)"></div>
                     </div>
                     <div v-else-if="action.action_type === 'CLERK_ANALYSIS'" class="courtroom-speech clerk">
-                      <span class="actor-label">📝 Greffier (Analyse) :</span>
+                      <div class="courtroom-speech-header">
+                        <span class="actor-label">📝 Greffier (Analyse) :</span>
+                      </div>
                       <div class="speech-text-content" v-html="renderMarkdown(action.action_args?.content || action.result)"></div>
                     </div>
                     <div v-else-if="action.action_type === 'STIMULUS'" class="courtroom-speech stimulus">
-                      <span class="actor-label">⚡ STIMULUS INJECTÉ :</span>
+                      <div class="courtroom-speech-header">
+                        <span class="actor-label">⚡ STIMULUS INJECTÉ :</span>
+                      </div>
                       <div class="speech-text-content" v-html="renderMarkdown(action.action_args?.content || action.result)"></div>
                     </div>
                     <div v-else class="content-text" v-html="renderMarkdown(action.action_args?.content || action.result)">
@@ -716,6 +741,100 @@ const stimulusText = ref('')
 const isInjecting = ref(false)
 const injectionSuccess = ref(false)
 const injectionError = ref(null)
+
+// Live Audio bubble player
+const currentlyPlayingId = ref(null)
+const currentlyLoadingId = ref(null)
+let activeAudio = null
+
+const playBubbleTTS = async (action) => {
+  const bubbleId = action._uniqueId || action.id || action.timestamp
+  
+  // If clicked while currently loading, cancel loading
+  if (currentlyLoadingId.value === bubbleId) {
+    currentlyLoadingId.value = null
+    return
+  }
+  
+  // If clicked while playing, pause/stop it
+  if (currentlyPlayingId.value === bubbleId) {
+    if (activeAudio) {
+      activeAudio.pause()
+      currentlyPlayingId.value = null
+    }
+    return
+  }
+  
+  // Stop any other active playback or loading
+  if (activeAudio) {
+    activeAudio.pause()
+    activeAudio = null
+  }
+  currentlyPlayingId.value = null
+  currentlyLoadingId.value = null
+  
+  const text = action.action_args?.content || action.result || ''
+  if (!text) return
+  
+  // Choose voice based on actor type
+  let voice = 'fr-FR-HenriNeural' // Henri (France)
+  if (action.action_type === 'SPEECH_PROSECUTOR' && isCivil.value) {
+    voice = 'fr-CA-SylvieNeural'
+  } else if (action.action_type === 'SPEECH_DEFENSE') {
+    voice = 'fr-FR-HenriNeural'
+  } else if (action.action_type === 'SPEECH_ACCUSED') {
+    voice = 'fr-CA-SylvieNeural'
+  } else if (action.action_type === 'VERDICT' || action.action_type === 'DECISION') {
+    voice = 'fr-FR-HenriNeural'
+  } else if (action.action_type === 'CLERK_ANALYSIS') {
+    voice = 'fr-CA-SylvieNeural'
+  }
+  
+  currentlyLoadingId.value = bubbleId
+  
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/simulation/tts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text, voice }),
+    })
+    
+    if (!response.ok) {
+      throw new Error('TTS generation failed')
+    }
+    
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    
+    // Check if user cancelled while it was loading
+    if (currentlyLoadingId.value !== bubbleId) {
+      return
+    }
+    
+    currentlyLoadingId.value = null
+    currentlyPlayingId.value = bubbleId
+    
+    activeAudio = new Audio(url)
+    activeAudio.play()
+    
+    activeAudio.onended = () => {
+      if (currentlyPlayingId.value === bubbleId) {
+        currentlyPlayingId.value = null
+      }
+      activeAudio = null
+    }
+  } catch (err) {
+    console.error('Failed to play TTS:', err)
+    if (currentlyLoadingId.value === bubbleId) {
+      currentlyLoadingId.value = null
+    }
+    if (currentlyPlayingId.value === bubbleId) {
+      currentlyPlayingId.value = null
+    }
+  }
+}
 
 const handleInjectStimulus = async () => {
   if (!stimulusText.value.trim() || !props.simulationId) return
@@ -2942,5 +3061,69 @@ onUnmounted(() => {
   background: #334155 !important;
   color: #f8fafc !important;
   border-color: #475569 !important;
+}
+
+.courtroom-speech-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.tts-play-btn {
+  font-size: 11px;
+  opacity: 0.65;
+  transition: all 0.25s ease;
+  padding: 1px 5px;
+  background: rgba(197, 168, 128, 0.08);
+  border-radius: 4px;
+  border: 1px solid rgba(197, 168, 128, 0.15);
+  color: var(--orange);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  height: 20px;
+  margin-left: 4px;
+}
+
+.tts-play-btn:hover {
+  opacity: 1;
+  transform: scale(1.08);
+  box-shadow: 0 0 10px rgba(197, 168, 128, 0.35);
+  background: rgba(197, 168, 128, 0.18);
+}
+
+.tts-play-btn.playing {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #EF4444;
+}
+
+.tts-play-btn.playing:hover {
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.tts-play-btn.loading {
+  opacity: 1;
+  background: rgba(197, 168, 128, 0.1);
+  cursor: wait;
+}
+
+.tts-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgba(197, 168, 128, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--orange);
+  animation: tts-spin 0.8s linear infinite;
+}
+
+@keyframes tts-spin {
+  to { transform: rotate(360deg); }
 }
 </style>

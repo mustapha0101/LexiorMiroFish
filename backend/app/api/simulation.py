@@ -5676,5 +5676,64 @@ def get_radar_analysis(simulation_id: str):
         }), 500
 
 
+@simulation_bp.route('/tts', methods=['POST'])
+def text_to_speech():
+    """
+    Génère un flux audio MP3 à partir du texte fourni.
+    """
+    try:
+        if request.method == 'OPTIONS':
+            return
+            
+        data = request.get_json() or {}
+        text = data.get('text', '').strip()
+        voice = data.get('voice', 'fr-FR-HenriNeural')
+        
+        if not text:
+            return jsonify({
+                "success": False,
+                "error": "Le paramètre 'text' est requis."
+            }), 400
+            
+        # Clean text: remove markdown markers
+        import re
+        text = re.sub(r'\*+', '', text)
+        text = re.sub(r'#+', '', text)
+        text = re.sub(r'`+', '', text)
+        text = text.strip()
+        
+        import edge_tts
+        import asyncio
+        import tempfile
+        
+        async def _communicate():
+            communicate = edge_tts.Communicate(text, voice)
+            with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_f:
+                temp_path = temp_f.name
+            await communicate.save(temp_path)
+            return temp_path
+            
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            temp_path = loop.run_until_complete(_communicate())
+        finally:
+            loop.close()
+            
+        return send_file(
+            temp_path,
+            mimetype="audio/mpeg",
+            as_attachment=False
+        )
+        
+    except Exception as e:
+        logger.error(f"Erreur de génération TTS en direct: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+
 
 

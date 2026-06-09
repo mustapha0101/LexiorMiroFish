@@ -7,6 +7,7 @@ import os
 import uuid
 import time
 import threading
+import logging
 from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass
 
@@ -17,6 +18,8 @@ from ..utils.locale import t, get_locale, set_locale
 
 from .local_graph_database import LocalGraphDatabase
 from .local_graph_extractor import LocalGraphExtractor
+
+logger = logging.getLogger("mirofish.graph_builder")
 
 
 @dataclass
@@ -130,53 +133,69 @@ class GraphBuilderService:
                 entity_types=entity_types
             )
     
+    _GRAPH_DATA_CACHE = {}
+
     def get_graph_data(self, graph_id: str) -> Dict[str, Any]:
         """
         Obtenir les données complètes du graphe pour affichage dans l'interface utilisateur
         """
-        with LocalGraphDatabase(graph_id, read_only=True) as db:
-            nodes = db.fetch_all_nodes()
-            edges = db.fetch_all_edges()
-        
-        # Remap to UI standards
-        nodes_data = []
-        node_map = {}
-        for n in nodes:
-            uuid_val = n.get("uuid", str(uuid.uuid4()))
-            node_map[uuid_val] = n.get("name", "")
-            nodes_data.append({
-                "uuid": uuid_val,
-                "name": n.get("name", ""),
-                "labels": n.get("labels", ["Entity"]),
-                "summary": n.get("summary", ""),
-                "attributes": n.get("attributes", {}),
-                "created_at": None,
-            })
+        try:
+            with LocalGraphDatabase(graph_id, read_only=True) as db:
+                nodes = db.fetch_all_nodes()
+                edges = db.fetch_all_edges()
             
-        edges_data = []
-        for e in edges:
-            src = e.get("source_node_uuid")
-            tgt = e.get("target_node_uuid")
-            edges_data.append({
-                "uuid": e.get("uuid", str(uuid.uuid4())),
-                "name": e.get("name", ""),
-                "fact": e.get("fact", ""),
-                "fact_type": e.get("name", ""),
-                "source_node_uuid": src,
-                "target_node_uuid": tgt,
-                "source_node_name": node_map.get(src, ""),
-                "target_node_name": node_map.get(tgt, ""),
-                "attributes": e.get("attributes", {}),
-                "episodes": [],
-            })
-            
-        return {
-            "graph_id": graph_id,
-            "nodes": nodes_data,
-            "edges": edges_data,
-            "node_count": len(nodes_data),
-            "edge_count": len(edges_data),
-        }
+            # Remap to UI standards
+            nodes_data = []
+            node_map = {}
+            for n in nodes:
+                uuid_val = n.get("uuid", str(uuid.uuid4()))
+                node_map[uuid_val] = n.get("name", "")
+                nodes_data.append({
+                    "uuid": uuid_val,
+                    "name": n.get("name", ""),
+                    "labels": n.get("labels", ["Entity"]),
+                    "summary": n.get("summary", ""),
+                    "attributes": n.get("attributes", {}),
+                    "created_at": None,
+                })
+                
+            edges_data = []
+            for e in edges:
+                src = e.get("source_node_uuid")
+                tgt = e.get("target_node_uuid")
+                edges_data.append({
+                    "uuid": e.get("uuid", str(uuid.uuid4())),
+                    "name": e.get("name", ""),
+                    "fact": e.get("fact", ""),
+                    "fact_type": e.get("name", ""),
+                    "source_node_uuid": src,
+                    "target_node_uuid": tgt,
+                    "source_node_name": node_map.get(src, ""),
+                    "target_node_name": node_map.get(tgt, ""),
+                    "attributes": e.get("attributes", {}),
+                    "episodes": [],
+                })
+                
+            res = {
+                "graph_id": graph_id,
+                "nodes": nodes_data,
+                "edges": edges_data,
+                "node_count": len(nodes_data),
+                "edge_count": len(edges_data),
+            }
+            self._GRAPH_DATA_CACHE[graph_id] = res
+            return res
+        except Exception as e:
+            logger.warning(f"Error fetching graph data for {graph_id}: {e}. Returning cached version if available.")
+            if graph_id in self._GRAPH_DATA_CACHE:
+                return self._GRAPH_DATA_CACHE[graph_id]
+            return {
+                "graph_id": graph_id,
+                "nodes": [],
+                "edges": [],
+                "node_count": 0,
+                "edge_count": 0,
+            }
     
     def delete_graph(self, graph_id: str):
         """Supprimer la base de données Kuzu locale"""
