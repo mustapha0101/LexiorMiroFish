@@ -393,7 +393,9 @@ class SimulationRunner:
                         "procedure_vs_equite": state_judge.tensions.get("procedure_vs_equite", 0.5),
                         "offensive_vs_negociation": state_judge.tensions.get("offensive_vs_negociation", 0.5),
                         "prudence_vs_rapidite": state_judge.tensions.get("prudence_vs_rapidite", 0.5),
-                        "belief_coupable": state_judge.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.5)
+                        "belief_coupable": state_judge.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.5),
+                        "meta_narrative": getattr(state_judge, 'meta_narrative', ''),
+                        "recent_reflection": getattr(state_judge, 'recent_reflection', '')
                     },
                     "1": {
                         "name": state_proc.name,
@@ -401,7 +403,9 @@ class SimulationRunner:
                         "procedure_vs_equite": state_proc.tensions.get("procedure_vs_equite", 0.5),
                         "offensive_vs_negociation": state_proc.tensions.get("offensive_vs_negociation", 0.5),
                         "prudence_vs_rapidite": state_proc.tensions.get("prudence_vs_rapidite", 0.5),
-                        "belief_coupable": state_proc.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.5)
+                        "belief_coupable": state_proc.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.5),
+                        "meta_narrative": getattr(state_proc, 'meta_narrative', ''),
+                        "recent_reflection": getattr(state_proc, 'recent_reflection', '')
                     },
                     "2": {
                         "name": state_def.name,
@@ -409,7 +413,9 @@ class SimulationRunner:
                         "procedure_vs_equite": state_def.tensions.get("procedure_vs_equite", 0.5),
                         "offensive_vs_negociation": state_def.tensions.get("offensive_vs_negociation", 0.5),
                         "prudence_vs_rapidite": state_def.tensions.get("prudence_vs_rapidite", 0.5),
-                        "belief_coupable": state_def.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.5)
+                        "belief_coupable": state_def.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.5),
+                        "meta_narrative": getattr(state_def, 'meta_narrative', ''),
+                        "recent_reflection": getattr(state_def, 'recent_reflection', '')
                     }
                 }
             }
