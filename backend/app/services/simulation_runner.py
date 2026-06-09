@@ -524,8 +524,8 @@ class SimulationRunner:
                 }
                 nodes, edges = extractor.extract_triplets(stimulus, ontology)
                 if nodes or edges:
-                    db = LocalGraphDatabase(sim_state.graph_id)
-                    db.upsert_triplets(nodes, edges)
+                    with LocalGraphDatabase(sim_state.graph_id) as db:
+                        db.upsert_triplets(nodes, edges)
                     logger.info(f"Successfully grounded {len(nodes)} nodes and {len(edges)} edges into Kuzu DB for graph_id={sim_state.graph_id}")
                 else:
                     logger.warning("No triplets extracted from stimulus text.")
@@ -1759,9 +1759,9 @@ class SimulationRunner:
             try:
                 from ..services.local_graph_database import LocalGraphDatabase
                 if project.graph_id:
-                    db = LocalGraphDatabase(project.graph_id)
-                    nodes = db.fetch_all_nodes()
-                    edges = db.fetch_all_edges()
+                    with LocalGraphDatabase(project.graph_id, read_only=True) as db:
+                        nodes = db.fetch_all_nodes()
+                        edges = db.fetch_all_edges()
                     
                     if nodes:
                         # Smart selection of top 20 nodes based on connection degree
@@ -2058,8 +2058,8 @@ class SimulationRunner:
                             }
                             nodes, edges = extractor.extract_triplets(init_stim, ontology)
                             if nodes or edges:
-                                db = LocalGraphDatabase(project.graph_id)
-                                db.upsert_triplets(nodes, edges)
+                                with LocalGraphDatabase(project.graph_id) as db:
+                                    db.upsert_triplets(nodes, edges)
                                 logger.info(f"Successfully grounded initial stimulus: {len(nodes)} nodes, {len(edges)} edges")
                     except Exception as init_err:
                         logger.error(f"Error handling initial stimulus: {init_err}")

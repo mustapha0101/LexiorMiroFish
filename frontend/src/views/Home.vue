@@ -51,6 +51,9 @@
               <button class="demo-load-btn" @click="loadDemoData">
                 {{ $t('home.loadDemoBtn') }}
               </button>
+              <button class="demo-preview-btn" @click="showDemoPreview = true">
+                {{ $t('home.previewDemoBtn') }}
+              </button>
             </div>
           </div>
            
@@ -261,6 +264,27 @@
         <HistoryDatabase />
       </LoginGate>
     </div>
+
+    <!-- Modal de prévisualisation du cas de démonstration -->
+    <div v-if="showDemoPreview" class="preview-modal-overlay" @click.self="showDemoPreview = false">
+      <div class="preview-modal-box">
+        <div class="preview-modal-header">
+          <h3 class="preview-modal-title">📄 {{ $t('home.demoFileName') }}</h3>
+          <button class="preview-modal-close-btn" @click="showDemoPreview = false">×</button>
+        </div>
+        <div class="preview-modal-body">
+          <pre class="preview-modal-text">{{ $t('home.demoFileContent') }}</pre>
+        </div>
+        <div class="preview-modal-footer">
+          <button class="preview-modal-cancel-btn" @click="showDemoPreview = false">
+            {{ $t('common.close') }}
+          </button>
+          <button class="preview-modal-confirm-btn" @click="loadDemoAndClose">
+            ⚡ {{ $t('home.loadDemoBtn').replace('✨ ', '').replace('✨', '') }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -321,6 +345,13 @@ const loadDemoData = () => {
   if (dashboardSection.value) {
     dashboardSection.value.scrollIntoView({ behavior: 'smooth' })
   }
+}
+
+const showDemoPreview = ref(false)
+
+const loadDemoAndClose = () => {
+  showDemoPreview.value = false
+  loadDemoData()
 }
 
 // 表单数据
@@ -1271,9 +1302,10 @@ html[lang="en"] .workflow-list {
 
 .demo-hero-container {
   display: flex;
+  gap: 12px;
   justify-content: flex-start;
   margin-top: 25px;
-  max-width: 320px;
+  max-width: 500px;
 }
 
 .demo-trigger-container {
@@ -1294,7 +1326,7 @@ html[lang="en"] .workflow-list {
   padding: 12px 24px;
   cursor: pointer;
   transition: all 0.3s ease;
-  width: 100%;
+  flex: 1;
   text-align: center;
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(197, 168, 128, 0.15);
@@ -1305,5 +1337,156 @@ html[lang="en"] .workflow-list {
   color: var(--orange);
   box-shadow: 0 6px 20px rgba(197, 168, 128, 0.1);
   transform: translateY(-2px);
+}
+
+.demo-preview-btn {
+  background: transparent;
+  border: 1px solid var(--orange);
+  color: var(--orange);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+  text-align: center;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(197, 168, 128, 0.05);
+}
+
+.demo-preview-btn:hover {
+  background: rgba(197, 168, 128, 0.1);
+  box-shadow: 0 6px 20px rgba(197, 168, 128, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Modal de prévisualisation */
+.preview-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(11, 18, 32, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.preview-modal-box {
+  background: #0B1220;
+  border: 1px solid #1A2333;
+  width: 90%;
+  max-width: 700px;
+  max-height: 80vh;
+  border-radius: 8px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeInModal 0.3s ease;
+}
+
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.preview-modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #1A2333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview-modal-title {
+  font-family: var(--font-serif);
+  color: var(--white);
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.preview-modal-close-btn {
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  font-size: 1.75rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.preview-modal-close-btn:hover {
+  color: var(--white);
+}
+
+.preview-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+  background: #0D1627;
+}
+
+.preview-modal-text {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #E2E8F0;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.preview-modal-footer {
+  padding: 20px;
+  border-top: 1px solid #1A2333;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.preview-modal-cancel-btn {
+  background: transparent;
+  border: 1px solid #334155;
+  color: #94A3B8;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preview-modal-cancel-btn:hover {
+  background: #1E293B;
+  color: var(--white);
+}
+
+.preview-modal-confirm-btn {
+  background: var(--orange);
+  border: 1px solid var(--orange);
+  color: #0B1220;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preview-modal-confirm-btn:hover {
+  background: transparent;
+  color: var(--orange);
 }
 </style>

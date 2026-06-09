@@ -32,19 +32,21 @@ class LocalGraphDatabase:
         import random
 
         with self._LOCK:
+            # Cache databases by (graph_dir, read_only) to keep read-only and read-write instances isolated
+            cache_key = (self.graph_dir, self.read_only)
+            
             # If the database is in cache but was closed (e.g. ref_count reached 0 previously), remove it
-            if self.graph_dir in self._KUZU_DATABASES:
-                entry = self._KUZU_DATABASES[self.graph_dir]
+            if cache_key in self._KUZU_DATABASES:
+                entry = self._KUZU_DATABASES[cache_key]
                 if isinstance(entry, dict) and entry.get("db") and entry["db"].is_closed:
-                    del self._KUZU_DATABASES[self.graph_dir]
+                    del self._KUZU_DATABASES[cache_key]
 
-            if self.graph_dir not in self._KUZU_DATABASES:
+            if cache_key not in self._KUZU_DATABASES:
                 max_attempts = 15
                 db_instance = None
                 for attempt in range(max_attempts):
                     try:
-                        # Open in read-write mode so both readers and writers can share the same database instance
-                        db_instance = kuzu.Database(self.graph_dir, read_only=False, max_db_size=1024 * 1024 * 1024)
+                        db_instance = kuzu.Database(self.graph_dir, read_only=self.read_only, max_db_size=1024 * 1024 * 1024)
                         break
                     except RuntimeError as e:
                         err_str = str(e).lower()
@@ -54,10 +56,15 @@ class LocalGraphDatabase:
                                 continue
                             else:
                                 # Fallback to read-only if we cannot acquire the lock (e.g. locked by another process)
-                                try:
-                                    db_instance = kuzu.Database(self.graph_dir, read_only=True, max_db_size=1024 * 1024 * 1024)
-                                    break
-                                except RuntimeError:
+                                if not self.read_only:
+                                    try:
+                                        db_instance = kuzu.Database(self.graph_dir, read_only=True, max_db_size=1024 * 1024 * 1024)
+                                        self.read_only = True
+                                        cache_key = (self.graph_dir, True)
+                                        break
+                                    except RuntimeError:
+                                        raise e
+                                else:
                                     raise e
                         elif "wal" in err_str or "recovery" in err_str or "corrupt" in err_str:
                             logger.warning(f"Corrupted Kuzu WAL/DB detected! Resetting directory {self.graph_dir}")
@@ -65,7 +72,7 @@ class LocalGraphDatabase:
                             shutil.rmtree(self.graph_dir, ignore_errors=True)
                             os.makedirs(self.graph_dir, exist_ok=True)
                             try:
-                                db_instance = kuzu.Database(self.graph_dir, read_only=False, max_db_size=1024 * 1024 * 1024)
+                                db_instance = kuzu.Database(self.graph_dir, read_only=self.read_only, max_db_size=1024 * 1024 * 1024)
                                 break
                             except RuntimeError:
                                 if attempt < max_attempts - 1:
@@ -74,21 +81,21 @@ class LocalGraphDatabase:
                                 raise e
                         else:
                             raise e
-                self._KUZU_DATABASES[self.graph_dir] = {
+                self._KUZU_DATABASES[cache_key] = {
                     "db": db_instance,
                     "ref_count": 1
                 }
             else:
-                entry = self._KUZU_DATABASES[self.graph_dir]
+                entry = self._KUZU_DATABASES[cache_key]
                 if isinstance(entry, dict):
                     entry["ref_count"] += 1
                 else:
-                    self._KUZU_DATABASES[self.graph_dir] = {
+                    self._KUZU_DATABASES[cache_key] = {
                         "db": entry,
                         "ref_count": 2
                     }
             
-            entry = self._KUZU_DATABASES[self.graph_dir]
+            entry = self._KUZU_DATABASES[cache_key]
             self.db = entry["db"] if isinstance(entry, dict) else entry
             
         self.conn = kuzu.Connection(self.db)
@@ -118,8 +125,9 @@ class LocalGraphDatabase:
         # Decrement ref_count and close database if it reaches 0
         if hasattr(self, 'db') and self.db:
             with self._LOCK:
-                if self.graph_dir in self._KUZU_DATABASES:
-                    entry = self._KUZU_DATABASES[self.graph_dir]
+                cache_key = (self.graph_dir, self.read_only)
+                if cache_key in self._KUZU_DATABASES:
+                    entry = self._KUZU_DATABASES[cache_key]
                     if isinstance(entry, dict):
                         entry["ref_count"] -= 1
                         if entry["ref_count"] <= 0:
@@ -129,7 +137,7 @@ class LocalGraphDatabase:
                             except Exception as e:
                                 logger.error(f"Error closing Kuzu database: {e}")
                             finally:
-                                del self._KUZU_DATABASES[self.graph_dir]
+                                del self._KUZU_DATABASES[cache_key]
                     else:
                         try:
                             if hasattr(entry, 'close') and not entry.is_closed:
@@ -137,7 +145,7 @@ class LocalGraphDatabase:
                         except Exception:
                             pass
                         finally:
-                            del self._KUZU_DATABASES[self.graph_dir]
+                            del self._KUZU_DATABASES[cache_key]
             self.db = None
         
     def _execute(self, query: str, parameters: dict = None):

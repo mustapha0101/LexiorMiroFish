@@ -18,9 +18,9 @@ class CognitiveMemoryService:
     """Service de gestion de la mémoire autobiographique et des états dans Kuzu DB."""
 
     @classmethod
-    def _get_db(cls, simulation_id: str) -> LocalGraphDatabase:
+    def _get_db(cls, simulation_id: str, read_only: bool = False) -> LocalGraphDatabase:
         """Retourne l'instance Kuzu DB pour la simulation."""
-        return LocalGraphDatabase(simulation_id)
+        return LocalGraphDatabase(simulation_id, read_only=read_only)
 
     @classmethod
     def _init_tables_if_needed(cls, db: LocalGraphDatabase):
@@ -132,11 +132,9 @@ class CognitiveMemoryService:
     @classmethod
     def get_agent_state(cls, simulation_id: str, agent_id: str, agent_name: str = "") -> Optional[CognitiveAgentState]:
         """Récupère l'état d'un agent. Crée un état par défaut si aucun n'existe en base."""
-        with cls._get_db(simulation_id) as db:
-            cls._init_tables_if_needed(db)
-            
-            query = "MATCH (n:Node_CognitiveState {uuid: $uuid}) RETURN n.name, n.summary, n.attributes"
-            try:
+        try:
+            with cls._get_db(simulation_id, read_only=True) as db:
+                query = "MATCH (n:Node_CognitiveState {uuid: $uuid}) RETURN n.name, n.summary, n.attributes"
                 res = db._execute(query, {"uuid": agent_id})
                 if res.has_next():
                     row = res.get_next()
@@ -156,8 +154,8 @@ class CognitiveMemoryService:
                         negative_interactions_count=attr_data.get("negative_interactions_count", 0),
                         attention_budget=attr_data.get("attention_budget")
                     )
-            except Exception as e:
-                logger.warning(f"Erreur lors de la récupération de l'état pour l'agent {agent_id}: {e}")
+        except Exception as e:
+            logger.warning(f"Erreur lors de la récupération de l'état pour l'agent {agent_id}: {e}")
 
         # État par défaut si non existant
         return CognitiveAgentState(
@@ -208,16 +206,13 @@ class CognitiveMemoryService:
     @classmethod
     def get_active_memories(cls, simulation_id: str, agent_id: str, strength_threshold: float = 0.2) -> List[str]:
         """Récupère les descriptions des souvenirs actifs (dont la force est au-dessus du seuil)."""
-        with cls._get_db(simulation_id) as db:
-            cls._init_tables_if_needed(db)
-            
-            query = (
-                "MATCH (a:Node_CognitiveState {uuid: $agent_id})-[r:Rel_HAS_MEMORY]->(m:Node_MemoryFragment) "
-                "RETURN m.summary, m.attributes"
-            )
-            
-            memories = []
-            try:
+        memories = []
+        try:
+            with cls._get_db(simulation_id, read_only=True) as db:
+                query = (
+                    "MATCH (a:Node_CognitiveState {uuid: $agent_id})-[r:Rel_HAS_MEMORY]->(m:Node_MemoryFragment) "
+                    "RETURN m.summary, m.attributes"
+                )
                 res = db._execute(query, {"agent_id": agent_id})
                 while res.has_next():
                     row = res.get_next()
@@ -227,10 +222,10 @@ class CognitiveMemoryService:
                     
                     if strength >= strength_threshold:
                         memories.append(summary)
-            except Exception as e:
-                logger.error(f"Erreur de lecture des souvenirs pour l'agent {agent_id}: {e}")
-                
-            return memories
+        except Exception as e:
+            logger.error(f"Erreur de lecture des souvenirs pour l'agent {agent_id}: {e}")
+            
+        return memories
 
     @classmethod
     def apply_memory_decay(cls, simulation_id: str, agent_id: str, decay_factor: float = 0.85):

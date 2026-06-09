@@ -795,7 +795,7 @@ class ZepToolsService:
         logger.info(t("console.fetchingAllNodes", graphId=graph_id))
 
         from .local_graph_database import LocalGraphDatabase
-        with LocalGraphDatabase(graph_id) as db:
+        with LocalGraphDatabase(graph_id, read_only=True) as db:
             nodes = db.fetch_all_nodes()
 
         result = []
@@ -826,7 +826,7 @@ class ZepToolsService:
         logger.info(t("console.fetchingAllEdges", graphId=graph_id))
 
         from .local_graph_database import LocalGraphDatabase
-        with LocalGraphDatabase(graph_id) as db:
+        with LocalGraphDatabase(graph_id, read_only=True) as db:
             edges = db.fetch_all_edges()
 
         result = []

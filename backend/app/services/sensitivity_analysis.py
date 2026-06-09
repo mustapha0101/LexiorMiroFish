@@ -51,7 +51,7 @@ class SensitivityAnalysisEngine:
         edges = []
         if project.graph_id:
             try:
-                with LocalGraphDatabase(project.graph_id) as db:
+                with LocalGraphDatabase(project.graph_id, read_only=True) as db:
                     nodes = db.fetch_all_nodes()
                     edges = db.fetch_all_edges()
             except Exception as e:
