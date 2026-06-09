@@ -146,7 +146,7 @@ class SimulationPDFExporter:
             y = margin_top
             
             # Dessiner le header
-            page.insert_text((margin_left, 35), "LEXIOR SIMULATOR  |  RAPPORT DE DÉROULEMENT DE SIMULATION", fontsize=7.5, color=(0.45, 0.55, 0.72), fontname="helvetica-bold")
+            page.insert_text((margin_left, 35), "LEXIOR SIMULATOR  |  RAPPORT OFFICIEL DU GREFFIER LEXIOR", fontsize=7.5, color=(0.45, 0.55, 0.72), fontname="helvetica-bold")
             page.draw_line((margin_left, 42), (margin_right, 42), color=(0.85, 0.88, 0.93), width=0.5)
             
             # Dessiner le footer
@@ -215,7 +215,7 @@ class SimulationPDFExporter:
         y += 20
         
         # Titre Principal
-        draw_text("RAPPORT DÉTAILLÉ DE SIMULATION", fontsize=18, color=(0.04, 0.09, 0.18), bold=True, line_spacing=24)
+        draw_text("RAPPORT OFFICIEL DU GREFFIER LEXIOR", fontsize=18, color=(0.04, 0.09, 0.18), bold=True, line_spacing=24)
         draw_text("JOURNAL DE BORD & CONTEXTE COGNITIF DES AGENTS", fontsize=11, color=(0.71, 0.54, 0.24), bold=False, line_spacing=15)
         y += 15
         
