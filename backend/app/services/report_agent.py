@@ -654,11 +654,10 @@ Ta tâche est de :
      > "Certaines catégories de la population disent : (Contenu original d'origine des agents)..."
    - C'est l'essence d'une prévision !
 
-3. [Cohérence Linguistique - La citation DOIT être traduite en français !]
-   - L'outil pourrait renvoyer un contenu dans une langue qui n'est pas le Français.
-   - Vous devez répondre TOUJOURS dans la langue spécifiée (Français).
-   - Traduisez toutes les citations retournées par l'outil vers le Français. Gardez l'idée centrale intacte.
-   - Cela s'applique au contenu normal et pour les citations intégrées au bloc !
+3. [Cohérence Linguistique - Traduction OBLIGATOIRE et COMPLÈTE en français !]
+   - L'outil renverra probablement des faits ou des déclarations d'agents en anglais (ex: "France Caron hired M. Laforest...", "obligation of result", etc.).
+   - Vous devez IMPÉRATIVEMENT et SYSTÉMATIQUEMENT traduire toutes les citations, verbatim, déclarations d'agents et faits récupérés par l'outil vers le Français.
+   - ❌ IL EST STRICTEMENT INTERDIT de laisser des phrases, citations, ou expressions en anglais dans le rapport généré. Tout doit être rédigé à 100% en Français, y compris les textes insérés entre guillemets ou dans les blocs de citation (> "citation").
 
 4. [Fidélité au Résultat de Prévision]
    - Consignes claires. S'il n'y a pas assez d'information, avouez-le. Ne créez pas de faux événements.
@@ -784,9 +783,10 @@ Description de la section : {section_description}
    - Vous devez appuyer votre analyse sur des faits précis du procès et des états d'agents simulés.
    - Demandez entre 3 et 5 requêtes de l'outil pour inspecter le graphe de la simulation (nœuds, relations, interviews d'agents).
 
-2. [Vous DEVEZ citer les faits et les déclarations d'agents]
-   - Utilisez les verbatim d'origine des agents (avocats, procureur, juge, témoins, etc.) pour étayer vos arguments.
-   - Traduis les déclarations en Français si les outils retournent une autre langue.
+2. [Vous DEVEZ citer les faits et les déclarations d'agents en Français]
+   - Utilisez les verbatim d'origine des agents (avocats, procureur, juge, témoins, etc.) pour étayer vos arguments, mais TRADUISEZ-LES ENTIÈREMENT EN FRANÇAIS.
+   - ❌ IL EST ABSOLUMENT REQUIS de traduire en français toutes les déclarations d'agents, verdicts, et faits retournés par les outils s'ils sont en anglais ou dans une autre langue.
+   - ❌ NE LAISSEZ AUCUN mot, expression ou citation en anglais dans le rapport final (ex. pas de "obligation of result", "failed to inform", ou "contracted..."). Tout extrait cité ou mis entre guillemets doit être 100% en Français.
 
 3. [Format de la Section]
    - Rédige la section directement en Markdown.

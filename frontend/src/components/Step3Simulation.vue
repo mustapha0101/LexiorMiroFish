@@ -710,8 +710,9 @@ const emit = defineEmits(['go-back', 'next-step', 'add-log', 'update-status'])
 const litigationType = ref('civil')
 
 const isCivil = computed(() => {
-  if (props.projectData?.simulation_mode !== 'legal') return false
-  return litigationType.value === 'civil'
+  if (props.projectData && props.projectData.simulation_mode !== 'legal') return false
+  if (props.runMode !== 'courtroom') return false
+  return litigationType.value !== 'criminal'
 })
 
 const procureurLabel = computed(() => {
@@ -1198,7 +1199,7 @@ const acquittalRate = computed(() => {
 const lastVerdict = computed(() => {
   const verdicts = allActions.value.filter(a => a.action_type === 'VERDICT' || a.action_type === 'DECISION')
   if (verdicts.length === 0) return null
-  const lastV = verdicts[0]
+  const lastV = verdicts[verdicts.length - 1]
   const text = lastV.action_args?.content || lastV.result || ''
   return text.length > 35 ? text.substring(0, 35) + '...' : text
 })
