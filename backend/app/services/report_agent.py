@@ -840,8 +840,9 @@ SECTION_USER_PROMPT_TEMPLATE = """\
 
 [Note Majeure] :
 1. Aucune Répétition Acceptable sur ce qui a été déjà mentionné ci-dessus.
-2. N'AFFICHER ton résultat texte que SI les appels aux Outils ONT ÉTÉ EN CLAIRS !
-3. N'utilisez pas qu'un seul outil !
+2. Si vous choisissez d'appeler un outil (Option A), utilisez uniquement la balise XML <tool_call> et attendez.
+3. ❌ IL EST STRICTEMENT INTERDIT d'écrire ou de simuler des appels sous forme de code Python (ex: print(tool(...))) ou d'inventer la réponse.
+4. Si vous avez déjà assez d'informations pour rédiger la section directement (Option B), répondez simplement avec "Final Answer:" suivi du texte rédigé en français.
 
 [⚠️ Code Rouge / Alerte de Formatage à l'aveugle]
 - ❌ Pas d'identifiant de format # !!
@@ -850,8 +851,8 @@ SECTION_USER_PROMPT_TEMPLATE = """\
 
 Début des calculs:
 1. Pensées ("Thought") : De quoi as-tu besoin ?
-2. Actions (Utilisation de ("Outils")) ou Option A ...
-3. Obtenir toutes les informations avant d'écrire et de valider. "Final Answer:" pour déposer le résultat."""
+2. Actions (Utilisation de ("Outils")) ou Option A (si nécessaire)
+3. "Final Answer:" pour déposer le résultat final (Option B)."""
 
 # ── ReACT 循环内消息模板 ──
 
@@ -1040,38 +1041,38 @@ class ReportAgent:
         logger.info(t('report.agentInitDone', graphId=graph_id, simulationId=simulation_id))
     
     def _define_tools(self) -> Dict[str, Dict[str, Any]]:
-        """定义可用工具"""
+        """定义可用工具 (en français pour le LLM)"""
         return {
             "insight_forge": {
                 "name": "insight_forge",
                 "description": TOOL_DESC_INSIGHT_FORGE,
                 "parameters": {
-                    "query": "你想深入分析的问题或话题",
-                    "report_context": "当前报告章节的上下文（可选，有助于生成更精准的子问题）"
+                    "query": "La question ou le sujet spécifique que vous souhaitez analyser en profondeur.",
+                    "report_context": "Le contexte du chapitre actuel (optionnel, aide à générer des sous-questions plus précises)."
                 }
             },
             "panorama_search": {
                 "name": "panorama_search",
                 "description": TOOL_DESC_PANORAMA_SEARCH,
                 "parameters": {
-                    "query": "搜索查询，用于相关性排序",
-                    "include_expired": "是否包含过期/历史内容（默认True）"
+                    "query": "Requête de recherche pour le classement de pertinence.",
+                    "include_expired": "Indique s'il faut inclure le contenu expiré/historique (True par défaut)."
                 }
             },
             "quick_search": {
                 "name": "quick_search",
                 "description": TOOL_DESC_QUICK_SEARCH,
                 "parameters": {
-                    "query": "搜索查询字符串",
-                    "limit": "返回结果数量（可选，默认10）"
+                    "query": "La chaîne de recherche.",
+                    "limit": "Nombre de résultats à retourner (optionnel, 10 par défaut)."
                 }
             },
             "interview_agents": {
                 "name": "interview_agents",
                 "description": TOOL_DESC_INTERVIEW_AGENTS,
                 "parameters": {
-                    "interview_topic": "采访主题或需求描述（如：'了解学生对宿舍甲醛事件的看法'）",
-                    "max_agents": "最多采访的Agent数量（可选，默认5，最大10）"
+                    "interview_topic": "Le sujet de l'interview ou la description du besoin.",
+                    "max_agents": "Nombre maximum d'agents à interviewer (optionnel, 5 par défaut, maximum 10)."
                 }
             }
         }
@@ -1190,10 +1191,11 @@ class ReportAgent:
     def _parse_tool_calls(self, response: str) -> List[Dict[str, Any]]:
         """
         从LLM响应中解析工具调用
-
+        
         支持的格式（按优先级）：
         1. <tool_call>{"name": "tool_name", "parameters": {...}}</tool_call>
-        2. 裸 JSON（响应整体或单行就是一个工具调用 JSON）
+        2. Python 函数调用风格如 print(insight_forge(query="..."))
+        3. 裸 JSON（响应整体或单行就是一个工具调用 JSON）
         """
         tool_calls = []
 
@@ -1209,8 +1211,56 @@ class ReportAgent:
         if tool_calls:
             return tool_calls
 
-        # 格式2: 兜底 - LLM 直接输出裸 JSON（没包 <tool_call> 标签）
-        # 只在格式1未匹配时尝试，避免误匹配正文中的 JSON
+        # 格式2: Python 函数调用风格（兜底本地7B模型，如 print(insightforge(query="...")) 或 insight_forge("...")）
+        python_pattern = r'\b(insight_?forge|panorama_?search|quick_?search|interview_?agents)\s*\((.*?)\)'
+        for pm in re.finditer(python_pattern, response, re.DOTALL):
+            tool_name_raw = pm.group(1)
+            std_name_map = {
+                "insightforge": "insight_forge",
+                "insight_forge": "insight_forge",
+                "panoramasearch": "panorama_search",
+                "panorama_search": "panorama_search",
+                "quicksearch": "quick_search",
+                "quick_search": "quick_search",
+                "interviewagents": "interview_agents",
+                "interview_agents": "interview_agents"
+            }
+            tool_name = std_name_map.get(tool_name_raw.lower())
+            if not tool_name:
+                continue
+
+            args_str = pm.group(2)
+            parameters = {}
+            # 匹配 key = "val" 或 key = 'val'
+            param_pattern = r'(\b[a-zA-Z_0-9]+)\s*=\s*(["\'])(.*?)\2'
+            for param_name, _, param_val in re.findall(param_pattern, args_str, re.DOTALL):
+                parameters[param_name] = param_val
+
+            # 如果没有命名参数但有带引号的字符串，将其映射到第一个参数
+            if not parameters and ('"' in args_str or "'" in args_str):
+                single_str_match = re.search(r'(["\'])(.*?)\1', args_str, re.DOTALL)
+                if single_str_match:
+                    val = single_str_match.group(2)
+                    default_params = {
+                        "insight_forge": "query",
+                        "panorama_search": "query",
+                        "quick_search": "query",
+                        "interview_agents": "interview_topic"
+                    }
+                    p_name = default_params.get(tool_name)
+                    if p_name:
+                        parameters[p_name] = val
+
+            tool_calls.append({
+                "name": tool_name,
+                "parameters": parameters
+            })
+
+        if tool_calls:
+            return tool_calls
+
+        # 格式3: 兜底 - LLM 直接输出裸 JSON（没包 <tool_call> 标签）
+        # 只在格式1和2未匹配时尝试，避免误匹配正文中的 JSON
         stripped = response.strip()
         if stripped.startswith('{') and stripped.endswith('}'):
             try:
@@ -1246,15 +1296,72 @@ class ReportAgent:
                 data["parameters"] = data.pop("params")
             return True
         return False
+
+    def _clean_llm_section_content(self, content: str) -> str:
+        """
+        Nettoie le contenu généré par le LLM pour supprimer les appels de fonctions Python
+        et les blocs de réponses JSON de simulation/mock afin de garder un texte propre.
+        """
+        import re
+        import json
+        if not content:
+            return content
+            
+        # 1. Supprimer les lignes ou blocs d'appels de fonction Python (ex: print(quick_search(...)) ou quick_search(...))
+        python_pattern = r'(?:print\s*\(\s*)?\b(?:insight_?forge|panorama_?search|quick_?search|interview_?agents)\s*\(.*?\)\s*\)?'
+        content = re.sub(python_pattern, '', content, flags=re.DOTALL | re.IGNORECASE)
+        
+        # 2. Supprimer les blocs de code JSON de simulation/mock retournés par les outils (souvent sous la forme ```json ... ```)
+        json_block_pattern = r'```(?:json)?\s*\{\s*".*?\}\s*```'
+        content = re.sub(json_block_pattern, '', content, flags=re.DOTALL)
+        
+        # 3. Supprimer le JSON brut qui ne serait pas dans un bloc de code (ex: au début de la réponse)
+        content_stripped = content.strip()
+        if content_stripped.startswith('{'):
+            brace_count = 0
+            end_idx = -1
+            for i, char in enumerate(content_stripped):
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        end_idx = i
+                        break
+            if end_idx != -1:
+                json_str = content_stripped[:end_idx+1]
+                try:
+                    data = json.loads(json_str)
+                    if isinstance(data, dict) and any(k in data for k in ["facts", "verdicts", "agents", "results", "query"]):
+                        content = content_stripped[end_idx+1:].strip()
+                except Exception:
+                    pass
+                    
+        # 4. Nettoyer les reliquats de blocs vides
+        content = re.sub(r'```json\s*```', '', content)
+        content = re.sub(r'```\s*```', '', content)
+        
+        # 5. Parcourir ligne par ligne pour supprimer les restes de lignes Python ou de JSON mal formatés
+        lines = content.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            stripped_line = line.strip()
+            # Supprime si la ligne commence par print( ou appelle un outil
+            if (stripped_line.lower().startswith('print(') and any(t in stripped_line.lower() for t in ["insight", "search", "interview"])) or \
+               (any(stripped_line.lower().startswith(t + '(') for t in ["insight_forge", "panorama_search", "quick_search", "interview_agents", "insightforge", "panoramasearch", "quicksearch", "interviewagents"])):
+                continue
+            cleaned_lines.append(line)
+            
+        return '\n'.join(cleaned_lines).strip()
     
     def _get_tools_description(self) -> str:
-        """生成工具描述文本"""
-        desc_parts = ["可用工具："]
+        """生成工具描述文本 (en français pour le LLM)"""
+        desc_parts = ["Outils disponibles :"]
         for name, tool in self.tools.items():
-            params_desc = ", ".join([f"{k}: {v}" for k, v in tool["parameters"].items()])
-            desc_parts.append(f"- {name}: {tool['description']}")
+            params_desc = ", ".join([f"{k} : {v}" for k, v in tool["parameters"].items()])
+            desc_parts.append(f"- {name} : {tool['description']}")
             if params_desc:
-                desc_parts.append(f"  参数: {params_desc}")
+                desc_parts.append(f"  Paramètres : {params_desc}")
         return "\n".join(desc_parts)
     
     def plan_outline(
@@ -1595,6 +1702,7 @@ class ReportAgent:
 
                 # 正常结束
                 final_answer = response.split("Final Answer:")[-1].strip()
+                final_answer = self._clean_llm_section_content(final_answer)
                 logger.info(t('report.sectionGenDone', title=section.title, count=tool_calls_count))
 
                 if self.report_logger:
@@ -1694,6 +1802,7 @@ class ReportAgent:
             # 直接将这段内容作为最终答案，不再空转
             logger.info(t('report.sectionNoPrefix', title=section.title, count=tool_calls_count))
             final_answer = response.strip()
+            final_answer = self._clean_llm_section_content(final_answer)
 
             if self.report_logger:
                 self.report_logger.log_section_content(
@@ -1722,6 +1831,8 @@ class ReportAgent:
             final_answer = response.split("Final Answer:")[-1].strip()
         else:
             final_answer = response
+        
+        final_answer = self._clean_llm_section_content(final_answer)
         
         # 记录章节内容生成完成日志
         if self.report_logger:
@@ -2476,8 +2587,18 @@ class ReportManager:
             "updated_at": datetime.now().isoformat()
         }
         
-        with open(cls._get_progress_path(report_id), 'w', encoding='utf-8') as f:
-            json.dump(progress_data, f, ensure_ascii=False, indent=2)
+        # Atomically save progress.json using a temp file and rename to prevent
+        # other Gunicorn processes from reading an empty/truncated file.
+        progress_path = cls._get_progress_path(report_id)
+        temp_path = progress_path + ".tmp"
+        try:
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(progress_data, f, ensure_ascii=False, indent=2)
+            os.replace(temp_path, progress_path)
+        except Exception as e:
+            logger.error(f"Failed to atomically write progress.json: {e}")
+            with open(progress_path, 'w', encoding='utf-8') as f:
+                json.dump(progress_data, f, ensure_ascii=False, indent=2)
     
     @classmethod
     def get_progress(cls, report_id: str) -> Optional[Dict[str, Any]]:
