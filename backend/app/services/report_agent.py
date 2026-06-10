@@ -1485,7 +1485,9 @@ class ReportAgent:
         # ReACT循环
         tool_calls_count = 0
         max_iterations = 5  # 最大迭代轮数
-        min_tool_calls = 3  # 最少工具调用次数
+        # Don't force tool calls in legal mode as the legal simulation context is already provided
+        # in the prompt. In social mode, require at least 1 tool call to retrieve public stance.
+        min_tool_calls = 0 if getattr(self, "simulation_mode", "social") == "legal" else 1
         conflict_retries = 0  # 工具调用与Final Answer同时出现的连续冲突次数
         used_tools = set()  # 记录已调用过的工具名
         all_tools = {"insight_forge", "panorama_search", "quick_search", "interview_agents"}
