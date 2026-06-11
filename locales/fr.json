@@ -33,7 +33,8 @@
   },
   "nav": {
     "visitGithub": "Visiter notre page Github",
-    "researchPaper": "Papier de recherche"
+    "researchPaper": "Papier de recherche",
+    "financialGuide": "Guide financier"
   },
   "home": {
     "tagline": "Neuro-Symbolique & Analyse Cognitive",
@@ -337,8 +338,9 @@
     "replayTitle": "Relecture de simulation",
     "step1Button": "Construction Graphe",
     "step2Button": "Config. Env.",
+    "step3Button": "Déroulement Procès",
     "step4Button": "Rapport d'analyse",
-    "replayHint": "L'Étape 3 'Exécuter simulation' et l'Étape 5 'Interaction profonde' doivent être démarrées lors de l'exécution et ne supportent pas la relecture d'historique",
+    "replayHint": "L'Étape 5 'Interaction profonde' doit être démarrée lors de l'exécution et ne supporte pas la relecture d'historique",
     "notStarted": "Non démarré",
     "roundsProgress": "{current}/{total} rounds",
     "untitledSimulation": "Simulation sans titre",

@@ -33,7 +33,8 @@
   },
   "nav": {
     "visitGithub": "Visit our Github page",
-    "researchPaper": "Research Paper"
+    "researchPaper": "Research Paper",
+    "financialGuide": "Financial Guide"
   },
   "home": {
     "tagline": "Neuro-Symbolic & Cognitive Analysis",
@@ -337,8 +338,9 @@
     "replayTitle": "Simulation Replay",
     "step1Button": "Graph Build",
     "step2Button": "Env Setup",
+    "step3Button": "Trial Timeline",
     "step4Button": "Analysis Report",
-    "replayHint": "Step 3 'Run Simulation' and Step 5 'Deep Interaction' must be started during runtime and do not support history replay",
+    "replayHint": "Step 5 'Deep Interaction' must be started during runtime and does not support history replay",
     "notStarted": "Not started",
     "roundsProgress": "{current}/{total} rounds",
     "untitledSimulation": "Untitled simulation",

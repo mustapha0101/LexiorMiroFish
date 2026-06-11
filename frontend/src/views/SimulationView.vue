@@ -285,6 +285,30 @@ const loadSimulationData = async () => {
     if (simRes.success && simRes.data) {
       const simData = simRes.data
 
+      // Check simulation status to redirect if it is running or completed
+      const status = (simData.status || '').toLowerCase()
+      const isEditing = route.query.edit === 'true'
+      
+      if (!isEditing && (status === 'running' || status === 'completed')) {
+        if (simData.report_id) {
+          router.replace({
+            name: 'Report',
+            params: { reportId: simData.report_id }
+          })
+          return
+        } else {
+          router.replace({
+            name: 'SimulationRun',
+            params: { simulationId: currentSimulationId.value },
+            query: {
+              runMode: simData.run_mode || 'courtroom',
+              resume: 'true'
+            }
+          })
+          return
+        }
+      }
+
       // 保存 simulation graph_id
       if (simData.graph_id) {
         simGraphId.value = simData.graph_id

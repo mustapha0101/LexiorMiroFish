@@ -217,7 +217,7 @@ const handleGoBack = async () => {
   }
   
   // 返回到 Step 2 (环境搭建)
-  router.push({ name: 'Simulation', params: { simulationId: currentSimulationId.value } })
+  router.push({ name: 'Simulation', params: { simulationId: currentSimulationId.value }, query: { edit: 'true' } })
 }
 
 const handleNextStep = () => {

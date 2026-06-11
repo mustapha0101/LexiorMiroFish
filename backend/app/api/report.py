@@ -488,19 +488,19 @@ Exemples concrets de verdicts motivés rendus par les juges simulés :
 
 Rédige le rapport complet en français sous forme de dictionnaire JSON avec les clés suivantes :
 
-1. "title": Le titre du rapport (ex. "Rapport Officiel du Greffier : Analyse Prédictive et Orientations Stratégiques du Demandeur")
-2. "summary": Un résumé analytique percutant des conclusions statistiques. Interprète le taux de {client_win_rate}% de succès pour le demandeur : s'agit-il d'un risque élevé, modéré ou faible ? Quel est le message clé pour l'avocat et son client ?
-3. "section1_title": "1. Rappel des Faits et Cartographie des Thèses Adversaires"
+1. "title": Le titre du rapport (ex. "Rapport Stratégique de Matérialité et d'Aléa Judiciaire du Demandeur")
+2. "summary": Un résumé analytique percutant des conclusions statistiques. Interprète le taux de {client_win_rate}% de succès pour le demandeur sous l'angle du risque de bilan pour le client.
+3. "section1_title": "1. Cartographie Factuelle & Diagnostic de Matérialité"
 4. "section1_content": Analyse approfondie et détaillée des faits de l'affaire, des forces et faiblesses initiales du demandeur (ex. matérialité de l'exfiltration, Loi 25) et de la défense (ex. clauses de limitation de responsabilité, open-source). Utilise du gras et des puces détaillées.
-5. "section2_title": "2. Analyse Statistique de l'Incertitude Judiciaire (Monte-Carlo)"
-6. "section2_content": Explique comment la simulation de Monte-Carlo a modélisé l'impact des 5 profils de juges (Formaliste strict, Sensible à l'équité, Conservateur, Progressiste, Imprévisible). Comment les sensibilités des juges expliquent-elles le taux de {client_win_rate}% de succès pour le demandeur ? Analyse la variance de la décision et le niveau de prévisibilité.
-7. "section3_title": "3. Débats à l'Audience & Points de Bascule (Triggers Cognitifs)"
-8. "section3_content": Quels ont été les arguments décisifs (points de bascule) constatés pendant les simulations ? Par exemple, comment le juge réagit-il à la clause contractuelle d'injonction, au fardeau de la preuve de la Loi 25, ou au courriel du PDG ? Identifie les moments où la conviction du juge a basculé en faveur ou contre le demandeur.
-9. "section4_title": "4. Recommandations Tactiques et Feuille de Route pour l'Avocat"
+5. "section2_title": "2. Modélisation de l'Aléa Judiciaire & Risque de Bilan (Monte-Carlo)"
+6. "section2_content": Explique comment la simulation de Monte-Carlo a modélisé l'impact des 5 profils de juges. Comment les sensibilités des juges expliquent-elles le taux de {client_win_rate}% de succès pour le demandeur ? Analyse la variance de la décision et le niveau de prévisibilité.
+7. "section3_title": "3. Dynamiques Comportementales & Points de Bascule (Puits de Potentiel)"
+8. "section3_content": Quels ont été les arguments décisifs (points de bascule ou puits de potentiel) constatés pendant les simulations ? Identifie les moments où la conviction du juge a basculé en faveur ou contre le demandeur.
+9. "section4_title": "4. Recommandations d'Arbitrage & Justification du Règlement à l'Amiable"
 10. "section4_content": Fournis une liste de recommandations actionnables pour l'avocat du demandeur :
-  - Tactique d'audience face à un juge formaliste strict (ex: respecter scrupuleusement la procédure et les délais, s'appuyer sur la lettre de la loi) vs un juge axé sur l'équité (ex: insister sur le préjudice subi par les 5 000 utilisateurs, la responsabilité sociale d'Apex).
+  - Tactique d'audience face aux profils de juges.
   - Éléments de preuve cruciaux à consolider (ex: rapports de sécurité, registres d'accès).
-  - Recommandation sur l'opportunité de négocier un règlement à l'amiable ou d'aller au procès en se basant sur le taux de succès statistique.
+  - Recommandation et justification mathématique sur l'opportunité de négocier un règlement à l'amiable hors cour ou d'aller au procès en se basant sur le taux de succès statistique.
 
 Renvoie uniquement un dictionnaire JSON valide. Ne mets pas de texte d'introduction ni de conclusion en dehors du JSON."""
         else:
@@ -523,19 +523,19 @@ Exemples concrets de verdicts motivés rendus par les juges simulés :
 
 Rédige le rapport complet en français sous forme de dictionnaire JSON avec les clés suivantes :
 
-1. "title": Le titre du rapport (ex. "Rapport Officiel du Greffier : Analyse Prédictive et Orientations Stratégiques de la Défense")
-2. "summary": Un résumé analytique percutant des conclusions statistiques. Interprète le taux de {win_rate}% d'acquittement : s'agit-il d'un risque élevé, modéré ou faible pour la défense ? Quel est le message clé pour l'avocat et son client ?
-3. "section1_title": "1. Rappel des Faits et Cartographie des Thèses Adversaires"
+1. "title": Le titre du rapport (ex. "Rapport Stratégique de Matérialité et d'Aléa Judiciaire pour la Défense")
+2. "summary": Un résumé analytique percutant des conclusions statistiques. Interprète le taux de {win_rate}% de succès pour la défense sous l'angle du risque de bilan pour le client.
+3. "section1_title": "1. Cartographie Factuelle & Diagnostic de Matérialité"
 4. "section1_content": Analyse approfondie et détaillée des faits de l'affaire, des forces et faiblesses initiales de l'accusation/demandeur (ex. matérialité de l'exfiltration, Loi 25) et de la défense (ex. ordre du PDG d'utiliser de l'open-source, absence de secret commercial). Utilise du gras et des puces détaillées.
-5. "section2_title": "2. Analyse Statistique de l'Incertitude Judiciaire (Monte-Carlo)"
+5. "section2_title": "2. Modélisation de l'Aléa Judiciaire & Risque de Bilan (Monte-Carlo)"
 6. "section2_content": Explique comment la simulation de Monte-Carlo a modélisé l'impact des 5 profils de juges (Formaliste strict, Sensible à l'équité, Conservateur, Progressiste, Imprévisible). Comment les sensibilités des juges expliquent-elles le taux de {win_rate}% ? Analyse la variance de la décision et le niveau de prévisibilité.
-7. "section3_title": "3. Débats à l'Audience & Points de Bascule (Triggers Cognitifs)"
-8. "section3_content": Quels ont été les arguments décisifs (points de bascule) constatés pendant les simulations ? Par exemple, comment le juge réagit-il à la clause contractuelle d'injonction, au fardeau de la preuve de la Loi 25, ou au courriel du PDG ? Identifie les moments où la conviction du juge a basculé.
-9. "section4_title": "4. Recommandations Tactiques et Feuille de Route pour l'Avocat"
-10. "section4_content": Fournis une liste de recommandations actionnables pour l'avocat :
+7. "section3_title": "3. Dynamiques Comportementales & Points de Bascule (Puits de Potentiel)"
+8. "section3_content": Quels ont été les arguments décisifs (points de bascule ou puits de potentiel) constatés pendant les simulations ? Par exemple, comment le juge réagit-il à la clause contractuelle d'injonction, au fardeau de la preuve de la Loi 25, ou au courriel du PDG ? Identifie les moments où la conviction du juge a basculé.
+9. "section4_title": "4. Recommandations d'Arbitrage & Justification du Règlement à l'Amiable"
+10. "section4_content": Fournis une liste de recommandations actionnables pour l'avocat de la défense :
   - Tactique d'audience face à un juge formaliste strict (ex: soulever des arguments de pure procédure) vs un juge axé sur l'équité (ex: insister sur la mauvaise foi de la demanderesse ou la contrainte).
   - Éléments de preuve cruciaux à consolider (ex: rapports de sécurité, registres d'accès).
-  - Recommandation sur l'opportunité de négocier un règlement à l'amiable ou d'aller au procès en se basant sur le taux de succès statistique.
+  - Recommandation sur l'opportunité et la justification mathématique de négocier un règlement à l'amiable ou d'aller au procès en se basant sur le taux de succès statistique.
 
 Renvoie uniquement un dictionnaire JSON valide. Ne mets pas de texte d'introduction ni de conclusion en dehors du JSON."""
 
@@ -565,29 +565,29 @@ Renvoie uniquement un dictionnaire JSON valide. Ne mets pas de texte d'introduct
                 }
             elif client_side == "plaintiff":
                 report_data = {
-                    "title": "Rapport officiel du Greffier (Demandeur)",
-                    "summary": f"Analyse statistique de {iterations} procès criminels/civils. Taux de succès mesuré pour le demandeur : {client_win_rate}%.",
-                    "section1_title": "Rappel des Faits et Débats (Demandeur)",
+                    "title": "Rapport Stratégique de Matérialité et d'Aléa Judiciaire pour le Demandeur",
+                    "summary": f"Analyse prédictive de risque de bilan par simulation de Monte-Carlo. Taux de succès estimé : {client_win_rate}%.",
+                    "section1_title": "1. Cartographie Factuelle & Diagnostic de Matérialité",
                     "section1_content": f"L'affaire repose sur les éléments décrits dans le dossier de procès : {simulation_requirement[:500]}...",
-                    "section2_title": "Analyse Statistique du Procès",
+                    "section2_title": "2. Modélisation de l'Aléa Judiciaire & Risque de Bilan (Monte-Carlo)",
                     "section2_content": f"La simulation de Monte-Carlo montre un taux de succès stable à {client_win_rate}% pour le demandeur. Cette variation s'explique par les différentes sensibilités jurisprudentielles et de personnalité des juges simulés.",
-                    "section3_title": "Synthèse des Arguments Clés",
-                    "section3_content": "Le Demandeur/Poursuite requiert l'application ferme de la loi au nom du préjudice ou de l'ordre public, tandis que la Défense s'attache à instiller un doute raisonnable ou soulever des clauses limitatives.",
-                    "section4_title": "Synthèse et Recommandations du Greffier",
-                    "section4_content": "Le dossier montre une asymétrie de décision modérée. Il est recommandé de consolider les éléments de preuve présentés par le demandeur pour convaincre les juges les plus formalistes."
+                    "section3_title": "3. Dynamiques Comportementales & Points de Bascule (Puits de Potentiel)",
+                    "section3_content": "Le Demandeur requiert l'application ferme de la loi, tandis que la Défense s'attache à instiller un doute raisonnable. Les points de bascule et puits de potentiel identifiés influencent grandement la décision du tribunal.",
+                    "section4_title": "4. Recommandations d'Arbitrage & Justification du Règlement à l'Amiable",
+                    "section4_content": "Il est recommandé de consolider les éléments de preuve présentés par le demandeur. La justification mathématique d'un arbitrage ou d'un règlement amiable dépend du taux de succès et de l'exposition financière."
                 }
             else:
                 report_data = {
-                    "title": "Rapport officiel du Greffier",
-                    "summary": f"Analyse statistique de {iterations} procès criminels/civils. Taux d'acquittement mesuré : {win_rate}%.",
-                    "section1_title": "Rappel des Faits et Débats",
+                    "title": "Rapport Stratégique de Matérialité et d'Aléa Judiciaire pour la Défense",
+                    "summary": f"Analyse prédictive de risque de bilan par simulation de Monte-Carlo. Taux de succès estimé : {win_rate}%.",
+                    "section1_title": "1. Cartographie Factuelle & Diagnostic de Matérialité",
                     "section1_content": f"L'affaire repose sur les éléments décrits dans le dossier de procès : {simulation_requirement[:500]}...",
-                    "section2_title": "Analyse Statistique du Procès",
-                    "section2_content": f"La simulation de Monte-Carlo montre un taux de relaxe/acquittement stable à {win_rate}%. Cette variation s'explique par les différentes sensibilités jurisprudentielles et de personnalité des juges simulés.",
-                    "section3_title": "Synthèse des Arguments Clés",
-                    "section3_content": "Le Procureur requiert l'application ferme de la loi au nom de l'ordre public, tandis que la Défense s'attache à instiller un doute raisonnable basé sur les circonstances du dossier.",
-                    "section4_title": "Synthèse et Recommandations du Greffier",
-                    "section4_content": "Le dossier montre une asymétrie de décision modérée. Il est recommandé de renforcer les preuves présentées pour réduire l'incertitude judiciaire."
+                    "section2_title": "2. Modélisation de l'Aléa Judiciaire & Risque de Bilan (Monte-Carlo)",
+                    "section2_content": f"La simulation de Monte-Carlo montre un taux de succès stable à {win_rate}% pour la défense. Cette variation s'explique par les différentes sensibilités jurisprudentielles et de personnalité des juges simulés.",
+                    "section3_title": "3. Dynamiques Comportementales & Points de Bascule (Puits de Potentiel)",
+                    "section3_content": "L'accusation/demandeur requiert l'application ferme de la loi, tandis que la Défense s'attache à instiller un doute raisonnable. Les points de bascule et puits de potentiel identifiés influencent grandement la décision du tribunal.",
+                    "section4_title": "4. Recommandations d'Arbitrage & Justification du Règlement à l'Amiable",
+                    "section4_content": "Il est recommandé de consolider les éléments de preuve présentés par la défense. La justification mathématique d'un arbitrage ou d'un règlement amiable dépend du taux de succès et de l'exposition financière."
                 }
 
         title = report_data.get("title", "Rapport officiel du Greffier")

@@ -1407,19 +1407,19 @@ class ReportAgent:
                 ]
             else:
                 side_label = "le Demandeur" if client_side == "plaintiff" else "la Défense"
-                title = f"Rapport Officiel du Greffier : Analyse Prédictive et Orientations Stratégiques pour {side_label}"
-                summary = f"Analyse statistique de procès criminels/civils. Taux de succès mesuré : {client_win_rate}%."
+                title = f"Rapport Stratégique de Matérialité et d'Aléa Judiciaire pour {side_label}"
+                summary = f"Analyse prédictive de risque de bilan par simulation de Monte-Carlo. Taux de succès estimé : {client_win_rate}%."
                 sections_desc = [
-                    ("1. Rappel des Faits et Cartographie des Thèses Adversaires", 
-                     "Analyse approfondie et détaillée des faits de l'affaire, des forces et faiblesses initiales du demandeur et de la défense."),
-                    ("2. Analyse Statistique de l'Incertitude Judiciaire (Monte-Carlo)", 
-                     "Comment la simulation de Monte-Carlo a modélisé l'impact des profils de juges sur l'issue du procès."),
-                    ("3. Débats à l'Audience & Points de Bascule (Triggers Cognitifs)", 
-                     "Quels ont été les arguments décisifs (points de bascule) constatés pendant les simulations pour la conviction du juge."),
-                    ("4. Recommandations Tactiques et Feuille de Route pour l'Avocat", 
-                     "Recommandations tactiques pour l'avocat face aux profils de juges, consolidation de preuves et opportunité de règlement."),
-                    ("5. Résumé des discussions de la simulation",
-                     "Synthèse chronologique des débats à l'audience lors des rounds de simulation, résumant les arguments clés des parties (Avocat Bob, Procureur/Avocat adverse Voisin) et l'évolution des états cognitifs des agents.")
+                    ("1. Cartographie Factuelle & Diagnostic de Matérialité", 
+                     "Analyse approfondie des faits de l'affaire, force probante des pièces et forces/faiblesses initiales des thèses en présence (incluant les connecteurs MCP et le secret professionnel)."),
+                    ("2. Modélisation de l'Aléa Judiciaire & Risque de Bilan (Monte-Carlo)", 
+                     "Résilience des moyens de droit face aux pièces adverses, évaluation statistique des chances de succès et de l'exposition financière (incluant la matrice graphique des risques)."),
+                    ("3. Dynamiques Comportementales & Points de Bascule (Puits de Potentiel)", 
+                     "Modélisation des trajectoires cognitives et d'inertie du tribunal et des parties adverses. Identification des points de blocage ou d'ouverture stratégique."),
+                    ("4. Recommandations d'Arbitrage & Justification du Règlement à l'Amiable", 
+                     "Options stratégiques, opportunités de pivot et justification mathématique de l'intérêt d'une transaction ou règlement à l'amiable hors cour face à un procès incertain."),
+                    ("5. Journal d'Audience & Introspection Cognitive de la Simulation",
+                     "Synthèse chronologique des débats simulés et historique de l'évolution des tensions cognitives (PIE) des acteurs du procès.")
                 ]
                 
             sections = [ReportSection(title=s[0], content="") for s in sections_desc]

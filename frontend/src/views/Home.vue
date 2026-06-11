@@ -10,6 +10,9 @@
         <router-link to="/research" class="nav-item-link">
           📚 {{ $t('nav.researchPaper') }}
         </router-link>
+        <router-link to="/financial-guide" class="nav-item-link">
+          ⚖️ {{ $t('nav.financialGuide') }}
+        </router-link>
         <button 
           v-if="session" 
           class="signout-btn" 

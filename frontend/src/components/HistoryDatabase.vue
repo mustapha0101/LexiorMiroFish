@@ -276,6 +276,15 @@
                 <span class="btn-text">{{ $t('history.step2Button') }}</span>
               </button>
               <button 
+                class="modal-btn btn-run" 
+                @click="goToActiveSimulation(selectedProject, true)"
+                :disabled="!selectedProject.simulation_id"
+              >
+                <span class="btn-step">Step3</span>
+                <span class="btn-icon">▲</span>
+                <span class="btn-text">{{ $t('history.step3Button') }}</span>
+              </button>
+              <button 
                 class="modal-btn btn-report" 
                 @click="goToReport"
                 :disabled="!selectedProject.report_id"
@@ -1441,6 +1450,7 @@ onMounted(() => {
 
 .modal-btn.btn-project .btn-icon { color: #2563EB; }
 .modal-btn.btn-simulation .btn-icon { color: #D97706; }
+.modal-btn.btn-run .btn-icon { color: #8B5CF6; }
 .modal-btn.btn-report .btn-icon { color: #059669; }
 
 .modal-playback-hint {

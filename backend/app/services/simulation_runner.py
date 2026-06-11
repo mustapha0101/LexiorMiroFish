@@ -2227,7 +2227,11 @@ class SimulationRunner:
                         if state_def.negative_interactions_count == 0:
                             state_def.mood = "Neutre"
 
-                    if res.get("is_defense_win", False):
+                    # Determine winner-specific reflections
+                    is_defense_win = res.get("is_defense_win", False)
+                    
+                    # 1. Update beliefs and tensions based on winner
+                    if is_defense_win:
                         p_coupable = state_judge.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.5)
                         new_p_coupable = max(0.10, p_coupable - 0.15)
                         state_judge.beliefs["culpabilite_accuse"] = {"coupable": new_p_coupable, "innocent": 1.0 - new_p_coupable}
@@ -2235,15 +2239,38 @@ class SimulationRunner:
                         state_judge.tensions["procedure_vs_equite"] = max(0.20, state_judge.tensions.get("procedure_vs_equite", 0.5) - 0.08)
                         state_def.beliefs["culpabilite_accuse"] = {"coupable": 0.05, "innocent": 0.95}
                         
-                        state_judge.meta_narrative = (
+                        # Default values in case dynamic generation fails
+                        j_meta = (
                             f"Les arguments de la défense m'ont convaincu de prononcer un verdict de relaxe au round {round_idx}."
                             if litigation_type == "criminal" else
                             f"Les arguments de la défense m'ont convaincu de rejeter la demande pour vice caché au round {round_idx}."
                         )
-                        state_judge.recent_reflection = (
+                        j_refl = (
                             "L'équité naturelle impose le bénéfice du doute en l'absence de preuves matérielles incontestables."
                             if litigation_type == "criminal" else
                             "L'acheteur n'a pas démontré avoir exercé la diligence raisonnable requise lors de l'acquisition."
+                        )
+                        
+                        p_meta = (
+                            f"Revers tactique au round {round_idx}. Les arguments de la défense ont ébranlé notre position."
+                            if litigation_type == "criminal" else
+                            f"Revers au round {round_idx}. Les éléments prouvant le vice caché doivent être présentés avec plus de rigueur."
+                        )
+                        p_refl = (
+                            "Je dois recentrer ma plaidoirie sur des éléments factuels incontestables au prochain round."
+                            if litigation_type == "criminal" else
+                            "Le fardeau de la preuve repose sur nous ; nous devons mieux démontrer le caractère grave et antérieur du défaut."
+                        )
+                        
+                        d_meta = (
+                            f"Succès tactique au round {round_idx}. Le juge a accueilli favorablement nos doutes raisonnables."
+                            if litigation_type == "criminal" else
+                            f"Avantage à la défense au round {round_idx}. Notre contestation sur la diligence raisonnable a porté ses fruits."
+                        )
+                        d_refl = (
+                            "Nous avons démontré l'insuffisance des preuves de l'accusation."
+                            if litigation_type == "criminal" else
+                            "L'acheteur a procédé à l'achat en pleine connaissance de cause ou sans l'inspection pré-achat requise."
                         )
                     else:
                         p_coupable = state_judge.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.5)
@@ -2252,50 +2279,128 @@ class SimulationRunner:
                         
                         state_judge.tensions["procedure_vs_equite"] = min(0.80, state_judge.tensions.get("procedure_vs_equite", 0.5) + 0.08)
                         
-                        state_judge.meta_narrative = (
+                        # Default values in case dynamic generation fails
+                        j_meta = (
                             f"L'accusation a démontré de manière probante les éléments constitutifs de l'infraction au round {round_idx}."
                             if litigation_type == "criminal" else
                             f"Le demandeur a démontré de manière prépondérante la présence d'un vice caché au round {round_idx}."
                         )
                         
-                        # Dynamically customize recent reflections based on the litigation context to avoid hallucinations (e.g. server issues vs water backup)
+                        # Context-aware fallback reflections for Juge & Procureur (Civil)
                         context_lower = context.lower()
-                        is_water_plumbing = any(kw in context_lower for kw in ["eau", "refoulement", "plomberie", "plombier", "tuyau", "tuyauterie", "drain", "inondation", "dégât", "syndicat", "copropriété"])
-                        is_server_it = any(kw in context_lower for kw in ["serveur", "hébergement", "logiciel", "informatique", "cloud", "panne"])
+                        # Strict plumbing checks (avoid matching simple 'drain' which could be roof drain, or 'tuyau' on its own)
+                        is_water_plumbing = any(kw in context_lower for kw in ["refoulement de tuyauterie", "défaut de plomberie", "refoulement d'égout", "tuyau d'égout", "refoulement de drain", "canalisations d'eau", "tuyauterie interne"])
+                        is_roof_construction = any(kw in context_lower for kw in ["toiture", "toit", "bardeaux", "charpente", "entrepreneur de toiture", "travaux de toiture"])
+                        is_server_it = any(kw in context_lower for kw in ["serveur d'hébergement", "hébergement web", "panne de serveur", "logiciel saas", "infrastructure cloud"])
                         
                         if is_water_plumbing:
                             civil_judge_reflection = "Le refoulement d'eau récurrent ou le défaut d'entretien de la tuyauterie constitue un vice caché rendant le bien impropre à son usage."
                             civil_proc_reflection = "J'ai mis en évidence le défaut d'entretien des parties communes et les refoulements pour prouver la faute des défendeurs."
+                        elif is_roof_construction:
+                            civil_judge_reflection = "Le manquement à l'obligation de résultat ou au devoir d'information de l'entrepreneur lors des travaux de toiture compromet l'étanchéité de l'immeuble."
+                            civil_proc_reflection = "J'ai démontré que l'entrepreneur a installé la toiture sur un support pourri en violation de son devoir de conseil (art. 2100 C.c.Q.)."
                         elif is_server_it:
                             civil_judge_reflection = "Le défaut de capacité des serveurs constitue un vice caché rendant le bien impropre à son usage."
                             civil_proc_reflection = "J'ai mis en évidence le défaut critique des serveurs pour prouver le manquement contractuel."
                         else:
-                            civil_judge_reflection = "Le défaut technique ou le vice caché affectant le bien le rend impropre à l'usage auquel il est destiné."
-                            civil_proc_reflection = "J'ai mis en évidence le vice caché technique pour prouver la responsabilité du défendeur."
+                            is_vice_cache = "vice" in context_lower or "caché" in context_lower
+                            if is_vice_cache:
+                                civil_judge_reflection = "Le défaut technique ou le vice caché affectant le bien le rend impropre à l'usage auquel il est destiné."
+                                civil_proc_reflection = "J'ai mis en évidence le vice caché technique pour prouver la responsabilité du défendeur."
+                            else:
+                                civil_judge_reflection = "Le manquement aux obligations contractuelles ou légales commis par la partie défenderesse cause un préjudice direct au demandeur."
+                                civil_proc_reflection = "J'ai mis en évidence les manquements et l'inexécution des obligations pour établir la responsabilité civile de la défenderesse."
 
-                        state_judge.recent_reflection = (
+                        j_refl = (
                             "Le respect de la loi et la répression des infractions guident ma décision."
                             if litigation_type == "criminal" else
                             civil_judge_reflection
                         )
                         
-                    state_proc.meta_narrative = (
-                        f"Rétrécissement des options de la défense au round {round_idx}. Le taux de culpabilité présumé reste élevé."
-                        if litigation_type == "criminal" else
-                        f"La démonstration de la responsabilité progresse au round {round_idx}. Les éléments factuels confirment le vice caché."
-                    )
-                    state_proc.recent_reflection = (
-                        "Ma plaidoirie s'est concentrée sur la matérialité des faits et l'application de la jurisprudence."
-                        if litigation_type == "criminal" else
-                        civil_proc_reflection
-                    )
+                        p_meta = (
+                            f"Rétrécissement des options de la défense au round {round_idx}. Le taux de culpabilité présumé reste élevé."
+                            if litigation_type == "criminal" else
+                            f"La démonstration de la responsabilité progresse au round {round_idx}. Les éléments factuels confirment le vice caché."
+                        )
+                        p_refl = (
+                            "Ma plaidoirie s'est concentrée sur la matérialité des faits et l'application de la jurisprudence."
+                            if litigation_type == "criminal" else
+                            civil_proc_reflection
+                        )
+                        
+                        d_meta = f"Rétrospection après le round {round_idx}. La tension délibérative reste palpable."
+                        d_refl = (
+                            "J'ai cherché à introduire le doute raisonnable face aux affirmations du procureur."
+                            if litigation_type == "criminal" else
+                            "J'ai soutenu que l'acheteur n'a pas procédé à la diligence raisonnable minimale requise."
+                        )
                     
-                    state_def.meta_narrative = f"Rétrospection après le round {round_idx}. La tension délibérative reste palpable."
-                    state_def.recent_reflection = (
-                        "J'ai cherché à introduire le doute raisonnable face aux affirmations du procureur."
-                        if litigation_type == "criminal" else
-                        "J'ai soutenu que l'acheteur n'a pas procédé à la diligence raisonnable minimale requise."
-                    )
+                    # 2. Try to generate metacognition dynamically via CognitiveEngine
+                    dynamic_success = False
+                    try:
+                        from app.services.cognitive_engine import CognitiveEngine
+                        engine = CognitiveEngine()
+                        
+                        # Generate for Judge
+                        judge_meta_res = engine.generate_legal_courtroom_metacognition(
+                            agent_name="Le Juge",
+                            state=state_judge,
+                            round_idx=round_idx,
+                            prosecutor_speech=prosecutor_speech,
+                            defense_speech=defense_speech,
+                            verdict=juge_verdict,
+                            clerk_analysis=clerk_analysis
+                        )
+                        
+                        # Generate for Prosecutor/Plaintiff
+                        proc_meta_res = engine.generate_legal_courtroom_metacognition(
+                            agent_name=agent1_name,
+                            state=state_proc,
+                            round_idx=round_idx,
+                            prosecutor_speech=prosecutor_speech,
+                            defense_speech=defense_speech,
+                            verdict=juge_verdict,
+                            clerk_analysis=clerk_analysis
+                        )
+                        
+                        # Generate for Defense
+                        def_meta_res = engine.generate_legal_courtroom_metacognition(
+                            agent_name="Avocat de la Défense",
+                            state=state_def,
+                            round_idx=round_idx,
+                            prosecutor_speech=prosecutor_speech,
+                            defense_speech=defense_speech,
+                            verdict=juge_verdict,
+                            clerk_analysis=clerk_analysis
+                        )
+                        
+                        if judge_meta_res and "recent_reflection" in judge_meta_res:
+                            state_judge.recent_reflection = judge_meta_res["recent_reflection"]
+                            state_judge.meta_narrative = judge_meta_res.get("meta_narrative", j_meta)
+                            
+                        if proc_meta_res and "recent_reflection" in proc_meta_res:
+                            state_proc.recent_reflection = proc_meta_res["recent_reflection"]
+                            state_proc.meta_narrative = proc_meta_res.get("meta_narrative", p_meta)
+                            
+                        if def_meta_res and "recent_reflection" in def_meta_res:
+                            state_def.recent_reflection = def_meta_res["recent_reflection"]
+                            state_def.meta_narrative = def_meta_res.get("meta_narrative", d_meta)
+                            
+                        dynamic_success = True
+                        logger.info(f"Dynamic metacognition successfully generated for round {round_idx}")
+                    except Exception as cog_err:
+                        logger.error(f"Error generating dynamic legal metacognition: {cog_err}. Falling back to default templates.")
+                    
+                    # 3. Fallback to templates if dynamic generation failed
+                    if not dynamic_success:
+                        state_judge.meta_narrative = j_meta
+                        state_judge.recent_reflection = j_refl
+                        
+                        state_proc.meta_narrative = p_meta
+                        state_proc.recent_reflection = p_refl
+                        
+                        state_def.meta_narrative = d_meta
+                        state_def.recent_reflection = d_refl
                     
                     CognitiveMemoryService.save_agent_state(simulation_id, state_judge)
                     CognitiveMemoryService.save_agent_state(simulation_id, state_proc)

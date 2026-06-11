@@ -2166,12 +2166,26 @@ const renderRiskQuadrantSVG = () => {
   const xAxisLabel = isCivil ? "Probabilité de perte" : "Probabilité d'occurrence";
   const yAxisLabel = isCivil ? "Impact financier potentiel" : "Coût estimé du sinistre";
   
+  // Calculate dynamic X (loss probability) based on Monte-Carlo results
+  const rate = winRateDisplay.value ?? 50;
+  const lossProb = 100 - rate; // Probability of loss
+  
+  // Calculate dynamic Y (financial impact scale) based on estimated cost
+  let maxCost = 250000;
+  if (legalResults.value?.estimated_cost) {
+    maxCost = legalResults.value.estimated_cost;
+  }
+  let roundedMax = Math.ceil(maxCost / 50000) * 50000;
+  if (roundedMax < 50000) roundedMax = 50000;
+  
+  const coreY = Math.min(85, Math.max(20, (maxCost / roundedMax) * 80));
+  
   const items = isCivil ? [
-    { name: "Obligation de résultat", x: 80, y: 80, r: 22, color: "#EAB308", textYOffset: -26 },
-    { name: "Devoir d'information", x: 70, y: 45, r: 18, color: "#94A3B8", textYOffset: -22 },
-    { name: "Frais de justice", x: 90, y: 15, r: 14, color: "#3B82F6", textYOffset: -18 },
-    { name: "Dommages punitifs", x: 15, y: 65, r: 16, color: "#EC4899", textYOffset: -20 },
-    { name: "Risque de réputation", x: 45, y: 25, r: 11, color: "#F97316", textYOffset: -15 }
+    { name: "Obligation de résultat", x: Math.min(95, Math.max(5, lossProb + 5)), y: coreY, r: 20, color: "#EAB308", textYOffset: -25 },
+    { name: "Devoir d'information", x: Math.min(95, Math.max(5, lossProb - 10)), y: Math.max(10, coreY * 0.7), r: 16, color: "#64748B", textYOffset: -21 },
+    { name: "Frais de justice", x: Math.min(95, Math.max(5, lossProb + 15)), y: Math.min(95, Math.max(10, (15000 / roundedMax) * 100)), r: 14, color: "#3B82F6", textYOffset: -18 },
+    { name: "Dommages punitifs", x: Math.min(95, Math.max(5, lossProb - 35)), y: Math.max(10, coreY * 0.45), r: 15, color: "#EC4899", textYOffset: -20 },
+    { name: "Risque de réputation", x: Math.min(95, Math.max(5, lossProb - 15)), y: Math.max(10, coreY * 0.3), r: 12, color: "#F97316", textYOffset: -16 }
   ] : [
     { name: "Denial of service", x: 20, y: 80, r: 22, color: "#FBBF24", textYOffset: -26 },
     { name: "Ransomware", x: 40, y: 34, r: 18, color: "#9CA3AF", textYOffset: -22 },
@@ -2180,7 +2194,19 @@ const renderRiskQuadrantSVG = () => {
     { name: "Imposter websites", x: 10, y: 8, r: 8, color: "#60A5FA", textYOffset: -12 }
   ];
 
-  const yLabels = isCivil ? ["$-", "$50k", "$100k", "$150k", "$200k", "$250k"] : ["$-", "$5k", "$10k", "$15k", "$20k", "$25k"];
+  const yLabels = [];
+  if (isCivil) {
+    const step = roundedMax / 5;
+    for (let i = 0; i <= 5; i++) {
+      const val = i * step;
+      if (val === 0) yLabels.push("$-");
+      else if (val >= 1000000) yLabels.push(`$${(val / 1000000).toFixed(1)}M`);
+      else if (val >= 1000) yLabels.push(`$${Math.round(val / 1000)}k`);
+      else yLabels.push(`$${Math.round(val)}`);
+    }
+  } else {
+    yLabels.push("$-", "$5k", "$10k", "$15k", "$20k", "$25k");
+  }
   const xLabels = ["0%", "20%", "40%", "60%", "80%", "100%"];
 
   let svg = `
@@ -2243,8 +2269,8 @@ const renderRiskQuadrantSVG = () => {
     const cx = 70 + (item.x / 100) * 400;
     const cy = 440 - (item.y / 100) * 400;
     svg += `<circle cx="${cx}" cy="${cy + 2}" r="${item.r}" fill="#000000" fill-opacity="0.08" />`;
-    svg += `<circle cx="${cx}" cy="${cy}" r="${item.r}" fill="${item.color}" fill-opacity="0.85" stroke="#ffffff" stroke-width="2" style="cursor: pointer; transition: all 0.2s;" />`;
-    svg += `<text x="${cx}" y="${cy + item.textYOffset}" font-size="10.5" font-weight="700" fill="#1e293b" text-anchor="middle" style="pointer-events: none;">${item.name}</text>`;
+    svg += `<circle cx="${cx}" cy="${cy}" r="${item.r}" fill="${item.color}" fill-opacity="0.85" stroke="#ffffff" stroke-width="2" style="cursor: pointer; transition: all 0.3s ease; filter: drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.1));" onmouseover="this.setAttribute('fill-opacity', '1'); this.setAttribute('r', '${item.r + 3}');" onmouseout="this.setAttribute('fill-opacity', '0.85'); this.setAttribute('r', '${item.r}');" />`;
+    svg += `<text x="${cx}" y="${cy + item.textYOffset}" font-size="11" font-weight="700" fill="#0f172a" text-anchor="middle" style="pointer-events: none; text-shadow: 0 1px 2px rgba(255,255,255,0.8);">${item.name}</text>`;
   });
 
   svg += `

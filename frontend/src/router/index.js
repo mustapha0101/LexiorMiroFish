@@ -54,6 +54,11 @@ const routes = [
     name: 'Interaction',
     component: InteractionView,
     props: true
+  },
+  {
+    path: '/financial-guide',
+    name: 'FinancialGuide',
+    component: () => import('../views/FinancialGuide.vue')
   }
 ]
 
@@ -63,8 +68,8 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from, next) => {
-  // Allow public access ONLY to the Research page. All other pages require auth.
-  if (to.name !== 'Research') {
+  // Allow public access ONLY to the Research and FinancialGuide pages. All other pages require auth.
+  if (to.name !== 'Research' && to.name !== 'FinancialGuide') {
     let session = null
     if (supabase) {
       try {
