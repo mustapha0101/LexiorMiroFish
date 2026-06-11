@@ -1982,6 +1982,9 @@ class ReportAgent:
                     section_index=section_num
                 )
                 
+                if section_num == 2 and "[RISK_QUADRANT_CHART]" not in section_content:
+                    section_content += "\n\n[RISK_QUADRANT_CHART]"
+                
                 section.content = section_content
                 generated_sections.append(f"## {section.title}\n\n{section_content}")
 

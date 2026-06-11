@@ -2159,11 +2159,112 @@ const truncateText = (text, maxLen) => {
   return text.substring(0, maxLen) + '...'
 }
 
+const renderRiskQuadrantSVG = () => {
+  const isCivil = props.projectData?.simulation_mode === 'legal' || props.result?.run_mode === 'courtroom';
+  
+  const title = isCivil ? "Matrice des Risques Judiciaires" : "Inherent Risk by Threat";
+  const xAxisLabel = isCivil ? "Probabilité de perte" : "Probabilité d'occurrence";
+  const yAxisLabel = isCivil ? "Impact financier potentiel" : "Coût estimé du sinistre";
+  
+  const items = isCivil ? [
+    { name: "Obligation de résultat", x: 80, y: 80, r: 22, color: "#EAB308", textYOffset: -26 },
+    { name: "Devoir d'information", x: 70, y: 45, r: 18, color: "#94A3B8", textYOffset: -22 },
+    { name: "Frais de justice", x: 90, y: 15, r: 14, color: "#3B82F6", textYOffset: -18 },
+    { name: "Dommages punitifs", x: 15, y: 65, r: 16, color: "#EC4899", textYOffset: -20 },
+    { name: "Risque de réputation", x: 45, y: 25, r: 11, color: "#F97316", textYOffset: -15 }
+  ] : [
+    { name: "Denial of service", x: 20, y: 80, r: 22, color: "#FBBF24", textYOffset: -26 },
+    { name: "Ransomware", x: 40, y: 34, r: 18, color: "#9CA3AF", textYOffset: -22 },
+    { name: "Phishing", x: 80, y: 16, r: 14, color: "#60A5FA", textYOffset: -18 },
+    { name: "Data leak (email)", x: 21, y: 8, r: 12, color: "#F97316", textYOffset: -16 },
+    { name: "Imposter websites", x: 10, y: 8, r: 8, color: "#60A5FA", textYOffset: -12 }
+  ];
+
+  const yLabels = isCivil ? ["$-", "$50k", "$100k", "$150k", "$200k", "$250k"] : ["$-", "$5k", "$10k", "$15k", "$20k", "$25k"];
+  const xLabels = ["0%", "20%", "40%", "60%", "80%", "100%"];
+
+  let svg = `
+  <div class="quadrant-container" style="display: flex; flex-direction: column; align-items: center; margin: 30px auto; background: #ffffff; border-radius: 12px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; width: 100%; max-width: 440px;">
+    <h4 style="margin: 0 0 16px 0; font-family: 'Merriweather', serif; color: #002d52; font-size: 15px; font-weight: 700; text-align: center;">${title}</h4>
+    <svg viewBox="0 0 520 520" width="100%" height="100%" style="font-family: 'DM Sans', sans-serif; overflow: visible;">
+      <!-- Grid Lines -->
+  `;
+
+  for (let i = 0; i <= 5; i++) {
+    const pct = i / 5;
+    const gridX = 70 + pct * 400;
+    const gridY = 440 - pct * 400;
+    svg += `<line x1="${gridX}" y1="40" x2="${gridX}" y2="440" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2 2" />`;
+    svg += `<line x1="70" y1="${gridY}" x2="470" y2="${gridY}" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2 2" />`;
+  }
+
+  const qLabels = isCivil ? [
+    { text: "Transférer", x: 170, y: 140 },
+    { text: "Éviter", x: 370, y: 140 },
+    { text: "Accepter", x: 170, y: 340 },
+    { text: "Atténuer", x: 370, y: 340 }
+  ] : [
+    { text: "Transfer", x: 170, y: 140 },
+    { text: "Avoid", x: 370, y: 140 },
+    { text: "Accept", x: 170, y: 340 },
+    { text: "Mitigate", x: 370, y: 340 }
+  ];
+
+  qLabels.forEach(q => {
+    svg += `<text x="${q.x}" y="${q.y}" font-size="26" font-weight="700" fill="#e2e8f0" fill-opacity="0.7" text-anchor="middle" dominant-baseline="middle">${q.text}</text>`;
+  });
+
+  svg += `
+    <line x1="60" y1="240" x2="480" y2="240" stroke="#94a3b8" stroke-width="4" stroke-linecap="round" />
+    <polygon points="60,240 70,234 70,246" fill="#94a3b8" />
+    <polygon points="480,240 470,234 470,246" fill="#94a3b8" />
+    
+    <line x1="270" y1="450" x2="270" y2="30" stroke="#94a3b8" stroke-width="4" stroke-linecap="round" />
+    <polygon points="270,450 264,440 276,440" fill="#94a3b8" />
+    <polygon points="270,30 264,40 276,40" fill="#94a3b8" />
+  `;
+
+  for (let i = 0; i <= 5; i++) {
+    const yVal = 440 - i * 80;
+    svg += `<text x="50" y="${yVal + 4}" font-size="11" font-weight="600" fill="#64748b" text-anchor="end">${yLabels[i]}</text>`;
+  }
+
+  for (let i = 0; i <= 5; i++) {
+    const xVal = 70 + i * 80;
+    svg += `<text x="${xVal}" y="470" font-size="11" font-weight="600" fill="#64748b" text-anchor="middle">${xLabels[i]}</text>`;
+  }
+
+  svg += `
+    <text x="270" y="505" font-size="12" font-weight="700" fill="#475569" text-anchor="middle">${xAxisLabel}</text>
+    <text x="12" y="240" font-size="12" font-weight="700" fill="#475569" text-anchor="middle" transform="rotate(-90,12,240)">${yAxisLabel}</text>
+  `;
+
+  items.forEach(item => {
+    const cx = 70 + (item.x / 100) * 400;
+    const cy = 440 - (item.y / 100) * 400;
+    svg += `<circle cx="${cx}" cy="${cy + 2}" r="${item.r}" fill="#000000" fill-opacity="0.08" />`;
+    svg += `<circle cx="${cx}" cy="${cy}" r="${item.r}" fill="${item.color}" fill-opacity="0.85" stroke="#ffffff" stroke-width="2" style="cursor: pointer; transition: all 0.2s;" />`;
+    svg += `<text x="${cx}" y="${cy + item.textYOffset}" font-size="10.5" font-weight="700" fill="#1e293b" text-anchor="middle" style="pointer-events: none;">${item.name}</text>`;
+  });
+
+  svg += `
+    </svg>
+  </div>
+  `;
+  return svg;
+};
+
 const renderMarkdown = (content) => {
   if (!content) return ''
   
+  // Replace the placeholder tag with SVG quadrant chart
+  let processedContent = content;
+  if (processedContent.includes('[RISK_QUADRANT_CHART]')) {
+    processedContent = processedContent.replace('[RISK_QUADRANT_CHART]', renderRiskQuadrantSVG());
+  }
+
   // 去掉开头的二级标题（## xxx），因为章节标题已在外层显示
-  let processedContent = content.replace(/^##\s+.+\n+/, '')
+  processedContent = processedContent.replace(/^##\s+.+\n+/, '')
   
   // 处理代码块
   let html = processedContent.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>')

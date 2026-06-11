@@ -431,6 +431,146 @@ class SimulationPDFExporter:
 
 class ReportPDFExporter:
     @classmethod
+    def _draw_risk_quadrant(cls, page, x, y, width, height, is_civil=True):
+        """
+        Dessine un magnifique cadran vectoriel de risques (quadrant) directement sur la page du PDF.
+        """
+        import fitz
+        # Dimensions du graphique lui-même
+        chart_w = 320
+        chart_h = 320
+        chart_x = x + (width - chart_w) // 2
+        chart_y = y + 20
+        
+        center_x = chart_x + chart_w // 2
+        center_y = chart_y + chart_h // 2
+        
+        # 1. Dessiner le cadre extérieur
+        page.draw_rect(
+            fitz.Rect(chart_x, chart_y, chart_x + chart_w, chart_y + chart_h),
+            color=(0.8, 0.8, 0.8),
+            width=1.0
+        )
+        
+        # 2. Dessiner la grille légère (tous les 10%)
+        for i in range(1, 10):
+            pct = i / 10.0
+            gx = chart_x + pct * chart_w
+            gy = chart_y + pct * chart_h
+            # Lignes verticales
+            page.draw_line((gx, chart_y), (gx, chart_y + chart_h), color=(0.94, 0.94, 0.94), width=0.5)
+            # Lignes horizontales
+            page.draw_line((chart_x, gy), (chart_x + chart_w, gy), color=(0.94, 0.94, 0.94), width=0.5)
+            
+        # 3. Écrire les étiquettes de fond des quadrants (Transfert, Éviter, Accepter, Atténuer)
+        # On utilise des couleurs grises très claires
+        quad_labels = [
+            ("Transférer" if is_civil else "Transfer", center_x - 80, center_y - 80),
+            ("Éviter" if is_civil else "Avoid", center_x + 80, center_y - 80),
+            ("Accepter" if is_civil else "Accept", center_x - 80, center_y + 80),
+            ("Atténuer" if is_civil else "Mitigate", center_x + 80, center_y + 80)
+        ]
+        
+        for text, tx, ty in quad_labels:
+            # Insérer le texte
+            page.insert_text(
+                (tx - 35, ty + 5),
+                text,
+                fontsize=16,
+                color=(0.82, 0.85, 0.90),
+                fontname="helvetica-bold"
+            )
+            
+        # 4. Dessiner les axes principaux avec flèches
+        # Axe horizontal (Y = center_y)
+        page.draw_line((chart_x - 10, center_y), (chart_x + chart_w + 10, center_y), color=(0.75, 0.75, 0.75), width=2.0)
+        # Flèche gauche
+        page.draw_line((chart_x - 10, center_y), (chart_x - 5, center_y - 4), color=(0.75, 0.75, 0.75), width=2.0)
+        page.draw_line((chart_x - 10, center_y), (chart_x - 5, center_y + 4), color=(0.75, 0.75, 0.75), width=2.0)
+        # Flèche droite
+        page.draw_line((chart_x + chart_w + 10, center_y), (chart_x + chart_w + 5, center_y - 4), color=(0.75, 0.75, 0.75), width=2.0)
+        page.draw_line((chart_x + chart_w + 10, center_y), (chart_x + chart_w + 5, center_y + 4), color=(0.75, 0.75, 0.75), width=2.0)
+        
+        # Axe vertical (X = center_x)
+        page.draw_line((center_x, chart_y + chart_h + 10), (center_x, chart_y - 10), color=(0.75, 0.75, 0.75), width=2.0)
+        # Flèche haut
+        page.draw_line((center_x, chart_y - 10), (center_x - 4, chart_y - 5), color=(0.75, 0.75, 0.75), width=2.0)
+        page.draw_line((center_x, chart_y - 10), (center_x + 4, chart_y - 5), color=(0.75, 0.75, 0.75), width=2.0)
+        # Flèche bas
+        page.draw_line((center_x, chart_y + chart_h + 10), (center_x - 4, chart_y + chart_h + 5), color=(0.75, 0.75, 0.75), width=2.0)
+        page.draw_line((center_x, chart_y + chart_h + 10), (center_x + 4, chart_y + chart_h + 5), color=(0.75, 0.75, 0.75), width=2.0)
+
+        # 5. Dessiner les graduations et textes d'axes
+        y_vals = ["$-", "$50k", "$100k", "$150k", "$200k", "$250k"] if is_civil else ["$-", "$5k", "$10k", "$15k", "$20k", "$25k"]
+        for i in range(6):
+            gy = chart_y + chart_h - (i * chart_h // 5)
+            page.insert_text(
+                (chart_x - 38, gy + 3),
+                y_vals[i],
+                fontsize=8,
+                color=(0.4, 0.4, 0.4),
+                fontname="helvetica"
+            )
+            
+        x_pcts = ["0%", "20%", "40%", "60%", "80%", "100%"]
+        for i in range(6):
+            gx = chart_x + (i * chart_w // 5)
+            page.insert_text(
+                (gx - 8, chart_y + chart_h + 14),
+                x_pcts[i],
+                fontsize=8,
+                color=(0.4, 0.4, 0.4),
+                fontname="helvetica"
+            )
+            
+        # Titre des axes
+        x_axis_title = "Probabilite de perte" if is_civil else "Probabilite d'occurrence"
+        y_axis_title = "Impact financier potentiel" if is_civil else "Cout estime"
+        
+        page.insert_text(
+            (center_x - 40, chart_y + chart_h + 28),
+            x_axis_title,
+            fontsize=9,
+            color=(0.2, 0.2, 0.2),
+            fontname="helvetica-bold"
+        )
+        
+        page.insert_text(
+            (chart_x - 45, chart_y - 18),
+            y_axis_title,
+            fontsize=9,
+            color=(0.2, 0.2, 0.2),
+            fontname="helvetica-bold"
+        )
+
+        # 6. Dessiner les bulles de risque
+        items = [
+            ("Obligation de resultat" if is_civil else "Denial of service", 80 if is_civil else 20, 80 if is_civil else 80, 22, (0.96, 0.75, 0.06)),
+            ("Devoir d'information" if is_civil else "Ransomware", 70 if is_civil else 40, 45 if is_civil else 34, 18, (0.6, 0.6, 0.6)),
+            ("Frais de justice" if is_civil else "Phishing", 90 if is_civil else 80, 15 if is_civil else 16, 14, (0.23, 0.51, 0.96)),
+            ("Dommages punitifs" if is_civil else "Data leak (email)", 15 if is_civil else 21, 65 if is_civil else 8, 16, (0.93, 0.28, 0.6)),
+            ("Risque de reputation" if is_civil else "Imposter websites", 45 if is_civil else 10, 25 if is_civil else 8, 11, (0.98, 0.45, 0.09))
+        ]
+        
+        for name, ix, iy, ir, fill in items:
+            cx = chart_x + (ix / 100.0) * chart_w
+            cy = chart_y + chart_h - (iy / 100.0) * chart_h
+            
+            # Bulle d'ombre
+            page.draw_circle((cx, cy + 1.5), ir, color=(0.85, 0.85, 0.85), fill=(0.85, 0.85, 0.85), width=0.1)
+            # Bulle de couleur
+            page.draw_circle((cx, cy), ir, color=fill, fill=fill, width=1.0)
+            
+            # Écrire le nom au-dessus
+            page.insert_text(
+                (cx - len(name)*2.2, cy - ir - 4),
+                name,
+                fontsize=7.5,
+                color=(0.15, 0.15, 0.15),
+                fontname="helvetica-bold"
+            )
+
+    @classmethod
     def generate_pdf(cls, report_id: str) -> str:
         """
         Génère un rapport PDF d'analyse/prédiction complet et bien paginé.
@@ -673,7 +813,17 @@ class ReportPDFExporter:
             
             for line in lines:
                 stripped = line.strip()
-                if stripped.startswith('### '):
+                if stripped == '[RISK_QUADRANT_CHART]':
+                    if p_block:
+                        draw_rich_text('\n'.join(p_block))
+                        p_block = []
+                    # Check for page space (quadrant requires about 360 points)
+                    if y + 370 > margin_bottom:
+                        new_page()
+                    cls._draw_risk_quadrant(page, margin_left, y, printable_width, 320, litigation_type == 'civil')
+                    y += 340
+                    continue
+                elif stripped.startswith('### '):
                     if p_block:
                         draw_rich_text('\n'.join(p_block))
                         p_block = []
