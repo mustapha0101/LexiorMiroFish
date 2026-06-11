@@ -260,7 +260,7 @@ class SimulationPDFExporter:
                     new_page()
                 
                 page.draw_rect(fitz.Rect(margin_left, y, margin_right, y + 2), color=(0.71, 0.54, 0.24), fill=(0.71, 0.54, 0.24), width=0.5)
-                y += 8
+                y += 20
                 
                 draw_text(f"{p_name} ({p_prof})", fontsize=10.5, color=(0.04, 0.09, 0.18), bold=True, line_spacing=12)
                 if p_persona:

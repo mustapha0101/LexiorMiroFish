@@ -692,7 +692,10 @@ class SimulationRunner:
                 verdict_upper = r_info["verdict"].upper()
                 is_defense_win = False
                 
-                if litigation_type == "civil":
+                if "[DÉCISION COLLÉGIALE - CONSENSUS :" in verdict_upper:
+                    header = verdict_upper.split(']')[0]
+                    is_defense_win = "DÉFENSE" in header
+                elif litigation_type == "civil":
                     has_responsible = "RESPONSABLE" in verdict_upper and not re.search(r'\bNON[- ]+RESPONSABLE\b', verdict_upper)
                     has_condemnation = any(k in verdict_upper for k in ["CONDAMNE", "CONDAMNER"])
                     if has_responsible or has_condemnation:
