@@ -2440,9 +2440,9 @@ const renderMarkdown = (content) => {
   let processedContent = content;
   
   // Protect the placeholder from markdown parsing (like converting underscores to <em>)
-  if (processedContent.includes('[RISK_QUADRANT_CHART]')) {
-    processedContent = processedContent.replace('[RISK_QUADRANT_CHART]', '@@@RISKQUADRANTCHART@@@');
-  }
+  // Matches variants like [RISK_QUADRANT_CHART], [RISKQUADRANTCHART], [RISK_QUAD_CHART], [RISKQUADCHART], and escaped variants like [RISK\_QUADRANT\_CHART]
+  const chartRegex = /\[RISK[\\_]*QUAD(?:RANT)?[\\_]*CHART\]/gi;
+  processedContent = processedContent.replace(chartRegex, '@@@RISKQUADRANTCHART@@@');
 
   // 去掉开头的二级标题（## xxx），因为章节标题已在外层显示
   processedContent = processedContent.replace(/^##\s+.+\n+/, '')
@@ -2550,7 +2550,7 @@ const renderMarkdown = (content) => {
     html = html.replace(/<br>\s*@@@RISKQUADRANTCHART@@@\s*<br>/g, '@@@RISKQUADRANTCHART@@@');
     html = html.replace(/<br>\s*@@@RISKQUADRANTCHART@@@/g, '@@@RISKQUADRANTCHART@@@');
     html = html.replace(/@@@RISKQUADRANTCHART@@@\s*<br>/g, '@@@RISKQUADRANTCHART@@@');
-    html = html.replace('@@@RISKQUADRANTCHART@@@', renderRiskQuadrantSVG());
+    html = html.replace(/@@@RISKQUADRANTCHART@@@/g, renderRiskQuadrantSVG());
   }
 
   return html

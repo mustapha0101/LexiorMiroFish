@@ -1986,7 +1986,8 @@ class ReportAgent:
                     section_index=section_num
                 )
                 
-                if section_num == 2 and "[RISK_QUADRANT_CHART]" not in section_content:
+                has_chart = re.search(r'\[RISK[\s\\_]*QUAD(?:RANT)?[\s\\_]*CHART\]', section_content, re.IGNORECASE)
+                if section_num == 2 and not has_chart:
                     section_content += "\n\n[RISK_QUADRANT_CHART]"
                 
                 section.content = section_content

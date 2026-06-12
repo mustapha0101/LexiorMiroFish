@@ -881,7 +881,7 @@ class ReportPDFExporter:
             
             for line in lines:
                 stripped = line.strip()
-                if stripped == '[RISK_QUADRANT_CHART]':
+                if re.search(r'\[RISK[\s\\_]*QUAD(?:RANT)?[\s\\_]*CHART\]', stripped, re.IGNORECASE):
                     if p_block:
                         draw_rich_text('\n'.join(p_block))
                         p_block = []
