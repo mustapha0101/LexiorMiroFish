@@ -431,7 +431,7 @@ class SimulationPDFExporter:
 
 class ReportPDFExporter:
     @classmethod
-    def _draw_risk_quadrant(cls, page, x, y, width, height, is_civil=True):
+    def _draw_risk_quadrant(cls, page, x, y, width, height, is_civil=True, client_side="defense", loss_prob=50.0, estimated_cost=250000.0):
         """
         Dessine un magnifique cadran vectoriel de risques (quadrant) directement sur la page du PDF.
         """
@@ -501,7 +501,28 @@ class ReportPDFExporter:
         page.draw_line((center_x, chart_y + chart_h + 10), (center_x + 4, chart_y + chart_h + 5), color=(0.75, 0.75, 0.75), width=2.0)
 
         # 5. Dessiner les graduations et textes d'axes
-        y_vals = ["$-", "$50k", "$100k", "$150k", "$200k", "$250k"] if is_civil else ["$-", "$5k", "$10k", "$15k", "$20k", "$25k"]
+        max_cost = estimated_cost if estimated_cost else 250000.0
+        import math
+        rounded_max = math.ceil(max_cost / 50000.0) * 50000.0
+        if rounded_max < 50000.0:
+            rounded_max = 50000.0
+
+        if is_civil:
+            y_vals = []
+            step = rounded_max / 5.0
+            for i in range(6):
+                val = i * step
+                if val == 0:
+                    y_vals.append("$-")
+                elif val >= 1000000.0:
+                    y_vals.append(f"${val / 1000000.0:.1f}M")
+                elif val >= 1000.0:
+                    y_vals.append(f"${int(val / 1000.0)}k")
+                else:
+                    y_vals.append(f"${int(val)}")
+        else:
+            y_vals = ["$-", "$5k", "$10k", "$15k", "$20k", "$25k"]
+
         for i in range(6):
             gy = chart_y + chart_h - (i * chart_h // 5)
             page.insert_text(
@@ -544,13 +565,24 @@ class ReportPDFExporter:
         )
 
         # 6. Dessiner les bulles de risque
-        items = [
-            ("Obligation de resultat" if is_civil else "Denial of service", 80 if is_civil else 20, 80 if is_civil else 80, 22, (0.96, 0.75, 0.06)),
-            ("Devoir d'information" if is_civil else "Ransomware", 70 if is_civil else 40, 45 if is_civil else 34, 18, (0.6, 0.6, 0.6)),
-            ("Frais de justice" if is_civil else "Phishing", 90 if is_civil else 80, 15 if is_civil else 16, 14, (0.23, 0.51, 0.96)),
-            ("Dommages punitifs" if is_civil else "Data leak (email)", 15 if is_civil else 21, 65 if is_civil else 8, 16, (0.93, 0.28, 0.6)),
-            ("Risque de reputation" if is_civil else "Imposter websites", 45 if is_civil else 10, 25 if is_civil else 8, 11, (0.98, 0.45, 0.09))
-        ]
+        core_y = min(85.0, max(20.0, (max_cost / rounded_max) * 80.0))
+
+        if is_civil:
+            items = [
+                ("Obligation de resultat", min(95.0, max(5.0, loss_prob + 5.0)), core_y, 20, (0.92, 0.70, 0.03)),
+                ("Devoir d'information", min(95.0, max(5.0, loss_prob - 10.0)), max(10.0, core_y * 0.7), 16, (0.39, 0.45, 0.55)),
+                ("Frais de justice", min(95.0, max(5.0, loss_prob + 15.0)), min(95.0, max(10.0, (15000.0 / rounded_max) * 100.0)), 14, (0.23, 0.51, 0.96)),
+                ("Dommages punitifs", min(95.0, max(5.0, loss_prob - 35.0)), max(10.0, core_y * 0.45), 15, (0.93, 0.28, 0.60)),
+                ("Risque de reputation", min(95.0, max(5.0, loss_prob - 15.0)), max(10.0, core_y * 0.3), 12, (0.98, 0.45, 0.09))
+            ]
+        else:
+            items = [
+                ("Denial of service", 20.0, 80.0, 22, (0.96, 0.75, 0.06)),
+                ("Ransomware", 40.0, 34.0, 18, (0.6, 0.6, 0.6)),
+                ("Phishing", 80.0, 16.0, 14, (0.23, 0.51, 0.96)),
+                ("Data leak (email)", 21.0, 8.0, 12, (0.98, 0.45, 0.09)),
+                ("Imposter websites", 10.0, 8.0, 8, (0.23, 0.51, 0.96))
+            ]
         
         for name, ix, iy, ir, fill in items:
             cx = chart_x + (ix / 100.0) * chart_w
@@ -609,8 +641,35 @@ class ReportPDFExporter:
         project_name = "Projet Lexior"
         litigation_type = "civil"
         simulation_requirement = "N/A"
+        client_side = "defense"
+        win_rate = 50.0
+        estimated_cost = 250000.0
         
         if simulation_id:
+            # Load project to get client_side
+            try:
+                from app.models.project import ProjectManager
+                sim_manager = SimulationManager()
+                state = sim_manager.get_simulation(simulation_id)
+                if state:
+                    project = ProjectManager.get_project(state.project_id)
+                    if project:
+                        client_side = getattr(project, "client_side", "defense")
+            except Exception:
+                pass
+
+            # Load results to get win_rate and estimated_cost
+            try:
+                sim_dir = os.path.join(Config.OASIS_SIMULATION_DATA_DIR, simulation_id)
+                results_path = os.path.join(sim_dir, "legal_simulation_results.json")
+                if os.path.exists(results_path):
+                    with open(results_path, 'r', encoding='utf-8') as f:
+                        res_data = json.load(f)
+                        win_rate = res_data.get("win_rate", 50.0)
+                        estimated_cost = res_data.get("estimated_cost", 250000.0)
+            except Exception:
+                pass
+
             sim_dir = os.path.join(Config.OASIS_SIMULATION_DATA_DIR, simulation_id)
             config_path = os.path.join(sim_dir, "simulation_config.json")
             if os.path.exists(config_path):
@@ -623,6 +682,15 @@ class ReportPDFExporter:
                         simulation_requirement = cfg.get("simulation_requirement", "N/A")
                 except Exception:
                     pass
+
+        # Calculate loss probability based on client_side and win_rate
+        # win_rate in results is Defense win rate.
+        # If client_side is plaintiff, User win rate = 100 - win_rate, User loss rate = win_rate.
+        # If client_side is defense, User win rate = win_rate, User loss rate = 100 - win_rate.
+        if client_side == "plaintiff":
+            loss_prob = win_rate
+        else:
+            loss_prob = 100.0 - win_rate
                     
         # Load outline and sections
         sections_data = []
@@ -820,7 +888,13 @@ class ReportPDFExporter:
                     # Check for page space (quadrant requires about 360 points)
                     if y + 370 > margin_bottom:
                         new_page()
-                    cls._draw_risk_quadrant(page, margin_left, y, printable_width, 320, litigation_type == 'civil')
+                    cls._draw_risk_quadrant(
+                        page, margin_left, y, printable_width, 320,
+                        is_civil=(litigation_type == 'civil'),
+                        client_side=client_side,
+                        loss_prob=loss_prob,
+                        estimated_cost=estimated_cost
+                    )
                     y += 340
                     continue
                 elif stripped.startswith('### '):
