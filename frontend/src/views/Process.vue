@@ -588,6 +588,9 @@ const handleNewProject = async () => {
       formDataObj.append('files', file)
     })
     formDataObj.append('simulation_requirement', pending.simulationRequirement)
+    if (pending.simulationName) {
+      formDataObj.append('project_name', pending.simulationName)
+    }
     
     // 调用本体生成 API
     const response = await generateOntology(formDataObj)

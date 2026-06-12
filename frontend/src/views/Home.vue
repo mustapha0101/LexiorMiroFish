@@ -198,6 +198,22 @@
               <span>{{ $t('home.inputParams') }}</span>
             </div>
 
+            <!-- Nom de la simulation (facultatif) -->
+            <div class="console-section">
+              <div class="console-header">
+                <span class="console-label">{{ $t('home.simulationNameLabel') }}</span>
+              </div>
+              <div class="input-wrapper">
+                <input
+                  v-model="formData.simulationName"
+                  type="text"
+                  class="code-input-single"
+                  :placeholder="$t('home.simulationNamePlaceholder')"
+                  :disabled="loading"
+                />
+              </div>
+            </div>
+
             <!-- 输入区域 -->
             <div class="console-section">
               <div class="console-header">
@@ -359,6 +375,7 @@ const loadDemoAndClose = () => {
 
 // 表单数据
 const formData = ref({
+  simulationName: '',
   simulationRequirement: '',
   simulationMode: 'social'
 })
@@ -439,7 +456,7 @@ const startSimulation = () => {
   
   // 存储待上传的数据
   import('../store/pendingUpload.js').then(({ setPendingUpload }) => {
-    setPendingUpload(files.value, formData.value.simulationRequirement, formData.value.simulationMode)
+    setPendingUpload(files.value, formData.value.simulationRequirement, formData.value.simulationMode, formData.value.simulationName)
     
     // 立即跳转到Process页面（使用特殊标识表示新建项目）
     router.push({
@@ -1079,6 +1096,18 @@ const startSimulation = () => {
   resize: vertical;
   outline: none;
   min-height: 150px;
+  color: #E2E8F0;
+}
+
+.code-input-single {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 12px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  outline: none;
   color: #E2E8F0;
 }
 

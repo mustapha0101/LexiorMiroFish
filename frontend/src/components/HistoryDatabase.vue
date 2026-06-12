@@ -114,7 +114,7 @@
 
         <!-- Content Area -->
         <div class="premium-card-body">
-          <h3 class="premium-card-title">{{ getSimulationTitle(project.simulation_requirement) }}</h3>
+          <h3 class="premium-card-title">{{ getDisplayTitle(project) }}</h3>
           <p class="premium-card-desc">{{ project.simulation_requirement }}</p>
         </div>
 
@@ -230,6 +230,12 @@
 
             <!-- Modal Body -->
             <div class="modal-body">
+              <!-- Name -->
+              <div class="modal-section" v-if="selectedProject.project_name && selectedProject.project_name !== 'Unnamed Project' && selectedProject.project_name !== 'Unnamed Simulation'">
+                <div class="modal-label">{{ $t('history.simName') }}</div>
+                <div class="modal-name-text">{{ selectedProject.project_name }}</div>
+              </div>
+
               <!-- Requirement -->
               <div class="modal-section">
                 <div class="modal-label">{{ $t('history.simRequirement') }}</div>
@@ -391,7 +397,8 @@ const filteredProjects = computed(() => {
       const q = searchQuery.value.toLowerCase()
       const matchesId = project.simulation_id.toLowerCase().includes(q)
       const matchesRequirement = (project.simulation_requirement || '').toLowerCase().includes(q)
-      if (!matchesId && !matchesRequirement) return false
+      const matchesName = (project.project_name || '').toLowerCase().includes(q)
+      if (!matchesId && !matchesRequirement && !matchesName) return false
     }
 
     // 2. Status Filter
@@ -632,6 +639,13 @@ const getSimulationTitle = (requirement) => {
   if (!requirement) return t('history.untitledSimulation')
   const title = requirement.slice(0, 32)
   return requirement.length > 32 ? title + '...' : title
+}
+
+const getDisplayTitle = (project) => {
+  if (project.project_name && project.project_name !== 'Unnamed Project' && project.project_name !== 'Unnamed Simulation') {
+    return project.project_name
+  }
+  return getSimulationTitle(project.simulation_requirement)
 }
 
 const formatSimulationId = (simulationId) => {
@@ -1328,6 +1342,17 @@ onMounted(() => {
   color: #1E293B;
   line-height: 1.6;
   background: #F8FAFC;
+  padding: 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+}
+
+.modal-name-text {
+  font-size: 0.9rem;
+  color: #1E293B;
+  font-weight: 600;
+  line-height: 1.6;
+  background: #F1F5F9;
   padding: 12px;
   border: 1px solid #E2E8F0;
   border-radius: 6px;
