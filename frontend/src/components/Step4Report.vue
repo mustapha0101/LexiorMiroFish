@@ -2438,6 +2438,11 @@ const renderMarkdown = (content) => {
   
   // Keep the placeholder during initial processing to avoid breaking SVG tags/newlines
   let processedContent = content;
+  
+  // Protect the placeholder from markdown parsing (like converting underscores to <em>)
+  if (processedContent.includes('[RISK_QUADRANT_CHART]')) {
+    processedContent = processedContent.replace('[RISK_QUADRANT_CHART]', '@@@RISKQUADRANTCHART@@@');
+  }
 
   // 去掉开头的二级标题（## xxx），因为章节标题已在外层显示
   processedContent = processedContent.replace(/^##\s+.+\n+/, '')
@@ -2538,14 +2543,14 @@ const renderMarkdown = (content) => {
   }
   html = tokens.join('')
 
-  // Replace the placeholder with the SVG quadrant chart after all markdown and linebreaks processing is complete
-  if (html.includes('[RISK_QUADRANT_CHART]')) {
+  // Replace the protected placeholder with the SVG quadrant chart after all markdown and linebreaks processing is complete
+  if (html.includes('@@@RISKQUADRANTCHART@@@')) {
     // Clean up surrounding paragraph and break tags around the placeholder
-    html = html.replace(/<p class="md-p">\s*\[RISK_QUADRANT_CHART\]\s*<\/p>/g, '[RISK_QUADRANT_CHART]');
-    html = html.replace(/<br>\s*\[RISK_QUADRANT_CHART\]\s*<br>/g, '[RISK_QUADRANT_CHART]');
-    html = html.replace(/<br>\s*\[RISK_QUADRANT_CHART\]/g, '[RISK_QUADRANT_CHART]');
-    html = html.replace(/\[RISK_QUADRANT_CHART\]\s*<br>/g, '[RISK_QUADRANT_CHART]');
-    html = html.replace('[RISK_QUADRANT_CHART]', renderRiskQuadrantSVG());
+    html = html.replace(/<p class="md-p">\s*@@@RISKQUADRANTCHART@@@\s*<\/p>/g, '@@@RISKQUADRANTCHART@@@');
+    html = html.replace(/<br>\s*@@@RISKQUADRANTCHART@@@\s*<br>/g, '@@@RISKQUADRANTCHART@@@');
+    html = html.replace(/<br>\s*@@@RISKQUADRANTCHART@@@/g, '@@@RISKQUADRANTCHART@@@');
+    html = html.replace(/@@@RISKQUADRANTCHART@@@\s*<br>/g, '@@@RISKQUADRANTCHART@@@');
+    html = html.replace('@@@RISKQUADRANTCHART@@@', renderRiskQuadrantSVG());
   }
 
   return html
