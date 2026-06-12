@@ -2181,17 +2181,17 @@ const renderRiskQuadrantSVG = () => {
   const coreY = Math.min(85, Math.max(20, (maxCost / roundedMax) * 80));
   
   const items = isCivil ? [
-    { name: "Obligation de résultat", x: Math.min(95, Math.max(5, lossProb + 5)), y: coreY, r: 20, color: "#EAB308", textYOffset: -25 },
-    { name: "Devoir d'information", x: Math.min(95, Math.max(5, lossProb - 10)), y: Math.max(10, coreY * 0.7), r: 16, color: "#64748B", textYOffset: -21 },
-    { name: "Frais de justice", x: Math.min(95, Math.max(5, lossProb + 15)), y: Math.min(95, Math.max(10, (15000 / roundedMax) * 100)), r: 14, color: "#3B82F6", textYOffset: -18 },
-    { name: "Dommages punitifs", x: Math.min(95, Math.max(5, lossProb - 35)), y: Math.max(10, coreY * 0.45), r: 15, color: "#EC4899", textYOffset: -20 },
-    { name: "Risque de réputation", x: Math.min(95, Math.max(5, lossProb - 15)), y: Math.max(10, coreY * 0.3), r: 12, color: "#F97316", textYOffset: -16 }
+    { name: "Obligation de résultat", x: Math.min(95, Math.max(5, lossProb + 5)), y: coreY, r: 20, color: "#EAB308" },
+    { name: "Devoir d'information", x: Math.min(95, Math.max(5, lossProb - 10)), y: Math.max(10, coreY * 0.7), r: 16, color: "#64748B" },
+    { name: "Frais de justice", x: Math.min(95, Math.max(5, lossProb + 15)), y: Math.min(95, Math.max(10, (15000 / roundedMax) * 100)), r: 14, color: "#3B82F6" },
+    { name: "Dommages punitifs", x: Math.min(95, Math.max(5, lossProb - 35)), y: Math.max(10, coreY * 0.45), r: 15, color: "#EC4899" },
+    { name: "Risque de réputation", x: Math.min(95, Math.max(5, lossProb - 15)), y: Math.max(10, coreY * 0.3), r: 12, color: "#F97316" }
   ] : [
-    { name: "Denial of service", x: 20, y: 80, r: 22, color: "#FBBF24", textYOffset: -26 },
-    { name: "Ransomware", x: 40, y: 34, r: 18, color: "#9CA3AF", textYOffset: -22 },
-    { name: "Phishing", x: 80, y: 16, r: 14, color: "#60A5FA", textYOffset: -18 },
-    { name: "Data leak (email)", x: 21, y: 8, r: 12, color: "#F97316", textYOffset: -16 },
-    { name: "Imposter websites", x: 10, y: 8, r: 8, color: "#60A5FA", textYOffset: -12 }
+    { name: "Denial of service", x: 20, y: 80, r: 22, color: "#FBBF24" },
+    { name: "Ransomware", x: 40, y: 34, r: 18, color: "#9CA3AF" },
+    { name: "Phishing", x: 80, y: 16, r: 14, color: "#60A5FA" },
+    { name: "Data leak (email)", x: 21, y: 8, r: 12, color: "#F97316" },
+    { name: "Imposter websites", x: 10, y: 8, r: 8, color: "#60A5FA" }
   ];
 
   const yLabels = [];
@@ -2209,75 +2209,228 @@ const renderRiskQuadrantSVG = () => {
   }
   const xLabels = ["0%", "20%", "40%", "60%", "80%", "100%"];
 
-  let svg = `
-  <div class="quadrant-container" style="display: flex; flex-direction: column; align-items: center; margin: 30px auto; background: #ffffff; border-radius: 12px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; width: 100%; max-width: 440px;">
-    <h4 style="margin: 0 0 16px 0; font-family: 'Merriweather', serif; color: #002d52; font-size: 15px; font-weight: 700; text-align: center;">${title}</h4>
-    <svg viewBox="0 0 520 520" width="100%" height="100%" style="font-family: 'DM Sans', sans-serif; overflow: visible;">
-      <!-- Grid Lines -->
-  `;
-
-  for (let i = 0; i <= 5; i++) {
-    const pct = i / 5;
-    const gridX = 70 + pct * 400;
-    const gridY = 440 - pct * 400;
-    svg += `<line x1="${gridX}" y1="40" x2="${gridX}" y2="440" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2 2" />`;
-    svg += `<line x1="70" y1="${gridY}" x2="470" y2="${gridY}" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2 2" />`;
-  }
-
   const qLabels = isCivil ? [
-    { text: "Transférer", x: 170, y: 140 },
-    { text: "Éviter", x: 370, y: 140 },
-    { text: "Accepter", x: 170, y: 340 },
-    { text: "Atténuer", x: 370, y: 340 }
+    { text: "Transférer", left: 25, top: 25 },
+    { text: "Éviter", left: 75, top: 25 },
+    { text: "Accepter", left: 25, top: 75 },
+    { text: "Atténuer", left: 75, top: 75 }
   ] : [
-    { text: "Transfer", x: 170, y: 140 },
-    { text: "Avoid", x: 370, y: 140 },
-    { text: "Accept", x: 170, y: 340 },
-    { text: "Mitigate", x: 370, y: 340 }
+    { text: "Transfer", left: 25, top: 25 },
+    { text: "Avoid", left: 75, top: 25 },
+    { text: "Accept", left: 25, top: 75 },
+    { text: "Mitigate", left: 75, top: 75 }
   ];
 
-  qLabels.forEach(q => {
-    svg += `<text x="${q.x}" y="${q.y}" font-size="26" font-weight="700" fill="#e2e8f0" fill-opacity="0.7" text-anchor="middle" dominant-baseline="middle">${q.text}</text>`;
-  });
-
-  svg += `
-    <line x1="60" y1="240" x2="480" y2="240" stroke="#94a3b8" stroke-width="4" stroke-linecap="round" />
-    <polygon points="60,240 70,234 70,246" fill="#94a3b8" />
-    <polygon points="480,240 470,234 470,246" fill="#94a3b8" />
+  let html = `
+  <div class="risk-quadrant-widget" style="display: flex; flex-direction: column; width: 100%; max-width: 460px; margin: 30px auto; font-family: 'Inter', sans-serif; background: #ffffff; border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; box-sizing: border-box;">
     
-    <line x1="270" y1="450" x2="270" y2="30" stroke="#94a3b8" stroke-width="4" stroke-linecap="round" />
-    <polygon points="270,450 264,440 276,440" fill="#94a3b8" />
-    <polygon points="270,30 264,40 276,40" fill="#94a3b8" />
-  `;
+    <style>
+      .risk-quadrant-widget * {
+        box-sizing: border-box;
+      }
+      .risk-quadrant-widget .quadrant-grid {
+        position: relative;
+        width: 320px;
+        height: 320px;
+        border: 2px solid #cbd5e1;
+        border-radius: 8px;
+        background: #f8fafc;
+        flex-shrink: 0;
+        overflow: visible;
+      }
+      .risk-quadrant-widget .quadrant-cell-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        width: 100%;
+        height: 100%;
+      }
+      .risk-quadrant-widget .quadrant-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .risk-quadrant-widget .cell-tl {
+        border-right: 1px dashed #cbd5e1;
+        border-bottom: 1px dashed #cbd5e1;
+        background: rgba(181, 138, 61, 0.02);
+      }
+      .risk-quadrant-widget .cell-tr {
+        border-bottom: 1px dashed #cbd5e1;
+        background: rgba(239, 68, 68, 0.02);
+      }
+      .risk-quadrant-widget .cell-bl {
+        border-right: 1px dashed #cbd5e1;
+        background: rgba(34, 197, 94, 0.02);
+      }
+      .risk-quadrant-widget .cell-br {
+        background: rgba(59, 130, 246, 0.02);
+      }
+      .risk-quadrant-widget .axis-line-y {
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #94a3b8;
+      }
+      .risk-quadrant-widget .axis-line-x {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #94a3b8;
+      }
+      .risk-quadrant-widget .bubble-item {
+        position: absolute;
+        z-index: 10;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .risk-quadrant-widget .bubble-item:hover {
+        z-index: 30;
+      }
+      .risk-quadrant-widget .bubble-circle {
+        border-radius: 50%;
+        border: 2px solid #ffffff;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        cursor: pointer;
+        opacity: 0.85;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .risk-quadrant-widget .bubble-item:hover .bubble-circle {
+        opacity: 1;
+        transform: scale(1.2);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+      }
+      .risk-quadrant-widget .bubble-label {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%) translateY(-6px);
+        white-space: nowrap;
+        font-size: 9px;
+        font-weight: 700;
+        color: #1e293b;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        pointer-events: none;
+        transition: all 0.2s ease;
+      }
+      .risk-quadrant-widget .bubble-item:hover .bubble-label {
+        background: #ffffff;
+        border-color: #94a3b8;
+        transform: translateX(-50%) translateY(-9px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .risk-quadrant-widget .bubble-tooltip {
+        visibility: hidden;
+        opacity: 0;
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%) translateY(6px);
+        background: rgba(15, 23, 42, 0.95);
+        color: #ffffff;
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-size: 9px;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 50;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        pointer-events: none;
+        line-height: 1.3;
+      }
+      .risk-quadrant-widget .bubble-item:hover .bubble-tooltip {
+        visibility: visible;
+        opacity: 1;
+        transform: translateX(-50%) translateY(9px);
+      }
+    </style>
 
-  for (let i = 0; i <= 5; i++) {
-    const yVal = 440 - i * 80;
-    svg += `<text x="50" y="${yVal + 4}" font-size="11" font-weight="600" fill="#64748b" text-anchor="end">${yLabels[i]}</text>`;
-  }
+    <h4 style="margin: 0 0 16px 0; font-family: 'Merriweather', serif; color: #002d52; font-size: 15px; font-weight: 700; text-align: center;">${title}</h4>
 
-  for (let i = 0; i <= 5; i++) {
-    const xVal = 70 + i * 80;
-    svg += `<text x="${xVal}" y="470" font-size="11" font-weight="600" fill="#64748b" text-anchor="middle">${xLabels[i]}</text>`;
-  }
+    <div style="display: flex; position: relative; justify-content: center; align-items: center;">
+      <!-- Y-Axis Labels Column -->
+      <div style="display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; padding-right: 10px; width: 65px; height: 320px; box-sizing: border-box; font-size: 10px; font-weight: 600; color: #64748b; font-family: 'JetBrains Mono', monospace;">
+        ${yLabels.slice().reverse().map(label => `<div style="height: 12px; line-height: 12px; display: flex; align-items: center;">${label}</div>`).join('')}
+      </div>
 
-  svg += `
-    <text x="270" y="505" font-size="12" font-weight="700" fill="#475569" text-anchor="middle">${xAxisLabel}</text>
-    <text x="12" y="240" font-size="12" font-weight="700" fill="#475569" text-anchor="middle" transform="rotate(-90,12,240)">${yAxisLabel}</text>
-  `;
+      <!-- Quadrant Area -->
+      <div class="quadrant-grid">
+        <!-- Grid Backdrops -->
+        <div class="quadrant-cell-container">
+          <div class="quadrant-cell cell-tl"></div>
+          <div class="quadrant-cell cell-tr"></div>
+          <div class="quadrant-cell cell-bl"></div>
+          <div class="quadrant-cell cell-br"></div>
+        </div>
 
-  items.forEach(item => {
-    const cx = 70 + (item.x / 100) * 400;
-    const cy = 440 - (item.y / 100) * 400;
-    svg += `<circle cx="${cx}" cy="${cy + 2}" r="${item.r}" fill="#000000" fill-opacity="0.08" />`;
-    svg += `<circle cx="${cx}" cy="${cy}" r="${item.r}" fill="${item.color}" fill-opacity="0.85" stroke="#ffffff" stroke-width="2" style="cursor: pointer; transition: all 0.3s ease; filter: drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.1));" onmouseover="this.setAttribute('fill-opacity', '1'); this.setAttribute('r', '${item.r + 3}');" onmouseout="this.setAttribute('fill-opacity', '0.85'); this.setAttribute('r', '${item.r}');" />`;
-    svg += `<text x="${cx}" y="${cy + item.textYOffset}" font-size="11" font-weight="700" fill="#0f172a" text-anchor="middle" style="pointer-events: none; text-shadow: 0 1px 2px rgba(255,255,255,0.8);">${item.name}</text>`;
-  });
+        <!-- Quadrant Text Labels (Watermarks) -->
+        ${qLabels.map(q => `
+          <div style="position: absolute; left: ${q.left}%; top: ${q.top}%; transform: translate(-50%, -50%); font-size: 20px; font-weight: 800; color: rgba(15, 23, 42, 0.05); text-transform: uppercase; letter-spacing: 2px; pointer-events: none; user-select: none;">
+            ${q.text}
+          </div>
+        `).join('')}
 
-  svg += `
-    </svg>
+        <!-- Axis Lines -->
+        <div class="axis-line-y"></div>
+        <div class="axis-line-x"></div>
+
+        <!-- Axis Arrowheads -->
+        <div style="position: absolute; left: 50%; top: -6px; transform: translateX(-50%); border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 6px solid #94a3b8; width: 0; height: 0;"></div>
+        <div style="position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #94a3b8; width: 0; height: 0;"></div>
+        <div style="position: absolute; right: -6px; top: 50%; transform: translateY(-50%); border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 6px solid #94a3b8; width: 0; height: 0;"></div>
+        <div style="position: absolute; left: -6px; top: 50%; transform: translateY(-50%); border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-right: 6px solid #94a3b8; width: 0; height: 0;"></div>
+
+        <!-- Risk Bubbles -->
+        ${items.map(item => {
+          const constrainedX = Math.min(92, Math.max(8, item.x));
+          const constrainedY = Math.min(92, Math.max(8, item.y));
+          const diameter = Math.round(item.r * 1.6);
+          return `
+            <div class="bubble-item" style="left: ${constrainedX}%; top: ${100 - constrainedY}%; transform: translate(-50%, -50%);">
+              <div class="bubble-circle" style="width: ${diameter}px; height: ${diameter}px; background: ${item.color};"></div>
+              <div class="bubble-label">${item.name}</div>
+              <div class="bubble-tooltip">
+                <span style="font-weight: 700; color: #f8fafc;">${item.name}</span><br/>
+                ${xAxisLabel}: <span style="font-weight: 700; color: #fbbf24;">${Math.round(item.x)}%</span><br/>
+                ${yAxisLabel}: <span style="font-weight: 700; color: #60a5fa;">${Math.round(item.y)}%</span>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- X-Axis Labels Row -->
+    <div style="display: flex; margin-left: 65px; width: 320px; justify-content: space-between; padding-top: 8px; font-size: 10px; font-weight: 600; color: #64748b; font-family: 'JetBrains Mono', monospace;">
+      ${xLabels.map(label => `<div>${label}</div>`).join('')}
+    </div>
+
+    <!-- Axis Labels -->
+    <div style="margin-top: 16px; padding-left: 65px; display: flex; flex-direction: column; align-items: center; width: 320px; gap: 4px;">
+      <div style="font-size: 11px; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 6px;">
+        <span style="display: inline-block; width: 8px; height: 2px; background: #cbd5e1;"></span>
+        <span>${xAxisLabel}</span>
+      </div>
+      <div style="font-size: 11px; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 6px;">
+        <span style="display: inline-block; width: 2px; height: 8px; background: #cbd5e1;"></span>
+        <span>${yAxisLabel}</span>
+      </div>
+    </div>
+
   </div>
   `;
-  return svg;
+  return html;
 };
 
 const renderMarkdown = (content) => {
