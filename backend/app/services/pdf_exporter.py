@@ -866,8 +866,14 @@ class ReportPDFExporter:
         y += 20
         
         # 3. Render each section's content
+        def normalize_title(t):
+            t = re.sub(r'^[#\s\d\.\-]+', '', t)
+            return ''.join(c.lower() for c in t if c.isalnum())
+
         for sec in sections_data:
-            draw_heading(f"{sec['index']}. {sec['title']}", level=1)
+            title_text = sec['title']
+            clean_title = re.sub(r'^\d+[\.\s\-]+', '', title_text).strip()
+            draw_heading(f"{sec['index']}. {clean_title}", level=1)
             
             content = sec['content']
             if not content.strip():
@@ -875,6 +881,8 @@ class ReportPDFExporter:
                 y += 10
                 continue
                 
+            normalized_sec_title = normalize_title(title_text)
+            
             # Parse markdown blocks line-by-line
             lines = content.split('\n')
             p_block = []
@@ -885,8 +893,8 @@ class ReportPDFExporter:
                     if p_block:
                         draw_rich_text('\n'.join(p_block))
                         p_block = []
-                    # Check for page space (quadrant requires about 360 points)
-                    if y + 370 > margin_bottom:
+                    # Check for page space (quadrant requires about 410 points)
+                    if y + 410 > margin_bottom:
                         new_page()
                     cls._draw_risk_quadrant(
                         page, margin_left, y, printable_width, 320,
@@ -895,22 +903,28 @@ class ReportPDFExporter:
                         loss_prob=loss_prob,
                         estimated_cost=estimated_cost
                     )
-                    y += 340
+                    y += 410
                     continue
                 elif stripped.startswith('### '):
                     if p_block:
                         draw_rich_text('\n'.join(p_block))
                         p_block = []
+                    if normalize_title(stripped) == normalized_sec_title:
+                        continue
                     draw_heading(stripped[4:], level=3)
                 elif stripped.startswith('## '):
                     if p_block:
                         draw_rich_text('\n'.join(p_block))
                         p_block = []
+                    if normalize_title(stripped) == normalized_sec_title:
+                        continue
                     draw_heading(stripped[3:], level=2)
                 elif stripped.startswith('# '):
                     if p_block:
                         draw_rich_text('\n'.join(p_block))
                         p_block = []
+                    if normalize_title(stripped) == normalized_sec_title:
+                        continue
                     draw_heading(stripped[2:], level=1)
                 elif stripped.startswith('- ') or stripped.startswith('* '):
                     if p_block:
