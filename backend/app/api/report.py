@@ -357,6 +357,7 @@ def _generate_legal_report(task_id, report_id, simulation_id, graph_id, simulati
         win_rate = 50.0
         iterations = 50
         defense_wins = 25
+        estimated_cost = 250000.0
         sample_verdicts = ""
         
         if not os.path.exists(results_path):
@@ -378,6 +379,7 @@ def _generate_legal_report(task_id, report_id, simulation_id, graph_id, simulati
                     win_rate = res_data.get("win_rate", 50.0)
                     iterations = res_data.get("iterations", 50)
                     defense_wins = res_data.get("defense_wins", 25)
+                    estimated_cost = res_data.get("estimated_cost", 250000.0)
                     details = res_data.get("details", [])
                     run_mode = res_data.get("run_mode", "courtroom")
                     judge_type = res_data.get("judge_type", "single")
@@ -482,6 +484,7 @@ Statistiques cumulées de la simulation Monte-Carlo :
 - Nombre de condamnations ou décisions favorables au demandeur/poursuite : {iterations - defense_wins}
 - Nombre d'acquittements ou de décisions favorables à la défense : {defense_wins}
 - Taux de succès global du demandeur mesuré : {client_win_rate}%
+- Coût / exposition financière estimée : {estimated_cost} $
 
 Exemples concrets de verdicts motivés rendus par les juges simulés :
 {sample_verdicts}
@@ -517,6 +520,7 @@ Statistiques cumulées de la simulation Monte-Carlo :
 - Nombre d'acquittements ou de décisions favorables à la défense : {defense_wins}
 - Nombre de condamnations ou décisions favorables à la poursuite/demandeur : {iterations - defense_wins}
 - Taux d'acquittement global mesuré : {win_rate}%
+- Coût / exposition financière estimée : {estimated_cost} $
 
 Exemples concrets de verdicts motivés rendus par les juges simulés :
 {sample_verdicts}

@@ -768,6 +768,7 @@ Statistiques cumulées de la simulation Monte-Carlo :
 - Nombre d'itérations simulées : {iterations}
 - Décisions favorables : {defense_wins}
 - Taux de succès / adhésion global : {win_rate}%
+- Coût / exposition financière estimée : {estimated_cost} $
 - Exemples de verdicts / discussions réels observés :
 {sample_verdicts}
 
@@ -1008,6 +1009,7 @@ class ReportAgent:
                             win_rate = res_data.get("win_rate", 50.0)
                             iterations = res_data.get("iterations", 50)
                             defense_wins = res_data.get("defense_wins", 25)
+                            estimated_cost = res_data.get("estimated_cost", 250000.0)
                             details = res_data.get("details", [])
                             run_mode = res_data.get("run_mode", "courtroom")
                             j_type = res_data.get("judge_type", "single")
@@ -1027,6 +1029,7 @@ class ReportAgent:
                         "win_rate": win_rate,
                         "iterations": iterations,
                         "defense_wins": defense_wins,
+                        "estimated_cost": estimated_cost,
                         "sample_verdicts": sample_verdicts,
                         "run_mode": run_mode,
                         "client_side": client_side,
@@ -1552,6 +1555,7 @@ class ReportAgent:
                 iterations=self.legal_context.get("iterations", 50),
                 defense_wins=self.legal_context.get("defense_wins", 25),
                 win_rate=self.legal_context.get("win_rate", 50.0),
+                estimated_cost=self.legal_context.get("estimated_cost", 250000.0),
                 sample_verdicts=self.legal_context.get("sample_verdicts", ""),
                 client_side_label=client_side_label,
                 section_title=section.title,
