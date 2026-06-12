@@ -3266,45 +3266,81 @@ def live_chat_with_character():
                 name = getattr(act, 'agent_name', 'Inconnu')
                 trial_context_str += f"- [{name}] {desc}\n"
         
+        # Get client_side from the project
+        client_side = getattr(project, "client_side", "defense")
+        
+        # Read the win_rate from results
+        sim_dir = os.path.join(SimulationManager.SIMULATION_DATA_DIR, simulation_id)
+        results_path = os.path.join(sim_dir, "legal_simulation_results.json")
+        win_rate = 50.0
+        if os.path.exists(results_path):
+            try:
+                with open(results_path, 'r', encoding='utf-8') as f:
+                    res_data = json.load(f)
+                    win_rate = res_data.get("win_rate", 50.0)
+            except Exception:
+                pass
+
+        # Determine roles based on litigation_type and client_side
+        if litigation_type == "criminal":
+            if client_side == "plaintiff":
+                # User is Prosecution (Procureur), adversary is Defense
+                user_role_label = "le Procureur (Représentant du Ministère Public)"
+                adversary_role_label = "l'Avocat de la Défense"
+                adversary_role_desc = "d'Avocat de la Défense cherchant à soulever un doute raisonnable ou à invoquer des moyens d'exonération pour ton client"
+                adversary_role_constraint = "Tu es l'Avocat de la Défense de l'accusé."
+                example_summary = "Lors d'une discussion hors-champ, la Poursuite a proposé un compromis de peine. La Défense a répliqué en invoquant un doute raisonnable..."
+                
+                adversary_win_rate = win_rate
+                user_win_rate = 100.0 - win_rate
+            else:
+                # User is Defense, adversary is Prosecution (Procureur)
+                user_role_label = "l'Avocat de la Défense"
+                adversary_role_label = "le Procureur (Accusation)"
+                adversary_role_desc = "de Procureur ferme et coriace requérant l'application stricte de la loi pénale au nom de la société"
+                adversary_role_constraint = "Tu es le Procureur représentant le Ministère Public."
+                example_summary = "Lors d'une discussion hors-champ, la Défense a présenté un affidavit. Le Procureur a répliqué en insistant sur la culpabilité de l'accusé..."
+                
+                adversary_win_rate = 100.0 - win_rate
+                user_win_rate = win_rate
+        else: # civil
+            if client_side == "plaintiff":
+                # User is Plaintiff (Demandeur), adversary is Defense
+                user_role_label = "l'Avocat du Demandeur"
+                adversary_role_label = "l'Avocat de la Défense"
+                adversary_role_desc = "d'Avocat de la Défense protégeant les intérêts de ton client contre les réclamations de la partie adverse"
+                adversary_role_constraint = "Tu ne dois JAMAIS utiliser le mot 'Procureur' ou 'Ministère Public' car il s'agit d'un litige civil. Utilise 'l'Avocat de la Défense'."
+                example_summary = "Lors d'une négociation hors-champ, l'Avocat du Demandeur a proposé un règlement à l'amiable. L'Avocat de la Défense a répliqué en contestant la responsabilité..."
+                
+                adversary_win_rate = win_rate
+                user_win_rate = 100.0 - win_rate
+            else:
+                # User is Defense, adversary is Plaintiff (Demandeur)
+                user_role_label = "l'Avocat de la Défense"
+                adversary_role_label = "l'Avocat du Demandeur"
+                adversary_role_desc = "d'Avocat Adverse défendant vigoureusement les intérêts financiers et contractuels de ton client (le Demandeur)"
+                adversary_role_constraint = "Tu ne dois JAMAIS utiliser le mot 'Procureur' ou 'Ministère Public' car il s'agit d'un litige civil. Utilise 'l'Avocat du Demandeur'."
+                example_summary = "Lors d'une négociation hors-champ, la Défense a présenté un affidavit. L'Avocat du Demandeur a répliqué en insistant sur l'obligation de résultat..."
+                
+                adversary_win_rate = 100.0 - win_rate
+                user_win_rate = win_rate
+
         # 1. 依据角色定义 System Prompt
         if character == 'adversary':
-            # Négociation avec l'adversaire
-            # Lire le win_rate actuel
-            sim_dir = os.path.join(SimulationManager.SIMULATION_DATA_DIR, simulation_id)
-            results_path = os.path.join(sim_dir, "legal_simulation_results.json")
-            win_rate = 50.0
-            if os.path.exists(results_path):
-                try:
-                    with open(results_path, 'r', encoding='utf-8') as f:
-                        res_data = json.load(f)
-                        win_rate = res_data.get("win_rate", 50.0)
-                except Exception:
-                    pass
-
-            role_label = "le Procureur (Accusation)" if litigation_type == "criminal" else "l'Avocat Adverse (Demandeur)"
-            role_desc = "de Procureur ferme et coriace" if litigation_type == "criminal" else "d'Avocat Adverse défendant vigoureusement les intérêts financiers et contractuels de ton client"
-            
-            if litigation_type == "civil":
-                example_summary = "Lors d'une négociation hors-champ, la Défense a présenté l'affidavit de David Hess. L'Avocat du Demandeur a répliqué en insistant sur..."
-                role_constraint = "Tu ne dois JAMAIS utiliser le mot 'Procureur' ou 'Ministère Public' car il s'agit d'un litige civil. Utilise 'l'Avocat du Demandeur'."
-            else:
-                example_summary = "Lors d'une négociation hors-champ, la Défense a présenté l'affidavit de David Hess. Le Procureur a répliqué en insistant sur..."
-                role_constraint = "Tu es le Procureur représentant le Ministère Public."
-
-            system_prompt = f"""Tu es {role_label} du dossier de procès suivant :
+            system_prompt = f"""Tu es {adversary_role_label} du dossier de procès suivant :
 {simulation_requirement}
 
 Statut actuel de la simulation :
-- Les simulations montrent que le camp adverse (la Défense) a {win_rate}% de chances de victoire.
-- Ton camp a donc {100 - win_rate}% de chances de victoire.
+- Les simulations montrent que le camp de l'utilisateur ({user_role_label}) a {user_win_rate}% de chances de victoire.
+- Ton camp ({adversary_role_label}) a donc {adversary_win_rate}% de chances de victoire.
 {trial_context_str}
 
 Directives :
-1. Reste dans ton rôle {role_desc}. {role_constraint}
-2. Si le client adverse (l'utilisateur) te propose un deal, une médiation ou des menaces réputationnelles/médiatiques, évalue cela en fonction de ton win rate théorique ({100 - win_rate}%). 
+1. Reste dans ton rôle {adversary_role_desc}. {adversary_role_constraint}
+2. Si la partie adverse (l'utilisateur) te propose un deal, une médiation ou des menaces réputationnelles/médiatiques, évalue cela en fonction de ton win rate théorique ({adversary_win_rate}%). 
 3. Sois arrogant et exigeant si ton taux est élevé, plus coopératif si ton taux est faible. 
 4. Réponds toujours en français sur un ton juridique professionnel. Ne mentionne pas l'IA.
-5. Adresses-toi à l'utilisateur (qui est l'Avocat de la Défense) en l'appelant 'Maître' ou 'Mon cher confrère'. Tu ne dois JAMAIS utiliser de placeholders ou d'emplacements réservés comme '[Mon Nom]', '[Votre Nom]', '[Nom de l'avocat]' ou '[Nom]'. Sois direct et utilise simplement 'Maître' ou 'Mon cher confrère'.
+5. Adresses-toi à l'utilisateur (qui est {user_role_label}) en l'appelant 'Maître' ou 'Mon cher confrère'. Tu ne dois JAMAIS utiliser de placeholders ou d'emplacements réservés comme '[Mon Nom]', '[Votre Nom]', '[Nom de l'avocat]' ou '[Nom]'. Sois direct et utilise simplement 'Maître' ou 'Mon cher confrère'.
 
 Tu dois obligatoirement répondre sous la forme d'un objet JSON valide contenant exactement ces deux clés :
 {{
@@ -3314,15 +3350,16 @@ Tu dois obligatoirement répondre sous la forme d'un objet JSON valide contenant
 Assure-toi que la réponse est uniquement un objet JSON valide, sans formatage markdown de bloc de code (ne mets pas de ```json ou ```).
 """
         else:
-            # Discussion stratégique avec l'Avocat de la Défense (confrère)
-            system_prompt = f"""Tu es l'Avocat de la Défense (co-conseil et confrère de l'utilisateur, qui est l'avocat principal/stratège de la défense) dans le dossier de procès suivant :
+            # Discussion stratégique avec le co-conseil (advocate)
+            camp_label = "la Défense" if client_side == "defense" else "le Demandeur"
+            system_prompt = f"""Tu es {user_role_label} (co-conseil et confrère de l'utilisateur, qui est également avocat dans le même camp) dans le dossier de procès suivant :
 {simulation_requirement}
 {trial_context_str}
 
 Directives :
 1. Tu es le confrère et co-conseil de l'utilisateur. Sois poli, stratégique, combatif et à l'écoute.
-2. Rappelle-toi que le client (le défendeur ou l'accusé dans l'affaire) est une tierce personne physique ou morale définie dans les faits du dossier, et non l'utilisateur lui-même. C'est le client commun que vous défendez ensemble. L'utilisateur est ton confrère avocat.
-3. L'utilisateur (votre confrère) te propose des arguments stratégiques, des points d'attention ou des orientations pour la défense au procès.
+2. Rappelle-toi que le client (le défendeur/accusé ou demandeur dans l'affaire selon les faits) est une tierce personne physique ou morale définie dans les faits du dossier, et non l'utilisateur lui-même. C'est le client commun que vous défendez ou représentez ensemble. L'utilisateur est ton confrère avocat.
+3. L'utilisateur (votre confrère) te propose des arguments stratégiques, des points d'attention ou des orientations pour le procès.
 4. Évalue ses propositions. Conseille-le de façon constructive, dis-lui si sa stratégie te semble judicieuse et comment vous allez l'adapter ensemble pour les prochains débats devant le juge.
 5. Réponds toujours en français sur un ton de collaboration professionnelle et engagée entre confrères. Ne mentionne pas l'IA.
 6. Adresses-toi à l'utilisateur en l'appelant 'Maître' ou 'Mon cher confrère'. Tu ne dois JAMAIS utiliser de placeholders comme '[Mon Nom]', '[Votre Nom]' ou '[Nom]'. Utilise simplement 'Maître' ou 'Mon cher confrère'.
@@ -3330,7 +3367,7 @@ Directives :
 Tu dois obligatoirement répondre sous la forme d'un objet JSON valide contenant exactement ces deux clés :
 {{
   "response": "Le message de réponse directe à l'utilisateur. Ton collaboratif, professionnel, s'adressant à l'utilisateur avec respect en l'appelant 'Maître' ou 'Mon cher confrère'. Pas de crochets.",
-  "stimulus_summary": "Un fait juridique ou un résumé objectif à la troisième personne de cet échange hors-champ. Ne transcris pas la conversation mot à mot. Décris plutôt l'événement de façon synthétique pour le procès (ex: 'Lors d'une réunion stratégique hors-champ, la Défense a analysé les pièces fournies par le client et a décidé d'ajuster sa stratégie en...')."
+  "stimulus_summary": "Un fait juridique ou un résumé objectif à la troisième personne de cet échange hors-champ. Ne transcris pas la conversation mot à mot. Décris plutôt l'événement de façon synthétique pour le procès (ex: 'Lors d'une réunion stratégique hors-champ, l'équipe d'avocats de {camp_label} a analysé les pièces fournies par le client et a décidé d'ajuster sa stratégie en...')."
 }}
 Assure-toi que la réponse est uniquement un objet JSON valide, sans formatage markdown de bloc de code (ne mets pas de ```json ou ```).
 """
