@@ -495,6 +495,7 @@ class InterviewResult:
     """
     interview_topic: str  # 采访主题
     interview_questions: List[str]  # 采访问题列表
+    simulation_mode: str = "social"  # 模拟模式：'social' 或 'legal'
     
     # 采访选择的Agent
     selected_agents: List[Dict[str, Any]] = field(default_factory=list)
@@ -514,6 +515,7 @@ class InterviewResult:
         return {
             "interview_topic": self.interview_topic,
             "interview_questions": self.interview_questions,
+            "simulation_mode": self.simulation_mode,
             "selected_agents": self.selected_agents,
             "interviews": [i.to_dict() for i in self.interviews],
             "selection_reasoning": self.selection_reasoning,
@@ -525,17 +527,29 @@ class InterviewResult:
     def to_text(self) -> str:
         """转换为详细的文本格式，供LLM理解和报告引用"""
         locale = get_locale()
+        is_legal = self.simulation_mode == 'legal'
         
         if locale == 'fr':
-            text_parts = [
-                "## Rapport d'interview approfondie",
-                f"**Sujet de l'interview:** {self.interview_topic}",
-                f"**Nombre d'interviews:** {self.interviewed_count} / {self.total_agents} agents simulés",
-                "\n### Raison du choix des sujets",
-                self.selection_reasoning or "(Sélection automatique)",
-                "\n---",
-                "\n### Interviews réelles",
-            ]
+            if is_legal:
+                text_parts = [
+                    "## Rapport des délibérations et dépositions",
+                    f"**Sujet de l'analyse:** {self.interview_topic}",
+                    f"**Nombre de participants entendus:** {self.interviewed_count} / {self.total_agents} agents simulés",
+                    "\n### Raison de sélection des participants",
+                    self.selection_reasoning or "(Sélection automatique)",
+                    "\n---",
+                    "\n### Déclarations et dépositions réelles",
+                ]
+            else:
+                text_parts = [
+                    "## Rapport d'interview approfondie",
+                    f"**Sujet de l'interview:** {self.interview_topic}",
+                    f"**Nombre d'interviews:** {self.interviewed_count} / {self.total_agents} agents simulés",
+                    "\n### Raison du choix des sujets",
+                    self.selection_reasoning or "(Sélection automatique)",
+                    "\n---",
+                    "\n### Interviews réelles",
+                ]
 
             if self.interviews:
                 for i, interview in enumerate(self.interviews, 1):
@@ -548,15 +562,26 @@ class InterviewResult:
             text_parts.append("\n### Résumé de l'interview et points clés")
             text_parts.append(self.summary or "(Aucun résumé)")
         elif locale == 'zh':
-            text_parts = [
-                "## 深度采访报告",
-                f"**采访主题:** {self.interview_topic}",
-                f"**采访人数:** {self.interviewed_count} / {self.total_agents} 位模拟Agent",
-                "\n### 采访对象选择理由",
-                self.selection_reasoning or "（自动选择）",
-                "\n---",
-                "\n### 采访实录",
-            ]
+            if is_legal:
+                text_parts = [
+                    "## 诉讼辩论与陈述报告",
+                    f"**分析主题:** {self.interview_topic}",
+                    f"**听取陈述人数:** {self.interviewed_count} / {self.total_agents} 位模拟人员",
+                    "\n### 参与人员选择理由",
+                    self.selection_reasoning or "（自动选择）",
+                    "\n---",
+                    "\n### 实际陈述与辩论记录",
+                ]
+            else:
+                text_parts = [
+                    "## 深度采访报告",
+                    f"**采访主题:** {self.interview_topic}",
+                    f"**采访人数:** {self.interviewed_count} / {self.total_agents} 位模拟Agent",
+                    "\n### 采访对象选择理由",
+                    self.selection_reasoning or "（自动选择）",
+                    "\n---",
+                    "\n### 采访实录",
+                ]
 
             if self.interviews:
                 for i, interview in enumerate(self.interviews, 1):
@@ -569,15 +594,26 @@ class InterviewResult:
             text_parts.append("\n### 采访摘要与核心观点")
             text_parts.append(self.summary or "（无摘要）")
         else:
-            text_parts = [
-                "## In-Depth Interview Report",
-                f"**Interview Topic:** {self.interview_topic}",
-                f"**Number of Interviews:** {self.interviewed_count} / {self.total_agents} Simulated Agents",
-                "\n### Reason for Selecting Interview Subjects",
-                self.selection_reasoning or "(Automatic Selection)",
-                "\n---",
-                "\n### Actual Interviews",
-            ]
+            if is_legal:
+                text_parts = [
+                    "## Report of Deliberations and Depositions",
+                    f"**Topic of Analysis:** {self.interview_topic}",
+                    f"**Number of Participants Heard:** {self.interviewed_count} / {self.total_agents} Simulated Agents",
+                    "\n### Reason for Selecting Participants",
+                    self.selection_reasoning or "(Automatic Selection)",
+                    "\n---",
+                    "\n### Actual Statements and Depositions",
+                ]
+            else:
+                text_parts = [
+                    "## In-Depth Interview Report",
+                    f"**Interview Topic:** {self.interview_topic}",
+                    f"**Number of Interviews:** {self.interviewed_count} / {self.total_agents} Simulated Agents",
+                    "\n### Reason for Selecting Interview Subjects",
+                    self.selection_reasoning or "(Automatic Selection)",
+                    "\n---",
+                    "\n### Actual Interviews",
+                ]
 
             if self.interviews:
                 for i, interview in enumerate(self.interviews, 1):
@@ -1410,7 +1446,8 @@ class ZepToolsService:
         interview_requirement: str,
         simulation_requirement: str = "",
         max_agents: int = 5,
-        custom_questions: List[str] = None
+        custom_questions: List[str] = None,
+        simulation_mode: str = "social"
     ) -> InterviewResult:
         """
         【InterviewAgents - 深度采访】
@@ -1426,7 +1463,7 @@ class ZepToolsService:
         
         【使用场景】
         - 需要从不同角色视角了解事件看法
-        - 需要收集多方意见和观点
+        - 需要收集多方意见 and 观点
         - 需要获取模拟Agent的真实回答（非LLM模拟）
         
         Args:
@@ -1435,6 +1472,7 @@ class ZepToolsService:
             simulation_requirement: 模拟需求背景（可选）
             max_agents: 最多采访的Agent数量
             custom_questions: 自定义采访问题（可选，若不提供则自动生成）
+            simulation_mode: 模拟模式（'social' 或 'legal'）
             
         Returns:
             InterviewResult: 采访结果
@@ -1445,7 +1483,8 @@ class ZepToolsService:
         
         result = InterviewResult(
             interview_topic=interview_requirement,
-            interview_questions=custom_questions or []
+            interview_questions=custom_questions or [],
+            simulation_mode=simulation_mode
         )
         
         # Step 1: 读取人设文件
@@ -1551,10 +1590,21 @@ class ZepToolsService:
                 twitter_response = self._clean_tool_call_response(twitter_response)
                 reddit_response = self._clean_tool_call_response(reddit_response)
 
-                # 始终输出双平台标记
-                twitter_text = twitter_response if twitter_response else "（该平台未获得回复）"
-                reddit_text = reddit_response if reddit_response else "（该平台未获得回复）"
-                response_text = f"【Twitter平台回答】\n{twitter_text}\n\n【Reddit平台回答】\n{reddit_text}"
+                if simulation_mode == 'legal':
+                    # In legal/courtroom mode, we present statements cleanly without social media labels
+                    if twitter_response and reddit_response and twitter_response.strip() != reddit_response.strip():
+                        response_text = f"【Déclaration 1】\n{twitter_response}\n\n【Déclaration 2】\n{reddit_response}"
+                    elif twitter_response:
+                        response_text = f"【Déclaration / Déposition】\n{twitter_response}"
+                    elif reddit_response:
+                        response_text = f"【Déclaration / Déposition】\n{reddit_response}"
+                    else:
+                        response_text = "（Aucune déclaration obtenue du participant）" if get_locale() == 'fr' else "（No statement obtained from participant）"
+                else:
+                    # 始终输出双平台标记
+                    twitter_text = twitter_response if twitter_response else "（该平台未获得回复）"
+                    reddit_text = reddit_response if reddit_response else "（该平台未获得回复）"
+                    response_text = f"【Twitter平台回答】\n{twitter_text}\n\n【Reddit平台回答】\n{reddit_text}"
 
                 # 提取关键引言（从两个平台的回答中）
                 import re

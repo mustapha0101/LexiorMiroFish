@@ -987,11 +987,11 @@ const parseInterview = (text) => {
   
   try {
     // 提取采访主题
-    const topicMatch = text.match(/\*\*(?:采访主题|Sujet de l'interview|Interview Topic):\*\*\s*(.+?)(?:\n|$)/i)
+    const topicMatch = text.match(/\*\*(?:采访主题|分析主题|Sujet de l'interview|Sujet de l'analyse|Interview Topic|Topic of Analysis):\*\*\s*(.+?)(?:\n|$)/i)
     if (topicMatch) result.topic = topicMatch[1].trim()
     
     // 提取采访人数（如 "5 / 9 位模拟Agent"）
-    const countMatch = text.match(/\*\*(?:采访人数|Nombre d'interviews|Number of interviews):\*\*\s*(\d+)\s*\/\s*(\d+)/i)
+    const countMatch = text.match(/\*\*(?:采访人数|听取陈述人数|Nombre d'interviews|Nombre de participants entendus|Number of interviews|Number of Participants Heard):\*\*\s*(\d+)\s*\/\s*(\d+)/i)
     if (countMatch) {
       result.successCount = parseInt(countMatch[1])
       result.totalCount = parseInt(countMatch[2])
@@ -999,7 +999,7 @@ const parseInterview = (text) => {
     }
     
     // 提取采访对象选择理由
-    const reasonMatch = text.match(/### (?:采访对象选择理由|Raison du choix des sujets|Reason for selecting interview subjects)\n([\s\S]*?)(?=\n---\n|\n### (?:采访实录|Interviews réelles|Actual interviews))/i)
+    const reasonMatch = text.match(/### (?:采访对象选择理由|参与人员选择理由|Raison du choix des sujets|Raison de sélection des participants|Reason for selecting interview subjects|Reason for selecting participants|Reason for Selecting Interview Subjects|Reason for Selecting Participants)\n([\s\S]*?)(?=\n---\n|\n### (?:采访实录|实际陈述与辩论记录|Interviews réelles|Déclarations et dépositions réelles|Actual interviews|Actual statements and depositions|Actual Statements and Depositions))/i)
     if (reasonMatch) {
       result.selectionReason = reasonMatch[1].trim()
     }
@@ -1152,6 +1152,7 @@ const parseInterview = (text) => {
         } else if (!twitterMatch && !redditMatch) {
           // 没有分平台标记（极旧格式），整体作为回答
           interview.twitterAnswer = answerText
+          interview.redditAnswer = answerText
         }
       }
       
@@ -1715,16 +1716,16 @@ const InterviewDisplay = {
       // Header Section
       h('div', { class: 'interview-header' }, [
         h('div', { class: 'header-main' }, [
-          h('div', { class: 'header-title' }, 'Agent Interview'),
+          h('div', { class: 'header-title' }, t('step4.agentInterview')),
           h('div', { class: 'header-stats' }, [
             h('span', { class: 'stat-item' }, [
               h('span', { class: 'stat-value' }, props.result.successCount || props.result.interviews.length),
-              h('span', { class: 'stat-label' }, 'Interviewed')
+              h('span', { class: 'stat-label' }, t('step4.interviewed'))
             ]),
             props.result.totalCount > 0 && h('span', { class: 'stat-divider' }, '/'),
             props.result.totalCount > 0 && h('span', { class: 'stat-item' }, [
               h('span', { class: 'stat-value' }, props.result.totalCount),
-              h('span', { class: 'stat-label' }, 'Total')
+              h('span', { class: 'stat-label' }, t('step4.total'))
             ]),
             props.resultLength && h('span', { class: 'stat-divider' }, '·'),
             props.resultLength && h('span', { class: 'stat-size' }, formatSize(props.resultLength))
@@ -1759,7 +1760,7 @@ const InterviewDisplay = {
         
         // Selection Reason - 选择理由
         props.result.interviews[activeIndex.value]?.selectionReason && h('div', { class: 'selection-reason' }, [
-          h('div', { class: 'reason-label' }, '选择理由'),
+          h('div', { class: 'reason-label' }, t('step4.reasonLabel')),
           h('div', { class: 'reason-content' }, props.result.interviews[activeIndex.value].selectionReason)
         ]),
         
@@ -1767,7 +1768,7 @@ const InterviewDisplay = {
         h('div', { class: 'qa-thread' }, 
           (props.result.interviews[activeIndex.value]?.questions?.length > 0 
             ? props.result.interviews[activeIndex.value].questions 
-            : [props.result.interviews[activeIndex.value]?.question || 'No question available']
+            : [props.result.interviews[activeIndex.value]?.question || t('step4.noQuestion')]
           ).map((question, qIdx) => {
             const interview = props.result.interviews[activeIndex.value]
             const currentPlatform = getPlatformTab(activeIndex.value, qIdx)
@@ -1829,7 +1830,7 @@ const InterviewDisplay = {
                   !isPlaceholder && answerText.length > 400 && h('button', {
                     class: 'expand-answer-btn',
                     onClick: () => toggleAnswer(expandKey)
-                  }, isExpanded ? 'Show Less' : 'Show More')
+                  }, isExpanded ? t('step4.showLess') : t('step4.showMore'))
                 ])
               ])
             ])
@@ -1838,7 +1839,7 @@ const InterviewDisplay = {
         
         // Key Quotes Section
         props.result.interviews[activeIndex.value]?.quotes?.length > 0 && h('div', { class: 'quotes-section' }, [
-          h('div', { class: 'quotes-header' }, 'Key Quotes'),
+          h('div', { class: 'quotes-header' }, t('step4.keyQuotes')),
           h('div', { class: 'quotes-list' },
             props.result.interviews[activeIndex.value].quotes.slice(0, 3).map((quote, qi) => {
               const cleanedQuote = cleanQuoteText(quote)
@@ -1855,7 +1856,7 @@ const InterviewDisplay = {
 
       // Summary Section (Collapsible)
       props.result.summary && h('div', { class: 'summary-section' }, [
-        h('div', { class: 'summary-header' }, 'Interview Summary'),
+        h('div', { class: 'summary-header' }, t('step4.interviewSummary')),
         h('div', { 
           class: 'summary-content',
           innerHTML: renderMarkdown(props.result.summary.length > 500 ? props.result.summary.substring(0, 500) + '...' : props.result.summary)
@@ -2160,60 +2161,145 @@ const truncateText = (text, maxLen) => {
 }
 
 const renderRiskQuadrantSVG = () => {
-  const isCivil = props.projectData?.simulation_mode === 'legal' || props.result?.run_mode === 'courtroom';
+  const isLegal = props.projectData?.simulation_mode === 'legal' || props.result?.run_mode === 'courtroom';
   
-  const title = isCivil ? "Matrice des Risques Judiciaires" : "Inherent Risk by Threat";
-  const xAxisLabel = isCivil ? "Probabilité de perte" : "Probabilité d'occurrence";
-  const yAxisLabel = isCivil ? "Impact financier potentiel" : "Coût estimé du sinistre";
+  const requirementText = (props.projectData?.simulation_requirement || "") + " " + (props.projectData?.name || "") + " " + (props.result?.context || "");
+  const reqLower = requirementText.toLowerCase();
+  
+  const isFranceCaron = reqLower.includes("caron") || reqLower.includes("allaire") || reqLower.includes("toiture");
+  const isTVQCase = reqLower.includes("9154-6093") || reqLower.includes("tvq") || reqLower.includes("taxe") || reqLower.includes("hébergement") || reqLower.includes("cotisation");
+  const isCriminalCase = legalResults.value?.litigation_type === 'criminal' || reqLower.includes("criminel") || reqLower.includes("accusé") || reqLower.includes("accusation") || reqLower.includes("poursuite");
+
+  let title = "Matrice des Risques Judiciaires";
+  let xAxisLabel = "Probabilité de perte";
+  let yAxisLabel = "Impact financier potentiel";
+
+  if (!isLegal) {
+    title = "Inherent Risk by Threat";
+    xAxisLabel = "Probabilité d'occurrence";
+    yAxisLabel = "Coût estimé du sinistre";
+  } else if (isCriminalCase) {
+    title = "Matrice des Risques Criminels";
+    xAxisLabel = "Probabilité de condamnation";
+    yAxisLabel = "Gravité de la peine / Impact";
+  }
   
   // Calculate dynamic X (loss probability) based on Monte-Carlo results
   const rate = winRateDisplay.value ?? 50;
   const lossProb = 100 - rate; // Probability of loss
   
+  // Format Y labels beautifully
+  const formatYValue = (val) => {
+    if (val === 0) return "$-";
+    if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+    if (val >= 1000) {
+      const kVal = val / 1000;
+      if (kVal % 1 === 0) return `$${kVal}k`;
+      return `$${kVal.toFixed(1)}k`;
+    }
+    return `$${Math.round(val)}`;
+  };
+
   // Calculate dynamic Y (financial impact scale) based on estimated cost
   let maxCost = 250000;
-  if (legalResults.value?.estimated_cost) {
-    maxCost = legalResults.value.estimated_cost;
+  if (isLegal) {
+    if (isFranceCaron) {
+      maxCost = 3000;
+    } else if (isTVQCase) {
+      maxCost = 15000;
+    } else if (legalResults.value?.estimated_cost && legalResults.value.estimated_cost > 0) {
+      maxCost = legalResults.value.estimated_cost;
+    }
   }
-  let roundedMax = Math.ceil(maxCost / 50000) * 50000;
-  if (roundedMax < 50000) roundedMax = 50000;
+
+  let roundedMax = 250000;
+  let yStep = 50000;
+  if (isLegal && !isCriminalCase) {
+    if (maxCost <= 5000) {
+      roundedMax = Math.ceil(maxCost / 1000) * 1000;
+      if (roundedMax < 1000) roundedMax = 1000;
+      yStep = roundedMax / 5;
+    } else if (maxCost <= 25000) {
+      roundedMax = Math.ceil(maxCost / 5000) * 5000;
+      yStep = roundedMax / 5;
+    } else if (maxCost <= 100000) {
+      roundedMax = Math.ceil(maxCost / 20000) * 20000;
+      yStep = roundedMax / 5;
+    } else {
+      roundedMax = Math.ceil(maxCost / 50000) * 50000;
+      yStep = roundedMax / 5;
+    }
+  }
   
   const coreY = Math.min(85, Math.max(20, (maxCost / roundedMax) * 80));
   
-  const items = isCivil ? [
-    { name: "Obligation de résultat", x: Math.min(95, Math.max(5, lossProb + 5)), y: coreY, r: 20, color: "#EAB308" },
-    { name: "Devoir d'information", x: Math.min(95, Math.max(5, lossProb - 10)), y: Math.max(10, coreY * 0.7), r: 16, color: "#64748B" },
-    { name: "Frais de justice", x: Math.min(95, Math.max(5, lossProb + 15)), y: Math.min(95, Math.max(10, (15000 / roundedMax) * 100)), r: 14, color: "#3B82F6" },
-    { name: "Dommages punitifs", x: Math.min(95, Math.max(5, lossProb - 35)), y: Math.max(10, coreY * 0.45), r: 15, color: "#EC4899" },
-    { name: "Risque de réputation", x: Math.min(95, Math.max(5, lossProb - 15)), y: Math.max(10, coreY * 0.3), r: 12, color: "#F97316" }
-  ] : [
-    { name: "Denial of service", x: 20, y: 80, r: 22, color: "#FBBF24" },
-    { name: "Ransomware", x: 40, y: 34, r: 18, color: "#9CA3AF" },
-    { name: "Phishing", x: 80, y: 16, r: 14, color: "#60A5FA" },
-    { name: "Data leak (email)", x: 21, y: 8, r: 12, color: "#F97316" },
-    { name: "Imposter websites", x: 10, y: 8, r: 8, color: "#60A5FA" }
-  ];
+  let items = [];
+  if (isLegal) {
+    if (isCriminalCase) {
+      items = [
+        { name: "Verdict de culpabilité", x: Math.min(95, Math.max(5, lossProb + 5)), y: 85, r: 20, color: "#EF4444", amount: "Risque maximal de condamnation" },
+        { name: "Peine d'emprisonnement", x: Math.min(95, Math.max(5, lossProb - 10)), y: 70, r: 17, color: "#F97316", amount: "Incarcération potentielle" },
+        { name: "Casier judiciaire", x: Math.min(95, Math.max(5, lossProb + 10)), y: 55, r: 15, color: "#EC4899", amount: "Impact sur l'employabilité" },
+        { name: "Frais de défense", x: 95, y: 35, r: 13, color: "#3B82F6", amount: "Frais d'avocat incompressibles" },
+        { name: "Risque de réputation", x: Math.min(95, Math.max(5, lossProb - 15)), y: 20, r: 12, color: "#64748B", amount: "Impact médiatique" }
+      ];
+    } else if (isFranceCaron) {
+      items = [
+        { name: "Travaux correctifs", x: Math.min(95, Math.max(5, lossProb + 5)), y: (2586.81 / roundedMax) * 100, r: 20, color: "#EAB308", amount: "2 586.81 $" },
+        { name: "Travaux intérieurs", x: Math.min(95, Math.max(5, lossProb - 10)), y: (1974.12 / roundedMax) * 100, r: 17, color: "#EC4899", amount: "1 974.12 $" },
+        { name: "Troubles & Inconvénients", x: Math.min(95, Math.max(5, lossProb - 20)), y: (1000.00 / roundedMax) * 100, r: 15, color: "#F97316", amount: "1 000.00 $" },
+        { name: "Perte de salaire", x: Math.min(95, Math.max(5, lossProb - 40)), y: (785.22 / roundedMax) * 100, r: 14, color: "#64748B", amount: "785.22 $" },
+        { name: "Frais d'expertise", x: Math.min(95, Math.max(5, lossProb - 5)), y: (569.13 / roundedMax) * 100, r: 13, color: "#3B82F6", amount: "569.13 $" },
+        { name: "Frais de justice", x: Math.min(95, Math.max(5, lossProb + 10)), y: (200.00 / roundedMax) * 100, r: 12, color: "#10B981", amount: "200.00 $" }
+      ];
+    } else if (isTVQCase) {
+      items = [
+        { name: "TVQ Unité 31", x: Math.min(95, Math.max(5, lossProb + 5)), y: (12000 / roundedMax) * 100, r: 20, color: "#EAB308", amount: "12 000.00 $" },
+        { name: "TVQ Unité 51", x: Math.min(95, Math.max(5, lossProb - 10)), y: (8500 / roundedMax) * 100, r: 17, color: "#EC4899", amount: "8 500.00 $" },
+        { name: "TVQ Unité 53", x: Math.min(95, Math.max(5, lossProb - 15)), y: (6200 / roundedMax) * 100, r: 15, color: "#F97316", amount: "6 200.00 $" },
+        { name: "TVQ Unité 54", x: Math.min(95, Math.max(5, lossProb - 20)), y: (5400 / roundedMax) * 100, r: 14, color: "#64748B", amount: "5 400.00 $" },
+        { name: "Taxe sur l'Hébergement", x: Math.min(95, Math.max(5, lossProb + 15)), y: (4100 / roundedMax) * 100, r: 13, color: "#3B82F6", amount: "4 100.00 $" },
+        { name: "Pénalité art. 59 LAF", x: Math.min(95, Math.max(5, lossProb - 35)), y: (250 / roundedMax) * 100, r: 12, color: "#10B981", amount: "250.00 $" }
+      ];
+    } else {
+      items = [
+        { name: "Réclamation principale", x: Math.min(95, Math.max(5, lossProb + 5)), y: coreY, r: 20, color: "#EAB308", amount: formatYValue(Math.round((coreY / 100) * roundedMax)) },
+        { name: "Dommages accessoires", x: Math.min(95, Math.max(5, lossProb - 10)), y: Math.max(10, coreY * 0.7), r: 16, color: "#EC4899", amount: formatYValue(Math.round((Math.max(10, coreY * 0.7) / 100) * roundedMax)) },
+        { name: "Intérêts & Indemnités", x: Math.min(95, Math.max(5, lossProb - 15)), y: Math.max(10, coreY * 0.45), r: 14, color: "#F97316", amount: formatYValue(Math.round((Math.max(10, coreY * 0.45) / 100) * roundedMax)) },
+        { name: "Frais de justice", x: Math.min(95, Math.max(5, lossProb + 10)), y: Math.min(95, Math.max(10, (15000 / roundedMax) * 100)), r: 12, color: "#3B82F6", amount: formatYValue(Math.round((Math.min(95, Math.max(10, (15000 / roundedMax) * 100)) / 100) * roundedMax)) }
+      ];
+    }
+  } else {
+    items = [
+      { name: "Denial of service", x: 20, y: 80, r: 22, color: "#FBBF24", amount: "$20k" },
+      { name: "Ransomware", x: 40, y: 34, r: 18, color: "#9CA3AF", amount: "$8.5k" },
+      { name: "Phishing", x: 80, y: 16, r: 14, color: "#60A5FA", amount: "$4k" },
+      { name: "Data leak (email)", x: 21, y: 8, r: 12, color: "#F97316", amount: "$2k" },
+      { name: "Imposter websites", x: 10, y: 8, r: 8, color: "#60A5FA", amount: "$2k" }
+    ];
+  }
 
   const yLabels = [];
-  if (isCivil) {
-    const step = roundedMax / 5;
-    for (let i = 0; i <= 5; i++) {
-      const val = i * step;
-      if (val === 0) yLabels.push("$-");
-      else if (val >= 1000000) yLabels.push(`$${(val / 1000000).toFixed(1)}M`);
-      else if (val >= 1000) yLabels.push(`$${Math.round(val / 1000)}k`);
-      else yLabels.push(`$${Math.round(val)}`);
+  if (isLegal) {
+    if (isCriminalCase) {
+      yLabels.push("Minimum", "Faible", "Modéré", "Sévère", "Critique", "Maximum");
+    } else {
+      const step = roundedMax / 5;
+      for (let i = 0; i <= 5; i++) {
+        const val = i * step;
+        yLabels.push(formatYValue(val));
+      }
     }
   } else {
     yLabels.push("$-", "$5k", "$10k", "$15k", "$20k", "$25k");
   }
   const xLabels = ["0%", "20%", "40%", "60%", "80%", "100%"];
 
-  const qLabels = isCivil ? [
-    { text: "Transférer", left: 25, top: 25 },
-    { text: "Éviter", left: 75, top: 25 },
-    { text: "Accepter", left: 25, top: 75 },
-    { text: "Atténuer", left: 75, top: 75 }
+  const qLabels = isLegal ? [
+    { text: "Risque Potentiel", left: 25, top: 25 },
+    { text: "Risque Critique", left: 75, top: 25 },
+    { text: "Risque Mineur", left: 25, top: 75 },
+    { text: "Risque Modéré", left: 75, top: 75 }
   ] : [
     { text: "Transfer", left: 25, top: 25 },
     { text: "Avoid", left: 75, top: 25 },
@@ -2376,7 +2462,7 @@ const renderRiskQuadrantSVG = () => {
 
         <!-- Quadrant Text Labels (Watermarks) -->
         ${qLabels.map(q => `
-          <div style="position: absolute; left: ${q.left}%; top: ${q.top}%; transform: translate(-50%, -50%); font-size: 20px; font-weight: 800; color: rgba(15, 23, 42, 0.05); text-transform: uppercase; letter-spacing: 2px; pointer-events: none; user-select: none;">
+          <div style="position: absolute; left: ${q.left}%; top: ${q.top}%; transform: translate(-50%, -50%); font-size: 16px; font-weight: 800; color: rgba(15, 23, 42, 0.06); text-transform: uppercase; letter-spacing: 2px; pointer-events: none; user-select: none;">
             ${q.text}
           </div>
         `).join('')}
@@ -2403,7 +2489,7 @@ const renderRiskQuadrantSVG = () => {
               <div class="bubble-tooltip">
                 <span style="font-weight: 700; color: #f8fafc;">${item.name}</span><br/>
                 ${xAxisLabel}: <span style="font-weight: 700; color: #fbbf24;">${Math.round(item.x)}%</span><br/>
-                ${yAxisLabel}: <span style="font-weight: 700; color: #60a5fa;">${Math.round(item.y)}%</span>
+                ${yAxisLabel}: <span style="font-weight: 700; color: #60a5fa;">${item.amount}</span>
               </div>
             </div>
           `;

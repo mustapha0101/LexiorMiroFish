@@ -274,7 +274,16 @@
     "panelRelatedEdges": "Relations liées",
     "panelRelatedNodes": "Nœuds liés",
     "world1": "Monde 1",
-    "world2": "Monde 2"
+    "world2": "Monde 2",
+    "reasonLabel": "Raison de la sélection",
+    "agentInterview": "Entretien d'agent",
+    "interviewed": "Interviewé",
+    "total": "Total",
+    "noQuestion": "Aucune question disponible",
+    "showLess": "Afficher moins",
+    "showMore": "Afficher plus",
+    "keyQuotes": "Citations clés",
+    "interviewSummary": "Résumé de l'entretien"
   },
   "step5": {
     "interactiveTools": "Outils interactifs",

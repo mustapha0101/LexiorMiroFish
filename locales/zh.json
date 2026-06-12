@@ -269,7 +269,16 @@
     "panelRelatedEdges": "相关关系",
     "panelRelatedNodes": "相关节点",
     "world1": "世界1",
-    "world2": "世界2"
+    "world2": "世界2",
+    "reasonLabel": "选择理由",
+    "agentInterview": "智能体访谈",
+    "interviewed": "已访谈",
+    "total": "总数",
+    "noQuestion": "暂无问题",
+    "showLess": "收起",
+    "showMore": "显示更多",
+    "keyQuotes": "关键引言",
+    "interviewSummary": "访谈摘要"
   },
   "step5": {
     "interactiveTools": "Interactive Tools",

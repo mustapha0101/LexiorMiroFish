@@ -431,7 +431,7 @@ class SimulationPDFExporter:
 
 class ReportPDFExporter:
     @classmethod
-    def _draw_risk_quadrant(cls, page, x, y, width, height, is_civil=True, client_side="defense", loss_prob=50.0, estimated_cost=250000.0):
+    def _draw_risk_quadrant(cls, page, x, y, width, height, is_civil=True, client_side="defense", loss_prob=50.0, estimated_cost=250000.0, simulation_requirement="", project_name=""):
         """
         Dessine un magnifique cadran vectoriel de risques (quadrant) directement sur la page du PDF.
         """
@@ -462,64 +462,96 @@ class ReportPDFExporter:
             # Lignes horizontales
             page.draw_line((chart_x, gy), (chart_x + chart_w, gy), color=(0.94, 0.94, 0.94), width=0.5)
             
-        # 3. Écrire les étiquettes de fond des quadrants (Transfert, Éviter, Accepter, Atténuer)
-        # On utilise des couleurs grises très claires
-        quad_labels = [
-            ("Transférer" if is_civil else "Transfer", center_x - 80, center_y - 80),
-            ("Éviter" if is_civil else "Avoid", center_x + 80, center_y - 80),
-            ("Accepter" if is_civil else "Accept", center_x - 80, center_y + 80),
-            ("Atténuer" if is_civil else "Mitigate", center_x + 80, center_y + 80)
-        ]
+        # Case detection
+        requirement_text = (simulation_requirement or "") + " " + (project_name or "")
+        req_lower = requirement_text.lower()
+        
+        is_france_caron = "caron" in req_lower or "allaire" in req_lower or "toiture" in req_lower
+        is_tvq_case = "9154-6093" in req_lower or "tvq" in req_lower or "taxe" in req_lower or "hébergement" in req_lower or "cotisation" in req_lower
+        is_criminal_case = is_civil and ("criminel" in req_lower or "accusé" in req_lower or "accusation" in req_lower or "poursuite" in req_lower)
+
+        # 3. Écrire les étiquettes de fond des quadrants
+        if is_civil:
+            quad_labels = [
+                ("Risque Potentiel", center_x - 80, center_y - 80),
+                ("Risque Critique", center_x + 80, center_y - 80),
+                ("Risque Mineur", center_x - 80, center_y + 80),
+                ("Risque Modéré", center_x + 80, center_y + 80)
+            ]
+        else:
+            quad_labels = [
+                ("Transfer", center_x - 80, center_y - 80),
+                ("Avoid", center_x + 80, center_y - 80),
+                ("Accept", center_x - 80, center_y + 80),
+                ("Mitigate", center_x + 80, center_y + 80)
+            ]
         
         for text, tx, ty in quad_labels:
-            # Insérer le texte
+            char_w = 7.5
+            text_w = len(text) * char_w
             page.insert_text(
-                (tx - 35, ty + 5),
+                (tx - text_w // 2, ty + 5),
                 text,
-                fontsize=16,
-                color=(0.82, 0.85, 0.90),
+                fontsize=13,
+                color=(0.90, 0.92, 0.95),
                 fontname="helvetica-bold"
             )
             
         # 4. Dessiner les axes principaux avec flèches
-        # Axe horizontal (Y = center_y)
         page.draw_line((chart_x - 10, center_y), (chart_x + chart_w + 10, center_y), color=(0.75, 0.75, 0.75), width=2.0)
-        # Flèche gauche
         page.draw_line((chart_x - 10, center_y), (chart_x - 5, center_y - 4), color=(0.75, 0.75, 0.75), width=2.0)
         page.draw_line((chart_x - 10, center_y), (chart_x - 5, center_y + 4), color=(0.75, 0.75, 0.75), width=2.0)
-        # Flèche droite
         page.draw_line((chart_x + chart_w + 10, center_y), (chart_x + chart_w + 5, center_y - 4), color=(0.75, 0.75, 0.75), width=2.0)
         page.draw_line((chart_x + chart_w + 10, center_y), (chart_x + chart_w + 5, center_y + 4), color=(0.75, 0.75, 0.75), width=2.0)
         
-        # Axe vertical (X = center_x)
         page.draw_line((center_x, chart_y + chart_h + 10), (center_x, chart_y - 10), color=(0.75, 0.75, 0.75), width=2.0)
-        # Flèche haut
         page.draw_line((center_x, chart_y - 10), (center_x - 4, chart_y - 5), color=(0.75, 0.75, 0.75), width=2.0)
         page.draw_line((center_x, chart_y - 10), (center_x + 4, chart_y - 5), color=(0.75, 0.75, 0.75), width=2.0)
-        # Flèche bas
         page.draw_line((center_x, chart_y + chart_h + 10), (center_x - 4, chart_y + chart_h + 5), color=(0.75, 0.75, 0.75), width=2.0)
         page.draw_line((center_x, chart_y + chart_h + 10), (center_x + 4, chart_y + chart_h + 5), color=(0.75, 0.75, 0.75), width=2.0)
 
         # 5. Dessiner les graduations et textes d'axes
         max_cost = estimated_cost if estimated_cost else 250000.0
+        if is_civil:
+            if is_france_caron:
+                max_cost = 3000.0
+            elif is_tvq_case:
+                max_cost = 15000.0
+
+        def format_y_value(val):
+            if val == 0:
+                return "$-"
+            if val >= 1000000.0:
+                return f"${val / 1000000.0:.1f}M"
+            if val >= 1000.0:
+                k_val = val / 1000.0
+                if k_val % 1 == 0:
+                    return f"${int(k_val)}k"
+                return f"${k_val:.1f}k"
+            return f"${int(val)}"
+
         import math
-        rounded_max = math.ceil(max_cost / 50000.0) * 50000.0
-        if rounded_max < 50000.0:
-            rounded_max = 50000.0
+        rounded_max = 250000.0
+        if is_civil and not is_criminal_case:
+            if max_cost <= 5000.0:
+                rounded_max = math.ceil(max_cost / 1000.0) * 1000.0
+                if rounded_max < 1000.0:
+                    rounded_max = 1000.0
+            elif max_cost <= 25000.0:
+                rounded_max = math.ceil(max_cost / 5000.0) * 5000.0
+            elif max_cost <= 100000.0:
+                rounded_max = math.ceil(max_cost / 20000.0) * 20000.0
+            else:
+                rounded_max = math.ceil(max_cost / 50000.0) * 50000.0
 
         if is_civil:
-            y_vals = []
-            step = rounded_max / 5.0
-            for i in range(6):
-                val = i * step
-                if val == 0:
-                    y_vals.append("$-")
-                elif val >= 1000000.0:
-                    y_vals.append(f"${val / 1000000.0:.1f}M")
-                elif val >= 1000.0:
-                    y_vals.append(f"${int(val / 1000.0)}k")
-                else:
-                    y_vals.append(f"${int(val)}")
+            if is_criminal_case:
+                y_vals = ["Minimum", "Faible", "Modere", "Severe", "Critique", "Maximum"]
+            else:
+                y_vals = []
+                step = rounded_max / 5.0
+                for i in range(6):
+                    y_vals.append(format_y_value(i * step))
         else:
             y_vals = ["$-", "$5k", "$10k", "$15k", "$20k", "$25k"]
 
@@ -545,8 +577,15 @@ class ReportPDFExporter:
             )
             
         # Titre des axes
-        x_axis_title = "Probabilite de perte" if is_civil else "Probabilite d'occurrence"
-        y_axis_title = "Impact financier potentiel" if is_civil else "Cout estime"
+        if not is_civil:
+            x_axis_title = "Probabilite d'occurrence"
+            y_axis_title = "Cout estime"
+        elif is_criminal_case:
+            x_axis_title = "Probabilite de condamnation"
+            y_axis_title = "Gravite de la peine / Impact"
+        else:
+            x_axis_title = "Probabilite de perte"
+            y_axis_title = "Impact financier potentiel"
         
         page.insert_text(
             (center_x - 40, chart_y + chart_h + 28),
@@ -568,13 +607,39 @@ class ReportPDFExporter:
         core_y = min(85.0, max(20.0, (max_cost / rounded_max) * 80.0))
 
         if is_civil:
-            items = [
-                ("Obligation de resultat", min(95.0, max(5.0, loss_prob + 5.0)), core_y, 20, (0.92, 0.70, 0.03)),
-                ("Devoir d'information", min(95.0, max(5.0, loss_prob - 10.0)), max(10.0, core_y * 0.7), 16, (0.39, 0.45, 0.55)),
-                ("Frais de justice", min(95.0, max(5.0, loss_prob + 15.0)), min(95.0, max(10.0, (15000.0 / rounded_max) * 100.0)), 14, (0.23, 0.51, 0.96)),
-                ("Dommages punitifs", min(95.0, max(5.0, loss_prob - 35.0)), max(10.0, core_y * 0.45), 15, (0.93, 0.28, 0.60)),
-                ("Risque de reputation", min(95.0, max(5.0, loss_prob - 15.0)), max(10.0, core_y * 0.3), 12, (0.98, 0.45, 0.09))
-            ]
+            if is_criminal_case:
+                items = [
+                    ("Verdict de culpabilite", min(95.0, max(5.0, loss_prob + 5.0)), 85.0, 20, (0.93, 0.28, 0.60)),
+                    ("Peine d'emprisonnement", min(95.0, max(5.0, loss_prob - 10.0)), 70.0, 17, (0.98, 0.45, 0.09)),
+                    ("Casier judiciaire", min(95.0, max(5.0, loss_prob + 10.0)), 55.0, 15, (0.93, 0.28, 0.60)),
+                    ("Frais de defense", 95.0, 35.0, 13, (0.23, 0.51, 0.96)),
+                    ("Risque de reputation", min(95.0, max(5.0, loss_prob - 15.0)), 20.0, 12, (0.39, 0.45, 0.55))
+                ]
+            elif is_france_caron:
+                items = [
+                    ("Travaux correctifs", min(95.0, max(5.0, loss_prob + 5.0)), (2586.81 / rounded_max) * 100.0, 20, (0.92, 0.70, 0.03)),
+                    ("Travaux interieurs", min(95.0, max(5.0, loss_prob - 10.0)), (1974.12 / rounded_max) * 100.0, 17, (0.93, 0.28, 0.60)),
+                    ("Troubles & Inconvenients", min(95.0, max(5.0, loss_prob - 20.0)), (1000.00 / rounded_max) * 100.0, 15, (0.98, 0.45, 0.09)),
+                    ("Perte de salaire", min(95.0, max(5.0, loss_prob - 40.0)), (785.22 / rounded_max) * 100.0, 14, (0.39, 0.45, 0.55)),
+                    ("Frais d'expertise", min(95.0, max(5.0, loss_prob - 5.0)), (569.13 / rounded_max) * 100.0, 13, (0.23, 0.51, 0.96)),
+                    ("Frais de justice", min(95.0, max(5.0, loss_prob + 10.0)), (200.00 / rounded_max) * 100.0, 12, (0.06, 0.73, 0.51))
+                ]
+            elif is_tvq_case:
+                items = [
+                    ("TVQ Unite 31", min(95.0, max(5.0, loss_prob + 5.0)), (12000.0 / rounded_max) * 100.0, 20, (0.92, 0.70, 0.03)),
+                    ("TVQ Unite 51", min(95.0, max(5.0, loss_prob - 10.0)), (8500.0 / rounded_max) * 100.0, 17, (0.93, 0.28, 0.60)),
+                    ("TVQ Unite 53", min(95.0, max(5.0, loss_prob - 15.0)), (6200.0 / rounded_max) * 100.0, 15, (0.98, 0.45, 0.09)),
+                    ("TVQ Unite 54", min(95.0, max(5.0, loss_prob - 20.0)), (5400.0 / rounded_max) * 100.0, 14, (0.39, 0.45, 0.55)),
+                    ("Taxe sur l'Hebergement", min(95.0, max(5.0, loss_prob + 15.0)), (4100.0 / rounded_max) * 100.0, 13, (0.23, 0.51, 0.96)),
+                    ("Penalite art. 59 LAF", min(95.0, max(5.0, loss_prob - 35.0)), (250.0 / rounded_max) * 100.0, 12, (0.06, 0.73, 0.51))
+                ]
+            else:
+                items = [
+                    ("Reclamation principale", min(95.0, max(5.0, loss_prob + 5.0)), core_y, 20, (0.92, 0.70, 0.03)),
+                    ("Dommages accessoires", min(95.0, max(5.0, loss_prob - 10.0)), max(10.0, core_y * 0.7), 16, (0.93, 0.28, 0.60)),
+                    ("Interets & Indemnites", min(95.0, max(5.0, loss_prob - 15.0)), max(10.0, core_y * 0.45), 14, (0.98, 0.45, 0.09)),
+                    ("Frais de justice", min(95.0, max(5.0, loss_prob + 10.0)), min(95.0, max(10.0, (15000.0 / rounded_max) * 100.0)), 12, (0.23, 0.51, 0.96))
+                ]
         else:
             items = [
                 ("Denial of service", 20.0, 80.0, 22, (0.96, 0.75, 0.06)),
@@ -901,7 +966,9 @@ class ReportPDFExporter:
                         is_civil=(run_mode == 'courtroom' or litigation_type in ('civil', 'criminal')),
                         client_side=client_side,
                         loss_prob=loss_prob,
-                        estimated_cost=estimated_cost
+                        estimated_cost=estimated_cost,
+                        simulation_requirement=simulation_requirement,
+                        project_name=project_name
                     )
                     y += 410
                     continue

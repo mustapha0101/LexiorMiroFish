@@ -274,7 +274,16 @@
     "panelRelatedEdges": "Related Edges",
     "panelRelatedNodes": "Related Nodes",
     "world1": "World 1",
-    "world2": "World 2"
+    "world2": "World 2",
+    "reasonLabel": "Reason for Selection",
+    "agentInterview": "Agent Interview",
+    "interviewed": "Interviewed",
+    "total": "Total",
+    "noQuestion": "No question available",
+    "showLess": "Show Less",
+    "showMore": "Show More",
+    "keyQuotes": "Key Quotes",
+    "interviewSummary": "Interview Summary"
   },
   "step5": {
     "interactiveTools": "Interactive Tools",
