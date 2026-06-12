@@ -739,6 +739,103 @@ def prepare_simulation():
                     except Exception as e:
                         logger.warning(f"Impossible de lire les nœuds Kuzu : {e}")
                     
+                    # Deduplicate and clean up entities extracted from Kuzu DB
+                    if graph_nodes:
+                        cleaned_nodes = []
+                        # Generic roles/nouns that shouldn't be separate personas
+                        generic_placeholders = {
+                            "the accused", "l'accusé", "l·accusé", "l'intimé", "l'appelant", "the appellant", "the respondent", "le prévenu",
+                            "the prosecutor", "le poursuivant", "le procureur", "the crown", "la couronne", "la poursuite",
+                            "the judge", "le juge", "juge des faits", "the court", "la cour",
+                            "the lawyer", "l'avocat", "avocat de l'accusé", "l·avocat de l·accusé",
+                            "le policier", "policier", "the police", "the officer", "police officer",
+                            "sa majesté le roi", "sa majeste le roi", "sa majesté", "sa majeste",
+                            "crpq"
+                        }
+                        
+                        abbreviations = {
+                            "crpq": "centre des renseignements policiers du quebec",
+                            "dpcp": "directeur des poursuites criminelles et pénales",
+                            "canlii": "canadian legal information institute"
+                        }
+                        
+                        def normalize_name(name_str):
+                            n = name_str.lower().strip()
+                            # Strip titles and honorifics
+                            n = n.replace("monsieur ", "").replace("m. ", "").replace("me ", "")
+                            n = n.replace("sergent ", "").replace("sergente ", "").replace("agent ", "").replace("sd ", "").replace("s/d ", "")
+                            n = n.replace("dr. ", "").replace("juge ", "").replace("justice ", "").replace("presiding ", "")
+                            n = n.replace(".", "").replace("-", " ").replace("·", " ")
+                            n = ' '.join(n.split())
+                            return abbreviations.get(n, n)
+                        
+                        # Group nodes by normalized names to find exact/case duplicates
+                        grouped_nodes = {}
+                        for node in graph_nodes:
+                            name_val = node["name"]
+                            name_norm = normalize_name(name_val)
+                            
+                            # Skip purely generic placeholder entities
+                            if name_norm in generic_placeholders or name_val.lower().strip() in generic_placeholders:
+                                logger.info(f"Skipping generic placeholder entity node: {name_val}")
+                                continue
+                                
+                            if name_norm not in grouped_nodes:
+                                grouped_nodes[name_norm] = []
+                            grouped_nodes[name_norm].append(node)
+                        
+                        # Resolve duplicates within each group
+                        for norm, group in grouped_nodes.items():
+                            if len(group) == 1:
+                                cleaned_nodes.append(group[0])
+                            else:
+                                best_node = group[0]
+                                for candidate in group[1:]:
+                                    current_label = best_node["label"].lower()
+                                    cand_label = candidate["label"].lower()
+                                    
+                                    # Specific labels priority
+                                    label_priority = ["accusedperson", "judge", "prosecutor", "policeofficer", "lawyer", "governmentagency", "organization"]
+                                    if cand_label in label_priority and current_label not in label_priority:
+                                        best_node = candidate
+                                    elif cand_label not in label_priority and current_label in label_priority:
+                                        pass
+                                    elif len(candidate["summary"]) > len(best_node["summary"]):
+                                        best_node = candidate
+                                    elif len(candidate["name"]) > len(best_node["name"]):
+                                        best_node = candidate
+                                
+                                # Merge summaries
+                                all_summaries = [n["summary"] for n in group if n["summary"]]
+                                if all_summaries:
+                                    best_node["summary"] = max(all_summaries, key=len)
+                                    
+                                logger.info(f"Merged exact duplicate nodes for '{norm}' -> {best_node['name']} ({best_node['label']})")
+                                cleaned_nodes.append(best_node)
+                        
+                        # Cross-type substring deduplication (e.g. "Samuel Danazarre" (AccusedPerson) merges with "M. Danazarre" (Person))
+                        final_nodes = []
+                        cleaned_nodes.sort(key=lambda x: len(x["name"]), reverse=True)
+                        
+                        for node in cleaned_nodes:
+                            is_dup = False
+                            node_name_norm = normalize_name(node["name"])
+                            for existing in final_nodes:
+                                existing_name_norm = normalize_name(existing["name"])
+                                
+                                # Substring overlap check (at least 3 characters to prevent matching single letters)
+                                if (node_name_norm in existing_name_norm or existing_name_norm in node_name_norm) and len(node_name_norm) >= 3:
+                                    if len(node["summary"]) > len(existing["summary"]):
+                                        existing["summary"] = node["summary"]
+                                    is_dup = True
+                                    logger.info(f"Substring match merged '{node['name']}' ({node['label']}) into existing node '{existing['name']}' ({existing['label']})")
+                                    break
+                                    
+                            if not is_dup:
+                                final_nodes.append(node)
+                                
+                        graph_nodes = final_nodes
+                    
                     time.sleep(0.3)
                     task_manager.update_task(
                         task_id,
