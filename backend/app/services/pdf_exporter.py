@@ -890,7 +890,7 @@ class ReportPDFExporter:
                         new_page()
                     cls._draw_risk_quadrant(
                         page, margin_left, y, printable_width, 320,
-                        is_civil=(litigation_type == 'civil'),
+                        is_civil=(run_mode == 'courtroom' or litigation_type in ('civil', 'criminal')),
                         client_side=client_side,
                         loss_prob=loss_prob,
                         estimated_cost=estimated_cost
