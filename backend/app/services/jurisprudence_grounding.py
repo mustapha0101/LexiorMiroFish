@@ -279,8 +279,9 @@ class JurisprudenceGrounding:
 
         # 1. Vérification Prioritaire CCQ (Code civil du Québec) et CPC (Code de procédure civile) sur TOUS les articles cités
         arg_lower = agent_argument.lower()
-        is_ccq = any(term in arg_lower for term in ["ccq", "c.c.q.", "c.c.q", "code civil", "québec"]) or litigation_type == "civil"
         is_cpc = any(term in arg_lower for term in ["cpc", "c.p.c.", "c.p.c", "procédure civile"])
+        has_ccq_mention = any(term in arg_lower for term in ["ccq", "c.c.q.", "c.c.q", "code civil", "québec"])
+        is_ccq = has_ccq_mention or (litigation_type == "civil" and not is_cpc and any(t in arg_lower for t in ["article", "art."]))
 
         # Détecter les articles explicitement rattachés au C.p.c.
         cpc_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:du\s+)?(?:C\.p\.c\.|CPC|Code de procédure civile)', agent_argument, re.IGNORECASE)

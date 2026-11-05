@@ -1,0 +1,40 @@
+name: Lexior Simulator CI & Test Suite
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  test-backend-and-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.9.26"
+
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+
+      - name: Sync Backend Dependencies & Run Test Suite
+        working-directory: ./backend
+        run: |
+          uv sync --frozen --no-dev
+          uv run python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build Frontend (Vite)
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run build
