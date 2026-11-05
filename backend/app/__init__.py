@@ -71,7 +71,14 @@ def create_app(config_class=Config):
     # 健康检查
     @app.route('/health')
     def health():
-        return {'status': 'ok', 'service': 'Lexior Simulator Backend'}
+        ccq_db = os.path.join(os.path.dirname(__file__), 'data', 'ccq_cpc.db')
+        return {
+            'status': 'ok',
+            'service': 'Lexior Simulator Backend',
+            'version': '2.0.0',
+            'commit': os.environ.get('RENDER_GIT_COMMIT', 'local')[:8],
+            'ccq_cpc_sqlite_ready': os.path.exists(ccq_db)
+        }
     
     if should_log_startup:
         logger.info("Lexior Simulator Backend démarré avec succès")
