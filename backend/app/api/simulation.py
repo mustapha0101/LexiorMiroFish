@@ -879,12 +879,23 @@ def prepare_simulation():
                         else:
                             client = OpenAI(api_key=api_key)
                             
-                        # 1. Classification du type de litige
-                        classification_prompt = f"""Analyse la description du litige ci-dessous et classifie-la en un type précis de litige.
+                        # 1. Classification déterministe + LLM du type de litige
+                        req_doc_lower = (simulation_requirement + " " + document_text[:4000]).lower()
+                        is_explicitly_civil = any(k in req_doc_lower for k in ["chambre civile", "c.c.q.", "code civil du québec", "c.p.c.", "demande reconventionnelle", "in solidum", "clause pénale", "petites créances"])
+                        is_explicitly_criminal = any(k in req_doc_lower for k in ["chambre criminelle", "code criminel", "sa majesté", "r. c.", "chef d'accusation", "hors de tout doute raisonnable"])
+
+                        if is_explicitly_civil and not is_explicitly_criminal:
+                            litigation_type = "civil"
+                            logger.info("Détection déterministe du type de litige : civil")
+                        elif is_explicitly_criminal and not is_explicitly_civil:
+                            litigation_type = "criminal"
+                            logger.info("Détection déterministe du type de litige : criminal")
+                        else:
+                            classification_prompt = f"""Analyse la description du litige ci-dessous et classifie-la en un type précis de litige.
 Réponds UNIQUEMENT par l'un de ces deux mots en minuscule sans aucune ponctuation : "civil" ou "criminal".
 
 - Choisi "civil" s'il s'agit de litiges commerciaux, de contrats, de vices cachés, de droit civil, de poursuites entre entreprises ou individus, d'indemnisations.
-- Choisi "criminal" s'il s'agit d'infractions criminelles, de fraudes pénales, d'agressions, d'homicides ou de poursuites par l'État/le Ministère Public pour un crime.
+- Choisi "criminal" s'il s'agit d'infractions criminelles, de fraudes pénales, d'agressions, d'homicides ou de poursuites par l'État/le DPCP pour un crime.
 
 Description du litige :
 {simulation_requirement}
@@ -892,21 +903,21 @@ Description du litige :
 Texte du document (extrait) :
 {document_text[:1000]}
 """
-                        response = client.chat.completions.create(
-                            model=model_name,
-                            messages=[
-                                {"role": "system", "content": "Tu es un assistant juridique expert qui classifie les litiges."},
-                                {"role": "user", "content": classification_prompt}
-                            ],
-                            temperature=0.0,
-                            max_tokens=5
-                        )
-                        output_text = response.choices[0].message.content.strip().lower()
-                        if "criminal" in output_text:
-                            litigation_type = "criminal"
-                        else:
-                            litigation_type = "civil"
-                        logger.info(f"Détection automatique du type de litige : {litigation_type} (LLM retourné : {output_text})")
+                            response = client.chat.completions.create(
+                                model=model_name,
+                                messages=[
+                                    {"role": "system", "content": "Tu es un assistant juridique expert qui classifie les litiges."},
+                                    {"role": "user", "content": classification_prompt}
+                                ],
+                                temperature=0.0,
+                                max_tokens=256
+                            )
+                            output_text = (response.choices[0].message.content or "").strip().lower()
+                            if "criminal" in output_text:
+                                litigation_type = "criminal"
+                            else:
+                                litigation_type = "civil"
+                            logger.info(f"Détection automatique du type de litige : {litigation_type} (LLM retourné : {output_text})")
                         
                         # 2. Mappage des acteurs réels depuis le graphe s'il contient des nœuds
                         if graph_nodes:
@@ -948,9 +959,9 @@ Retourne uniquement un objet JSON avec cette structure (remplace les valeurs par
                                         {"role": "user", "content": mapping_prompt}
                                     ],
                                     temperature=0.0,
-                                    max_tokens=150
+                                    max_tokens=512
                                 )
-                                raw_map = map_res.choices[0].message.content.strip()
+                                raw_map = (map_res.choices[0].message.content or "").strip()
                                 if raw_map.startswith("```json"):
                                     raw_map = raw_map[7:]
                                 elif raw_map.startswith("```"):
@@ -1026,9 +1037,9 @@ Retourne uniquement un JSON avec cette structure :
                                         {"role": "user", "content": party_prompt}
                                     ],
                                     temperature=0.0,
-                                    max_tokens=100
+                                    max_tokens=512
                                 )
-                                raw_party = party_res.choices[0].message.content.strip()
+                                raw_party = (party_res.choices[0].message.content or "").strip()
                                 if raw_party.startswith("```json"):
                                     raw_party = raw_party[7:]
                                 elif raw_party.startswith("```"):
@@ -1062,9 +1073,9 @@ Retourne uniquement un JSON avec cette structure :
                                         {"role": "user", "content": accused_prompt}
                                     ],
                                     temperature=0.0,
-                                    max_tokens=50
+                                    max_tokens=512
                                 )
-                                raw_accused = accused_res.choices[0].message.content.strip()
+                                raw_accused = (accused_res.choices[0].message.content or "").strip()
                                 if raw_accused.startswith("```json"):
                                     raw_accused = raw_accused[7:]
                                 elif raw_accused.startswith("```"):
@@ -1078,9 +1089,9 @@ Retourne uniquement un JSON avec cette structure :
                                 
                     except Exception as e:
                         logger.warning(f"Erreur lors de la classification/extraction LLM : {e}. Utilisation des valeurs par défaut.")
-                        # Fallback simple basé sur des mots-clés
-                        req_lower = (simulation_requirement + " " + document_text).lower()
-                        if any(k in req_lower for k in ["pénale", "pénal", "criminel", "criminal", "meurtre", "vol de", "agression", "infraction"]):
+                        # Fallback simple basé sur des mots-clés (en excluant 'clause pénale' qui est civil)
+                        req_lower = (simulation_requirement + " " + document_text).lower().replace("clause pénale", "")
+                        if any(k in req_lower for k in ["chambre criminelle", "code criminel", "criminel", "criminal", "meurtre", "vol de", "agression", "chef d'accusation"]):
                             litigation_type = "criminal"
                     
                     # 3. Génération des profils
@@ -2686,7 +2697,12 @@ def get_simulation_config(simulation_id: str):
                 "success": False,
                 "error": t('api.configNotFound')
             }), 404
-        
+
+        # Self-heal litigation_type if 'clause pénale' previously triggered a false 'criminal' classification
+        req_str = (config.get("simulation_requirement") or "").lower()
+        if config.get("litigation_type") == "criminal" and any(k in req_str for k in ["chambre civile", "c.c.q.", "c.p.c.", "in solidum", "reconventionnelle"]):
+            config["litigation_type"] = "civil"
+
         return jsonify({
             "success": True,
             "data": config
@@ -3280,8 +3296,9 @@ def live_chat_with_character():
         win_rate = 50.0
         if os.path.exists(results_path):
             try:
+                from scripts.run_legal_simulation import normalize_legal_results_verdicts
                 with open(results_path, 'r', encoding='utf-8') as f:
-                    res_data = json.load(f)
+                    res_data = normalize_legal_results_verdicts(json.load(f))
                     win_rate = res_data.get("win_rate", 50.0)
             except Exception:
                 pass
@@ -5112,9 +5129,9 @@ Description du litige :
                     {"role": "user", "content": classification_prompt}
                 ],
                 temperature=0.0,
-                max_tokens=5
+                max_tokens=256
             )
-            output_text = response.choices[0].message.content.strip().lower()
+            output_text = (response.choices[0].message.content or "").strip().lower()
             if "criminal" in output_text:
                 litigation_type = "criminal"
             else:
@@ -5122,8 +5139,8 @@ Description du litige :
             logger.info(f"Détection automatique du type de litige (Monte-Carlo) : {litigation_type} (LLM retourné : {output_text})")
         except Exception as e:
             logger.warning(f"Erreur lors de la détection du type de litige par LLM : {e}. Par défaut : civil")
-            req_lower = context.lower()
-            if any(k in req_lower for k in ["pénale", "pénal", "criminel", "criminal", "meurtre", "vol de", "agression", "infraction"]):
+            req_lower = context.lower().replace("clause pénale", "")
+            if any(k in req_lower for k in ["chambre criminelle", "code criminel", "criminel", "criminal", "meurtre", "vol de", "agression", "chef d'accusation"]):
                 litigation_type = "criminal"
                 
         def _run_in_background():
@@ -5627,8 +5644,9 @@ def get_simulation_legal_results(simulation_id: str):
                 "success": True,
                 "data": reconstructed
             })
+        from scripts.run_legal_simulation import normalize_legal_results_verdicts
         with open(results_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+            data = normalize_legal_results_verdicts(json.load(f))
         return jsonify({
             "success": True,
             "data": data

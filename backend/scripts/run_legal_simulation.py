@@ -23,6 +23,250 @@ from app.services.jurisprudence_grounding import JurisprudenceGrounding
 logger = logging.getLogger('mirofish.run_legal_simulation')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+import re as _re_mod
+
+
+def evaluate_verdict_is_defense_win(verdict_text: str, litigation_type: str = "civil") -> bool:
+    """
+    Détermine de manière déterministe si un délibéré judiciaire donne gain de cause
+    à la Défense (acquittement / rejet de la demande principale) ou au Demandeur / Poursuite.
+    Ignore explicitement le rejet d'une demande reconventionnelle afin de ne jamais
+    confondre « REJETTE la demande reconventionnelle des défendeurs » avec un rejet de l'action principale.
+    """
+    if not verdict_text:
+        return False
+    verdict_upper = verdict_text.upper()
+
+    # Si c'est un verdict collégial combiné contenant les votes individuels (- Juge 1 ...), évaluer chaque juge
+    judge_splits = _re_mod.split(r'(?:^|\n)\s*-\s*JUGE\s+\d+\s*\([^)]*\)\s*:\s*', verdict_upper)
+    if len(judge_splits) >= 3:
+        individual_verdicts = [s.strip() for s in judge_splits[1:] if s.strip()]
+        wins = sum(1 for jv in individual_verdicts if evaluate_verdict_is_defense_win(jv, litigation_type))
+        return wins >= (len(individual_verdicts) // 2 + 1)
+
+    # Isoler le dispositif final s'il est présent (après PAR CES MOTIFS ou DISPOSITIF)
+    dispositif_match = _re_mod.search(r'(?:PAR\s+CES\s+MOTIFS|DISPOSITIF\s+FINAL|4\.\s*DISPOSITIF|\bDISPOSITIF\b)', verdict_upper)
+    target_zone = verdict_upper[dispositif_match.start():] if dispositif_match else verdict_upper
+
+    # Retirer toute phrase ou clause portant sur la demande reconventionnelle
+    cleaned_main = _re_mod.sub(r'[^.!?\n]*DEMANDE\s+RECONVENTIONNELLE[^.!?\n]*', '', target_zone)
+
+    # Détecter l'accueil de la demande principale ou la condamnation des défendeurs
+    has_main_welcome = bool(_re_mod.search(r'\bACCUEILLE\b[^.!?\n]*(?:DEMANDE|ACTION|RECOURS|REQUÊTE)', cleaned_main))
+    has_main_reject = bool(_re_mod.search(r'\b(?:REJETTE|DÉBOUTE|DEBOUTE)\b[^.!?\n]*(?:DEMANDE\s+PRINCIPALE|DEMANDE\s+DES\s+DEMANDEURS|ACTION\s+PRINCIPALE|RECOURS\s+DES\s+DEMANDEURS)', cleaned_main))
+    if has_main_reject and not has_main_welcome:
+        return True
+
+    has_condemnation = bool(_re_mod.search(r'\bCONDAMNE(?:R|NT|S)?\b', cleaned_main))
+    has_responsible = ("RESPONSABLE" in cleaned_main and not _re_mod.search(r'\bNON[- ]+RESPONSABLE\b', cleaned_main))
+    has_guilty = ("COUPABLE" in cleaned_main and not _re_mod.search(r'\bNON[- ]+COUPABLE\b', cleaned_main))
+
+    if has_main_welcome or has_condemnation or has_responsible or has_guilty:
+        return False
+
+    return any(
+        k in cleaned_main
+        for k in [
+            "NON RESPONSABLE", "NON-RESPONSABLE",
+            "NON COUPABLE", "NON-COUPABLE",
+            "RELAXE", "ACQUITTEMENT", "ACQUITTE",
+            "REJETTE", "REJET", "DÉBOUTE", "DEBOUTE", "REFUSE", "SANS FONDEMENT"
+        ]
+    )
+
+
+def extract_max_claim_amount(context_text: str) -> float:
+    """
+    Extrait le montant total de la demande principale (plafond de l'ultra petita, art. 10 C.p.c.)
+    à partir du contexte du dossier ou de la requête de simulation.
+    """
+    if not context_text:
+        return 0.0
+
+    def _parse_money(s: str) -> float:
+        cleaned = s.replace(' ', '').replace('\u00a0', '').replace(',', '.')
+        try:
+            return float(cleaned)
+        except ValueError:
+            return 0.0
+
+    # Retirer les mentions de demande reconventionnelle ou de prix de vente du Kit/contrat pour isoler la demande principale
+    patterns = [
+        r'(?:demande\s+principale(?:\s+totale)?\s+de|réclame(?:nt)?\s+au\s+total|montant\s+total\s+de\s+la\s+demande\s+principale|condamner[^\n$]{0,90}?payer\s+la\s+somme\s+totale\s+de|total\s+réclamé\s*[:de]*)\s*(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2}))\s*\$',
+        r'(?:somme\s+totale\s+réclamée\s+de|réclamation\s+principale\s+de)\s*(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2}))\s*\$',
+    ]
+    for pat in patterns:
+        matches = _re_mod.findall(pat, context_text, flags=_re_mod.IGNORECASE)
+        vals = [_parse_money(m) for m in matches if _parse_money(m) > 100.0]
+        if vals:
+            return max(vals)
+    return 0.0
+
+
+def _single_judge_quantum(verdict_str: str, max_claim_amount: float = 0.0) -> float:
+    if not verdict_str:
+        return 0.0
+    if evaluate_verdict_is_defense_win(verdict_str):
+        return 0.0
+    upper = verdict_str.upper()
+    dispositif_match = _re_mod.search(r'(?:PAR\s+CES\s+MOTIFS|DISPOSITIF\s+FINAL|4\.\s*DISPOSITIF|\bDISPOSITIF\b)', upper)
+    zone = verdict_str[dispositif_match.start():] if dispositif_match else verdict_str
+
+    # Nettoyer les phrases qui mentionnent un rejet (ex: rejette la demande reconventionnelle de 51 646,53 $ ou rejette 25 811 $)
+    zone_clean = _re_mod.sub(r'[^.!?\n]*\b(?:REJETTE|DÉBOUTE|DEBOUTE|REFUSE|NON\s+FONDÉE?)\b[^.!?\n]*', '', zone, flags=_re_mod.IGNORECASE)
+
+    def _parse_money(s: str) -> float:
+        cleaned = s.replace(' ', '').replace('\u00a0', '').replace(',', '.')
+        try:
+            return float(cleaned)
+        except ValueError:
+            return 0.0
+
+    def _is_valid_claim_val(v: float) -> bool:
+        if v <= 50.0:
+            return False
+        # Écarter les montants manifestement hors demande principale (ex: prix global d'un contrat 223 223 $ > max_claim_amount)
+        if max_claim_amount > 0 and v > max_claim_amount * 1.05:
+            return False
+        return True
+
+    # 1. Chercher un montant total explicite dans le dispositif
+    total_matches = _re_mod.findall(
+        r'(?:TOTAL(?:E)?\s+DES\s+CONDAMNATIONS|SOMME\s+TOTALE\s+DE|MONTANT\s+TOTAL\s+DE|TOTAL\s+EN\s+CAPITAL\s*[:de]*|TOTAL\s*:\s*)[^$\n]{0,60}?(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2}))\s*\$',
+        zone_clean,
+        flags=_re_mod.IGNORECASE,
+    )
+    if total_matches:
+        t_vals = [_parse_money(m) for m in total_matches if _is_valid_claim_val(_parse_money(m))]
+        if t_vals:
+            res_q = max(t_vals)
+            return round(min(res_q, max_claim_amount), 2) if max_claim_amount > 0 else round(res_q, 2)
+
+    # 2. Chercher toutes les clauses de condamnation chiffrées (CONDAMNE ... à payer ... X $)
+    condemn_clauses = _re_mod.findall(
+        r'\b(?:CONDAMNE(?:R|NT)?|ACCORDE(?:R)?|ORDONNE[^.!?\n]{0,60}?PAYER)\b[^.!?\n]{0,220}?(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2}))\s*\$',
+        zone_clean,
+        flags=_re_mod.IGNORECASE,
+    )
+    if condemn_clauses:
+        c_vals = []
+        for m in condemn_clauses:
+            v = _parse_money(m)
+            if _is_valid_claim_val(v) and v not in c_vals:
+                c_vals.append(v)
+        if c_vals:
+            # Si un montant dans la liste est déjà la somme des autres, retourner le max; sinon additionner les chefs distincts
+            if len(c_vals) > 1:
+                max_v = max(c_vals)
+                others_sum = sum(v for v in c_vals if v != max_v)
+                if abs(max_v - others_sum) < 5.0:
+                    res_q = max_v
+                else:
+                    res_q = sum(c_vals)
+            else:
+                res_q = c_vals[0]
+            return round(min(res_q, max_claim_amount), 2) if max_claim_amount > 0 else round(res_q, 2)
+
+    # 3. Fallback sur les montants restants de la zone nettoyée (filtrés par max_claim_amount)
+    matches = _re_mod.findall(r'(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2}))\s*\$', zone_clean)
+    vals = [_parse_money(m) for m in matches if _is_valid_claim_val(_parse_money(m))]
+    if not vals:
+        return 0.0
+    res_q = max(vals)
+    return round(min(res_q, max_claim_amount), 2) if max_claim_amount > 0 else round(res_q, 2)
+
+
+def extract_verdict_quantum(verdict_text: str, max_claim_amount: float = 0.0) -> float:
+    """
+    Extrait le quantum financier total accordé par le Tribunal (unique ou collégial),
+    borné par le plafond de la demande principale (règle de l'ultra petita, art. 10 C.p.c.).
+    """
+    if not verdict_text:
+        return 0.0
+    judge_splits = _re_mod.split(r'(?:^|\n)\s*-\s*Juge\s+\d+\s*\([^)]*\)\s*:\s*', verdict_text, flags=_re_mod.IGNORECASE)
+    if len(judge_splits) >= 3:
+        q_list = []
+        for jv in judge_splits[1:]:
+            if jv.strip():
+                q_j = _single_judge_quantum(jv, max_claim_amount=max_claim_amount)
+                if q_j > 0:
+                    q_list.append(q_j)
+        if q_list:
+            q_list.sort()
+            # Médiane des 3 juges (ou moyenne si 2)
+            return round(q_list[len(q_list) // 2], 2)
+    return _single_judge_quantum(verdict_text, max_claim_amount=max_claim_amount)
+
+
+def normalize_legal_results_verdicts(res_data: dict) -> dict:
+    """
+    Recalibre dynamiquement les résultats de simulation juridique (y compris ceux déjà enregistrés sur disque)
+    pour corriger toute inversion de verdict collégial due au rejet d'une demande reconventionnelle,
+    appliquer le plafond de l'ultra petita (art. 10 C.p.c.), et corriger la détection civil/criminel.
+    """
+    if not isinstance(res_data, dict):
+        return res_data
+    ctx_text = res_data.get("context") or ""
+    ctx_lower = ctx_text.lower()
+    if any(m in ctx_lower for m in ["c.c.q.", "c.p.c.", "chambre civile", "demande reconventionnelle", "demandeurs"]):
+        if not any(m in ctx_lower for m in ["code criminel", "dpcp", "acte d'accusation", "hors de tout doute raisonnable"]):
+            res_data["litigation_type"] = "civil"
+
+    max_claim = res_data.get("max_claim_amount") or extract_max_claim_amount(ctx_text)
+    if max_claim > 0:
+        res_data["max_claim_amount"] = max_claim
+
+    lit_type = res_data.get("litigation_type", "civil")
+    details = res_data.get("details")
+    if not isinstance(details, list) or not details:
+        return res_data
+
+    defense_wins = 0
+    for det in details:
+        if not isinstance(det, dict):
+            continue
+        verdict_txt = det.get("verdict") or ""
+        is_def_win = evaluate_verdict_is_defense_win(verdict_txt, lit_type)
+        det["is_defense_win"] = is_def_win
+        if is_def_win:
+            defense_wins += 1
+
+        # Corriger l'en-tête collégial si présent
+        judge_splits = _re_mod.split(r'(?:^|\n)\s*-\s*Juge\s+\d+\s*\([^)]*\)\s*:\s*', verdict_txt, flags=_re_mod.IGNORECASE)
+        if len(judge_splits) >= 3:
+            indiv = [s.strip() for s in judge_splits[1:] if s.strip()]
+            total_j = len(indiv)
+            def_j_wins = sum(1 for jv in indiv if evaluate_verdict_is_defense_win(jv, lit_type))
+            winning_votes = def_j_wins if is_def_win else (total_j - def_j_wins)
+            consensus_label = "Défense (Majorité)" if is_def_win else (
+                "Poursuite (Majorité)" if lit_type == "criminal" else "Demandeur (Majorité)"
+            )
+            verdict_txt = _re_mod.sub(
+                r'\[DÉCISION COLLÉGIALE - CONSENSUS\s*:[^\]]*\]',
+                f"[DÉCISION COLLÉGIALE - CONSENSUS : {consensus_label} ({winning_votes}/{total_j})]",
+                verdict_txt,
+                count=1,
+            )
+            det["verdict"] = verdict_txt
+
+        # Nettoyer le vocabulaire criminel résiduel dans la synthèse du greffier en matière civile
+        if lit_type == "civil" and det.get("clerk_analysis"):
+            ca = det["clerk_analysis"]
+            ca = _re_mod.sub(r'\bverdict\s+de\s+culpabilité\b', 'jugement de responsabilité civile', ca, flags=_re_mod.IGNORECASE)
+            ca = _re_mod.sub(r'\bculpabilité\b', 'responsabilité civile', ca, flags=_re_mod.IGNORECASE)
+            ca = _re_mod.sub(r'\bcoupables?\b', 'responsables', ca, flags=_re_mod.IGNORECASE)
+            det["clerk_analysis"] = ca
+
+        q_val = extract_verdict_quantum(verdict_txt, max_claim_amount=max_claim)
+        if q_val > 0 or is_def_win:
+            det["awarded_quantum"] = q_val
+
+    res_data["iterations"] = len(details)
+    res_data["defense_wins"] = defense_wins
+    res_data["win_rate"] = round((defense_wins / len(details)) * 100.0, 1)
+    return res_data
+
+
 class LegalSimulationRunner:
     def __init__(self, context: str, iterations: int = 50, litigation_type: str = "civil", judge_type: str = "single", selected_judge_personality: str = None, selected_judges_personalities: list = None):
         self.context = context
@@ -268,25 +512,18 @@ class LegalSimulationRunner:
             tour += 1
  
         # 3. Phase de Délibéré
-        import re
-        
         def evaluate_verdict(verdict_text: str) -> bool:
-            verdict_upper = verdict_text.upper()
-            if self.litigation_type == "civil":
-                has_responsible = "RESPONSABLE" in verdict_upper and not re.search(r'\bNON[- ]+RESPONSABLE\b', verdict_upper)
-                has_condemnation = any(k in verdict_upper for k in ["CONDAMNE", "CONDAMNER"])
-                if has_responsible or has_condemnation:
-                    return False
-                return any(k in verdict_upper for k in ["NON RESPONSABLE", "NON-RESPONSABLE", "REJETTE", "REJET", "DEBOUTE", "REFUSE", "SANS FONDEMENT"])
-            else:
-                has_guilty = "COUPABLE" in verdict_upper and not re.search(r'\bNON[- ]+COUPABLE\b', verdict_upper)
-                has_condemnation = False
-                if "CONDAMNE" in verdict_upper or "CONDAMNER" in verdict_upper:
-                    if re.search(r'CONDAMNE(R)?\s+(?:[^.!?]*)(?:APEX|DÉFENDEUR|DÉFENDERESSE)', verdict_upper):
-                        has_condemnation = True
-                if has_guilty or has_condemnation:
-                    return False
-                return any(k in verdict_upper for k in ["NON COUPABLE", "RELAXE", "ACQUITTEMENT", "ACQUITTE", "NON-COUPABLE", "REJETTE", "REFUSE"])
+            return evaluate_verdict_is_defense_win(verdict_text, self.litigation_type)
+
+        max_claim = extract_max_claim_amount(self.context)
+        judge_grounded_ctx = self.filter_context(grounded_context, "judge")
+        if max_claim > 0 and self.litigation_type == "civil":
+            judge_grounded_ctx += (
+                f"\n\n[PLAFOND IMPÉRATIF DE L'ULTRA PETITA (Art. 10 et 468 C.p.c.) : "
+                f"Le montant total réclamé dans la demande principale est de {max_claim:,.2f} $. "
+                f"Le quantum total accordé au dispositif ne peut EN AUCUN CAS dépasser {max_claim:,.2f} $. "
+                f"Ne confondez jamais le prix global d'un contrat ou d'un bien mentionné dans les faits avec le montant réclamé.]\n"
+            )
 
         if self.judge_type == "collegiate":
             logger.info("Délibéré du Tribunal Collégial (3 Juges)...")
@@ -298,9 +535,9 @@ class LegalSimulationRunner:
             collegiate_results = []
             for idx, j_pers in enumerate(judges_list):
                 logger.info(f"Délibération du Juge {idx+1} ({j_pers})...")
-                judge_sys = LegalAgents.get_judge_prompt(self.filter_context(self.context, "judge"), j_pers, self.litigation_type)
+                judge_sys = LegalAgents.get_judge_prompt(judge_grounded_ctx, j_pers, self.litigation_type)
                 judge_history = [{"role": "user", "content": "Voici la transcription du débat:\n" + "\n".join(transcript) + "\n\nQuel est votre verdict ?"}]
-                verdict_j = self._call_llm(judge_sys, judge_history)
+                verdict_j = _strip_meta_and_citations(self._call_llm(judge_sys, judge_history))
                 is_win_j = evaluate_verdict(verdict_j)
                 collegiate_results.append({
                     "personality": j_pers,
@@ -309,12 +546,14 @@ class LegalSimulationRunner:
                 })
             
             wins_count = sum(1 for r in collegiate_results if r["is_defense_win"])
-            is_defense_win = wins_count >= 2
+            total_judges = len(collegiate_results)
+            is_defense_win = wins_count >= (total_judges // 2 + 1)
+            majority_votes = wins_count if is_defense_win else (total_judges - wins_count)
             consensus_label = "Défense (Majorité)" if is_defense_win else (
                 "Poursuite (Majorité)" if self.litigation_type == "criminal" else "Demandeur (Majorité)"
             )
             
-            combined_verdict = f"[DÉCISION COLLÉGIALE - CONSENSUS : {consensus_label} ({wins_count}/3)]\n\n"
+            combined_verdict = f"[DÉCISION COLLÉGIALE - CONSENSUS : {consensus_label} ({majority_votes}/{total_judges})]\n\n"
             for idx, r in enumerate(collegiate_results):
                 j_name = r["personality"].split('(')[0].strip()
                 combined_verdict += f"- Juge {idx+1} ({j_name}) : {r['verdict']}\n\n"
@@ -325,7 +564,7 @@ class LegalSimulationRunner:
                 on_action_callback("VERDICT", "Le Tribunal Collégial", 0, verdict, result=verdict)
         else:
             logger.info("Délibéré du juge...")
-            judge_sys = LegalAgents.get_judge_prompt(self.filter_context(grounded_context, "judge"), current_personality, self.litigation_type)
+            judge_sys = LegalAgents.get_judge_prompt(judge_grounded_ctx, current_personality, self.litigation_type)
             judge_history = [{"role": "user", "content": "Voici la transcription du débat:\n" + "\n".join(transcript) + "\n\nQuel est votre verdict ?"}]
             verdict = _strip_meta_and_citations(self._call_llm(judge_sys, judge_history))
             transcript.append(f"JUGE: {verdict}")
@@ -337,6 +576,10 @@ class LegalSimulationRunner:
         clerk_sys = LegalAgents.get_clerk_prompt(self.litigation_type)
         clerk_history = [{"role": "user", "content": "Analyse du verdict et des arguments décisifs:\n" + "\n".join(transcript)}]
         clerk_analysis = _strip_meta_and_citations(self._call_llm(clerk_sys, clerk_history))
+        if self.litigation_type == "civil" and clerk_analysis:
+            clerk_analysis = _re_mod.sub(r'\bverdict\s+de\s+culpabilité\b', 'jugement de responsabilité civile', clerk_analysis, flags=_re_mod.IGNORECASE)
+            clerk_analysis = _re_mod.sub(r'\bculpabilité\b', 'responsabilité civile', clerk_analysis, flags=_re_mod.IGNORECASE)
+            clerk_analysis = _re_mod.sub(r'\bcoupables?\b', 'responsables', clerk_analysis, flags=_re_mod.IGNORECASE)
         if on_action_callback:
             on_action_callback("CLERK_ANALYSIS", "Le Greffier", 4, clerk_analysis, result="Analysis completed")
         
@@ -344,6 +587,7 @@ class LegalSimulationRunner:
             "iteration": iter_id,
             "judge_personality": current_personality,
             "is_defense_win": is_defense_win,
+            "awarded_quantum": extract_verdict_quantum(verdict, max_claim_amount=max_claim),
             "transcript": transcript,
             "clerk_analysis": clerk_analysis,
             "verdict": verdict

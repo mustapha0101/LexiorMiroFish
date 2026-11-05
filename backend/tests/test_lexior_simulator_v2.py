@@ -269,6 +269,80 @@ class TestLexiorSimulatorV2(unittest.TestCase):
             shutil.rmtree(os.path.join(base_dir, "uploads", "simulations", sim_id), ignore_errors=True)
             shutil.rmtree(os.path.join(base_dir, "uploads", "kuzu", sim_id), ignore_errors=True)
 
+    def test_10_robertson_c_murray_ultra_petita_and_counterclaim_verdict(self):
+        """
+        Vérifie les 4 correctifs sur le cas Robertson c. Murray (Maisons Paragon Homes inc.) :
+        1. Détection CIVIL même en présence de 'clause pénale' ou 'manoeuvres dolosives'.
+        2. Prohibition de l'ultra petita (art. 10 C.p.c.) : ignore le prix du Kit Paragon (223 223,00 $) dans les motifs et borne à max_claim_amount (71 928,15 $).
+        3. Non-inversion du gagnant : 'REJETTE la demande reconventionnelle des défendeurs' ne donne jamais is_defense_win=True lorsque la demande principale est accueillie.
+        4. Sommation exacte des chefs de condamnation du dispositif (41 117,15 $ + 5 000,00 $ = 46 117,15 $).
+        """
+        from scripts.run_legal_simulation import (
+            evaluate_verdict_is_defense_win,
+            extract_verdict_quantum,
+            extract_max_claim_amount,
+            normalize_legal_results_verdicts,
+        )
+
+        context_robertson = (
+            "Cour du Québec (Chambre civile). Demande principale de 71 928,15 $ "
+            "(restitution de 41 117,15 $, troubles et inconvénients de 5 000 $, honoraires extrajudiciaires de 25 811 $ sous l'art. 51 C.p.c.). "
+            "Demande reconventionnelle de 51 646,53 $ fondée sur une clause pénale de 20 %."
+        )
+        max_claim = extract_max_claim_amount(context_robertson)
+        self.assertAlmostEqual(max_claim, 71928.15, places=2)
+
+        sample_collegiate_verdict = (
+            "[DÉCISION COLLÉGIALE - CONSENSUS : Défense (Majorité) (2/3)]\n\n"
+            "- Juge 1 (Formaliste strict) : MOTIFS : François Murray a admis un profit sur le Kit Paragon d'une valeur de 223 223,00 $. "
+            "PAR CES MOTIFS, LE TRIBUNAL :\n"
+            "1. ACCUEILLE en partie la demande principale des demandeurs ;\n"
+            "2. CONDAMNE solidairement les défendeurs à payer aux demandeurs la somme de 41 117,15 $ à titre de restitution ;\n"
+            "3. CONDAMNE solidairement les défendeurs à payer aux demandeurs la somme de 5 000,00 $ pour troubles et inconvénients ;\n"
+            "4. REJETTE la réclamation de 25 811,00 $ pour honoraires extrajudiciaires sous l'art. 51 C.p.c. ;\n"
+            "5. REJETTE l'intégralité de la demande reconventionnelle des défendeurs de 51 646,53 $.\n\n"
+            "- Juge 2 (Sensible à l'équité) : PAR CES MOTIFS :\n"
+            "ACCUEILLE la demande principale ; CONDAMNE solidairement les défendeurs à payer 41 117,15 $ et 5 000,00 $ ; "
+            "REJETTE la demande d'honoraires de 25 811,00 $ ; REJETTE la demande reconventionnelle de 51 646,53 $.\n\n"
+            "- Juge 3 (Conservateur) : PAR CES MOTIFS :\n"
+            "ACCUEILLE la demande principale ; CONDAMNE solidairement les défendeurs à payer 41 117,15 $ ; "
+            "REJETTE la demande reconventionnelle de 51 646,53 $.\n"
+        )
+
+        # 1. Aucun juge n'a donné victoire à la Défense (la demande principale est accueillie, seule la reconventionnelle est rejetée)
+        self.assertFalse(evaluate_verdict_is_defense_win(sample_collegiate_verdict, "civil"))
+
+        # 2. Le quantum extrait ignore 223 223,00 $ (motifs) et 51 646,53 $ / 25 811,00 $ (rejetés), et calcule la médiane des condamnations (46 117,15 $)
+        q = extract_verdict_quantum(sample_collegiate_verdict, max_claim_amount=max_claim)
+        self.assertAlmostEqual(q, 46117.15, places=2)
+
+        # 3. Normalisation d'un résultat existant (rétro-compatibilité sim_b85102ab9fcb)
+        raw_res = {
+            "context": context_robertson,
+            "litigation_type": "criminal",
+            "iterations": 1,
+            "defense_wins": 1,
+            "win_rate": 100.0,
+            "details": [
+                {
+                    "iteration": 1,
+                    "judge_personality": "Tribunal Collégial",
+                    "is_defense_win": True,
+                    "awarded_quantum": 223223.0,
+                    "verdict": sample_collegiate_verdict,
+                    "clerk_analysis": "Le Tribunal a rendu un verdict de culpabilité contre les défendeurs.",
+                }
+            ],
+        }
+        norm = normalize_legal_results_verdicts(raw_res)
+        self.assertEqual(norm["litigation_type"], "civil")
+        self.assertEqual(norm["defense_wins"], 0)
+        self.assertEqual(norm["win_rate"], 0.0)
+        self.assertFalse(norm["details"][0]["is_defense_win"])
+        self.assertAlmostEqual(norm["details"][0]["awarded_quantum"], 46117.15, places=2)
+        self.assertIn("Demandeur (Majorité) (3/3)", norm["details"][0]["verdict"])
+        self.assertNotIn("culpabilité", norm["details"][0]["clerk_analysis"].lower())
+
 
 if __name__ == "__main__":
     unittest.main()

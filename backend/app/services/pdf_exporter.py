@@ -44,6 +44,9 @@ class SimulationPDFExporter:
                     litigation_type = cfg.get("litigation_type", "civil")
                     run_mode = cfg.get("run_mode", "courtroom")
                     project_name = cfg.get("project_name", "Procès Lexior")
+                    req_low = (simulation_requirement or "").lower()
+                    if any(m in req_low for m in ["c.c.q.", "c.p.c.", "chambre civile", "demande reconventionnelle"]):
+                        litigation_type = "civil"
             except Exception as e:
                 print(f"Error reading config: {e}")
                 
@@ -176,6 +179,8 @@ class SimulationPDFExporter:
             if not text:
                 return ""
             s = str(text)
+            # Remplacer les ligatures hors ISO-8859-1 (qui deviennent '·' en police Helvetica de base)
+            s = s.replace('œ', 'oe').replace('Œ', 'OE').replace('\u2019', "'").replace('\u2018', "'").replace('\u2013', '-').replace('\u2014', '-')
             # 1. Supprimer les placeholders non résolus
             s = re.sub(r'\[À insérer[^\]]*\]', '', s, flags=re.IGNORECASE)
             # 2. Nettoyer les séquences LaTeX / Markdown autour du symbole $
@@ -743,13 +748,19 @@ class ReportPDFExporter:
 
             # Load results to get win_rate and estimated_cost
             try:
+                from scripts.run_legal_simulation import normalize_legal_results_verdicts
                 sim_dir = os.path.join(Config.OASIS_SIMULATION_DATA_DIR, simulation_id)
                 results_path = os.path.join(sim_dir, "legal_simulation_results.json")
                 if os.path.exists(results_path):
                     with open(results_path, 'r', encoding='utf-8') as f:
-                        res_data = json.load(f)
+                        res_data = normalize_legal_results_verdicts(json.load(f))
                         win_rate = res_data.get("win_rate", 50.0)
                         estimated_cost = res_data.get("estimated_cost", 250000.0)
+                        litigation_type = res_data.get("litigation_type", litigation_type)
+                        # Mettre à jour estimated_cost à partir des quantums si disponible
+                        q_vals = [d.get("awarded_quantum", 0.0) for d in res_data.get("details", []) if isinstance(d, dict) and d.get("awarded_quantum", 0.0) > 0]
+                        if q_vals and (not estimated_cost or estimated_cost < 10.0):
+                            estimated_cost = max(q_vals)
             except Exception:
                 pass
 
@@ -763,6 +774,9 @@ class ReportPDFExporter:
                         litigation_type = cfg.get("litigation_type", litigation_type)
                         run_mode = cfg.get("run_mode", run_mode)
                         simulation_requirement = cfg.get("simulation_requirement", "N/A")
+                        req_low = (simulation_requirement or "").lower()
+                        if any(m in req_low for m in ["c.c.q.", "c.p.c.", "chambre civile", "demande reconventionnelle"]):
+                            litigation_type = "civil"
                 except Exception:
                     pass
 
@@ -833,7 +847,7 @@ class ReportPDFExporter:
             page.insert_text((margin_right - 40, 812), f"Page {doc.page_count}", fontsize=7.5, color=(0.5, 0.5, 0.5), fontname="helvetica-bold")
 
         def get_clean_length(text, font, fontsize):
-            clean = text.replace('**', '')
+            clean = text.replace('**', '').replace('*', '')
             return font.text_length(clean, fontsize=fontsize)
 
         def wrap_rich_text(text, font, fontsize, max_width):
@@ -856,41 +870,54 @@ class ReportPDFExporter:
                 lines.append("")
             return lines[:-1] # Remove last empty line
 
-        def draw_rich_line(x, y, line, fontsize, color, is_bullet=False):
+        def draw_rich_line(x, y, line, fontsize, color, is_bullet=False, show_bullet_dot=False):
             start_x = x
             if is_bullet:
-                page.insert_text((x, y), "•", fontsize=fontsize, color=(0.71, 0.54, 0.24), fontname="helvetica-bold")
+                if show_bullet_dot:
+                    page.insert_text((x, y), "•", fontsize=fontsize, color=(0.71, 0.54, 0.24), fontname="helvetica-bold")
                 start_x += 12
                 
-            parts = re.split(r'(\*\*.*?\*\*)', line)
+            parts = re.split(r'(\*\*.*?\*\*|\*[^*]+\*)', line)
             current_x = start_x
             for part in parts:
-                is_bold = part.startswith('**') and part.endswith('**')
-                text = part[2:-2] if is_bold else part
+                is_bold = part.startswith('**') and part.endswith('**') and len(part) > 4
+                is_italic = (not is_bold) and part.startswith('*') and part.endswith('*') and len(part) > 2
+                if is_bold:
+                    text = part[2:-2]
+                elif is_italic:
+                    text = part[1:-1]
+                else:
+                    text = part.replace('*', '')
                 if not text:
                     continue
-                fontname = "helvetica-bold" if is_bold else "helvetica"
+                fontname = "helvetica-bold" if is_bold else ("helvetica-oblique" if is_italic else "helvetica")
                 page.insert_text((current_x, y), text, fontsize=fontsize, color=color, fontname=fontname)
-                font = font_bold if is_bold else font_reg
+                font = font_bold if is_bold else (font_italic if is_italic else font_reg)
                 current_x += font.text_length(text, fontsize=fontsize)
 
         def draw_rich_text(text, fontsize=9.5, color=(0.15, 0.15, 0.15), line_spacing=13, is_bullet=False):
             nonlocal page, y
-            text = re.sub(r'\[À insérer[^\]]*\]', '', str(text), flags=re.IGNORECASE)
+            text = str(text).replace('œ', 'oe').replace('Œ', 'OE').replace('\u2019', "'").replace('\u2018', "'").replace('\u2013', '-').replace('\u2014', '-')
+            text = re.sub(r'\[À insérer[^\]]*\]', '', text, flags=re.IGNORECASE)
             text = re.sub(r'\\+\$', '$', text)
             text = re.sub(r'\$\s*\\mathfrak\{[^}]*\}\s*\$', '$', text)
-            lines = wrap_rich_text(text, font_reg, fontsize, printable_width - (15 if is_bullet else 0))
+            text = re.sub(r'\b(\d{1,3})[\s\u00a0](\d)\2{3}([.,]\d{2}\s*\$)', r'\1 \2\2\2\3', text)
+            lines = wrap_rich_text(text, font_reg, fontsize, printable_width - (22 if is_bullet else 0))
+            first_nonempty_drawn = False
             for line in lines:
                 if y + line_spacing > margin_bottom:
                     new_page()
                 if line == "":
                     y += 6 # Spacing between paragraphs
                     continue
-                draw_rich_line(margin_left + (10 if is_bullet else 0), y, line, fontsize, color, is_bullet)
+                show_dot = is_bullet and (not first_nonempty_drawn)
+                first_nonempty_drawn = True
+                draw_rich_line(margin_left + (10 if is_bullet else 0), y, line, fontsize, color, is_bullet=is_bullet, show_bullet_dot=show_dot)
                 y += line_spacing
 
         def draw_heading(text, level=1):
             nonlocal page, y
+            text = str(text).replace('œ', 'oe').replace('Œ', 'OE').replace('\u2019', "'").replace('\u2018', "'").replace('\u2013', '-').replace('\u2014', '-')
             font_size = 14 if level == 1 else (11.5 if level == 2 else 10)
             spacing = 22 if level == 1 else (18 if level == 2 else 14)
             color = (0.04, 0.09, 0.18) if level == 1 else (0.71, 0.54, 0.24) if level == 2 else (0.3, 0.3, 0.3)
@@ -953,7 +980,8 @@ class ReportPDFExporter:
         
         # 3. Render each section's content
         def normalize_title(t):
-            t = re.sub(r'^[#\s\d\.\-]+', '', t)
+            t = re.sub(r'^[#\s\d\.\-\*]+', '', str(t))
+            t = t.replace('&', ' ').replace(' et ', ' ')
             return ''.join(c.lower() for c in t if c.isalnum())
 
         for sec in sections_data:
@@ -972,9 +1000,14 @@ class ReportPDFExporter:
             # Parse markdown blocks line-by-line
             lines = content.split('\n')
             p_block = []
+            seen_first_nonempty = False
             
             for line in lines:
                 stripped = line.strip()
+                if not seen_first_nonempty and stripped:
+                    seen_first_nonempty = True
+                    if normalize_title(stripped) == normalized_sec_title:
+                        continue
                 if re.search(r'\[RISK[\s\\_]*QUAD(?:RANT)?[\s\\_]*CHART\]', stripped, re.IGNORECASE):
                     if p_block:
                         draw_rich_text('\n'.join(p_block))

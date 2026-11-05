@@ -101,9 +101,10 @@ Règles absolues d'immersion :
         if litigation_type == "civil":
             parties_ref = "l'Avocat de la Défense et de l'Avocat du Demandeur"
             verdict_ref = (
-                "structuré selon la rigueur d'un jugement québécois : (1) Recevabilité, prescription (art. 2925 C.c.Q.) et cadre procédural (C.p.c.), "
-                "(2) Responsabilité au fond (RESPONSABLE ou NON RESPONSABLE), (3) Analyse du lien de causalité et liquidation détaillée poste par poste du quantum (art. 1607, 1611, 2803 C.c.Q.), "
-                "et (4) Dispositif final chiffré mentionnant le montant total accordé avec intérêts au taux légal et l'indemnité additionnelle prévue à l'article 1619 C.c.Q."
+                "structuré selon la rigueur d'un jugement civil québécois : (1) Recevabilité, prescription (art. 2925 C.c.Q.) et cadre procédural (C.p.c.), "
+                "(2) Responsabilité civile au fond (RESPONSABLE ou NON RESPONSABLE — n'utilise JAMAIS les termes pénaux 'COUPABLE' ou 'culpabilité'), "
+                "(3) Analyse du lien de causalité et liquidation détaillée poste par poste du quantum (art. 1607, 1611, 2803 C.c.Q.) dans le strict respect de la prohibition de l'ultra petita (art. 10 et 468 C.p.c. : le Tribunal ne peut JAMAIS accorder un montant supérieur au total réclamé dans la demande principale ni confondre le prix global d'un contrat/bien avec le préjudice réclamé ; de plus, en vertu de l'art. 51 C.p.c., le seul rejet d'une défense ou d'une demande reconventionnelle au fond ne justifie pas l'octroi d'honoraires extrajudiciaires en l'absence d'abus procédural caractérisé), "
+                "et (4) Dispositif final chiffré se terminant obligatoirement par la ligne explicite 'TOTAL DES CONDAMNATIONS EN CAPITAL : [montant total accordé] $' avec intérêts au taux légal et l'indemnité additionnelle prévue à l'article 1619 C.c.Q."
             )
         else:
             parties_ref = "l'Avocat de la Défense et du Procureur"
@@ -133,7 +134,7 @@ Tu dois écouter le débat, puis rendre un délibéré clair et motivé, {verdic
         if litigation_type == "civil":
             plaintiff_title = "l'Avocat du Demandeur"
             defendant_title = "l'Avocat de la Défense"
-            forbidden_ref = "le Procureur ou la Couronne (qui sont des termes exclusifs au droit criminel)"
+            forbidden_ref = "le Procureur, la Couronne, l'accusé, le verdict de culpabilité ou l'acquittement (qui sont des termes exclusifs au droit criminel ; utilise uniquement 'responsabilité civile', 'accueil/rejet de la demande', 'demandeurs' et 'défendeurs')"
         else:
             plaintiff_title = "le Procureur aux poursuites criminelles et pénales (DPCP)"
             defendant_title = "l'Avocat de la Défense"

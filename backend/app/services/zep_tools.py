@@ -1541,8 +1541,57 @@ class ZepToolsService:
         )
         optimized_prompt = f"{INTERVIEW_PROMPT_PREFIX}{combined_prompt}"
         
-        # Step 4: 调用真实的采访API（不指定platform，默认双平台同时采访）
+        # Step 4: Pour les simulations judiciaires ('legal'), exécuter directement l'interrogatoire hors cour via LLM
+        # sans appeler l'IPC double-plateforme OASIS (Twitter/Reddit) qui générerait un faux WARNING.
         try:
+            if simulation_mode == "legal":
+                logger.info(f"Exécution de l'interrogatoire judiciaire hors cour pour {len(selected_agents)} acteurs du dossier...")
+                for agent in selected_agents:
+                    agent_name = agent.get("realname", agent.get("username", "Acteur"))
+                    agent_role = agent.get("profession", "Intervenant judiciaire")
+                    agent_bio = agent.get("bio", "")
+                    agent_persona = agent.get("persona", "")
+                    system_prompt = (
+                        f"Tu incarnes {agent_name} ({agent_role}) lors d'un interrogatoire judiciaire contradictoire au Québec.\n"
+                        f"Profil et rôle : {agent_persona}\n"
+                        f"Faits et biographie au dossier : {agent_bio}\n\n"
+                        f"Réponds directement en français aux questions posées en respectant scrupuleusement ton rôle, tes intérêts et les faits du dossier.\n"
+                        f"Consignes :\n"
+                        f"1. Réponds en langage juridique ou factuel naturel, sans appeler d'outil et sans mentionner de réseau social.\n"
+                        f"2. Structure ta déposition point par point selon les questions."
+                    )
+                    user_prompt = f"Questions de l'interrogatoire :\n{combined_prompt}"
+                    response_text = self.llm.chat(
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        temperature=0.6,
+                        max_tokens=700
+                    )
+                    import re
+                    clean_text = re.sub(r'[*_`|>~\-]{2,}', '', response_text)
+                    sentences = re.split(r'[。！？.!?]', clean_text)
+                    meaningful = [s.strip() for s in sentences if 20 <= len(s.strip()) <= 160]
+                    key_quotes = [s + "." for s in meaningful[:3]]
+                    interview = AgentInterview(
+                        agent_name=agent_name,
+                        agent_role=agent_role,
+                        agent_bio=agent_bio[:1000],
+                        question=combined_prompt,
+                        response=f"【Déclaration / Déposition】\n{response_text}",
+                        key_quotes=key_quotes
+                    )
+                    result.interviews.append(interview)
+                result.interviewed_count = len(result.interviews)
+                if result.interviews:
+                    result.summary = self._generate_interview_summary(
+                        interviews=result.interviews,
+                        interview_requirement=interview_requirement
+                    )
+                logger.info(t("console.interviewAgentsComplete", count=result.interviewed_count))
+                return result
+
             # 构建批量采访列表（不指定platform，双平台采访）
             interviews_request = []
             for agent_idx in selected_indices:

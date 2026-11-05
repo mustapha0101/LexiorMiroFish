@@ -1010,7 +1010,12 @@ class ReportAgent:
                     
                     if os.path.exists(results_path):
                         with open(results_path, 'r', encoding='utf-8') as f:
-                            res_data = json.load(f)
+                            from scripts.run_legal_simulation import (
+                                normalize_legal_results_verdicts,
+                                extract_verdict_quantum,
+                                extract_max_claim_amount,
+                            )
+                            res_data = normalize_legal_results_verdicts(json.load(f))
                             win_rate = res_data.get("win_rate", 50.0)
                             iterations = res_data.get("iterations", 50)
                             defense_wins = res_data.get("defense_wins", 25)
@@ -1018,35 +1023,44 @@ class ReportAgent:
                             details = res_data.get("details", [])
                             run_mode = res_data.get("run_mode", "courtroom")
                             j_type = res_data.get("judge_type", "single")
+                            max_claim = (
+                                res_data.get("max_claim_amount")
+                                or extract_max_claim_amount(self.simulation_requirement)
+                                or extract_max_claim_amount(res_data.get("context", ""))
+                            )
                             
                             # Extraire la trajectoire complète des verdicts et les quantums financiers réels par round
-                            import re as _re
                             verdicts = []
                             quantums = []
+                            partial_defense_success_rounds = 0
                             for idx, det in enumerate(details):
                                 verdict_txt = det.get('verdict', '')
                                 clerk_txt = det.get('clerk_analysis', '')
                                 q_val = det.get('awarded_quantum', 0.0)
-                                if not q_val and verdict_txt:
-                                    matches = _re.findall(r'(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2}))\s*\$', verdict_txt)
-                                    vals = []
-                                    for m in matches:
-                                        try:
-                                            v = float(m.replace(' ', '').replace('\u00a0', '').replace(',', '.'))
-                                            if v > 50.0:
-                                                vals.append(v)
-                                        except ValueError:
-                                            pass
-                                    if vals:
-                                        q_val = max(vals)
+                                if (not q_val or (max_claim > 0 and q_val > max_claim)) and verdict_txt:
+                                    q_val = extract_verdict_quantum(verdict_txt, max_claim_amount=max_claim)
+                                if max_claim > 0 and q_val > max_claim:
+                                    q_val = max_claim
                                 if q_val > 0:
                                     quantums.append((idx + 1, q_val))
+                                if det.get('is_defense_win') or q_val == 0:
+                                    outcome_label = "Victoire Totale Défense (Rejet intégral de la demande - 0,00 $)"
+                                    partial_defense_success_rounds += 1
+                                elif max_claim > 0 and q_val < max_claim * 0.96:
+                                    saved_amt = max_claim - q_val
+                                    saved_pct = (saved_amt / max_claim) * 100.0
+                                    outcome_label = (
+                                        f"Condamnation Partielle (Demandeur au fond / Victoire Partielle Défense sur le Quantum : "
+                                        f"{q_val:,.2f} $ accordés sur {max_claim:,.2f} $ réclamés, économie de {saved_amt:,.2f} $ [-{saved_pct:.1f}%])"
+                                    )
+                                    partial_defense_success_rounds += 1
+                                else:
+                                    outcome_label = f"Condamnation Intégrale Demandeur ({q_val:,.2f} $)"
                                 # Inclure les 6 premiers rounds complets (sans troncature à 300 caractères qui coupait le dispositif du juge !)
                                 if verdict_txt and idx < 6:
                                     v_limit = 2500
-                                    q_str = f" [Quantum accordé : {q_val:,.2f} $]" if q_val > 0 else ""
                                     verdicts.append(
-                                        f"Round {idx+1} (Juge : {det.get('judge_personality')}) — Gagnant: {'Défense' if det.get('is_defense_win') else 'Demandeur'}{q_str} :\n"
+                                        f"Round {idx+1} (Juge : {det.get('judge_personality')}) — Issue déterministe : {outcome_label} :\n"
                                         f"Verdict complet : {verdict_txt[:v_limit]}\n"
                                         f"Synthèse du Greffier : {clerk_txt[:800]}"
                                     )
@@ -1057,19 +1071,22 @@ class ReportAgent:
                                 max_q = max(q for _, q in quantums)
                                 min_q = min(q for _, q in quantums)
                                 avg_q = sum(q for _, q in quantums) / len(quantums)
+                                ref_ceiling = max_claim if max_claim >= max_q else max_q
                                 # Majoration légale québécoise (Intérêts au taux légal 5% + Indemnité additionnelle art. 1619 C.c.Q. ~3.5% = +8.5%)
                                 legal_interest_markup = round(avg_q * 0.085, 2)
                                 total_actuarial_exposure = round(avg_q + legal_interest_markup, 2)
                                 cra_settlement_floor = round(min_q * 0.95, 2)
                                 cra_settlement_target = round(avg_q * 0.92, 2)
-                                estimated_cost = max_q
+                                estimated_cost = ref_ceiling
                                 traj_str = " -> ".join(f"R{r}: {q:,.2f} $" for r, q in quantums[:8])
-                                drop_pct = ((max_q - min_q) / max_q) * 100.0 if max_q > 0 else 0.0
+                                drop_amt = max(0.0, ref_ceiling - min_q)
+                                drop_pct = (drop_amt / ref_ceiling) * 100.0 if ref_ceiling > 0 else 0.0
                                 actuarial_header = (
-                                    "=== BILAN ACTUARIEL & FINANCIER VÉRIFIÉ (MOTEUR PIE v2) ===\n"
-                                    f"- Trajectoire du Quantum par Round : {traj_str}\n"
-                                    f"- Quantum Maximal Accordé (Plein Droit) : {max_q:,.2f} $\n"
-                                    f"- Puits de Potentiel (Quantum Minimal après réduction art. 1607/1611/2803 C.c.Q.) : {min_q:,.2f} $ (-{drop_pct:.1f}%)\n"
+                                    "=== BILAN ACTUARIEL & FINANCIER VÉRIFIÉ (MOTEUR PIE v2 — RESPECT DE L'ART. 10 C.P.C. ULTRA PETITA) ===\n"
+                                    f"- Plafond de la Demande Principale Réclamée (Art. 10 C.p.c.) : {ref_ceiling:,.2f} $\n"
+                                    f"- Trajectoire du Quantum Accordé par Round : {traj_str}\n"
+                                    f"- Quantum Maximal Accordé au Dispositif : {max_q:,.2f} $\n"
+                                    f"- Puits de Potentiel (Quantum Minimal après réduction art. 1607/1611/2803 C.c.Q. et art. 51 C.p.c.) : {min_q:,.2f} $ (Économie Défense : -{drop_amt:,.2f} $, soit -{drop_pct:.1f}% d'atténuation du risque)\n"
                                     f"- Espérance Mathématique en Capital E[Q] : {avg_q:,.2f} $\n"
                                     f"- Majoration Légale Québécoise (Intérêts légaux art. 1618 C.c.Q. + Indemnité additionnelle art. 1619 C.c.Q. estimés à +8,5 %) : +{legal_interest_markup:,.2f} $\n"
                                     f"- Exposition Actuarielle Totale Estimée (Capital + Art. 1619 C.c.Q.) : {total_actuarial_exposure:,.2f} $\n"
@@ -1405,18 +1422,37 @@ class ReportAgent:
         content = re.sub(r'```json\s*```', '', content)
         content = re.sub(r'```\s*```', '', content)
         
-        # 5. Parcourir ligne par ligne pour supprimer les restes de lignes Python ou de JSON mal formatés
+        # 5. Parcourir ligne par ligne pour supprimer les restes de lignes Python, JSON mal formatés ou titres répétés
         lines = content.split('\n')
         cleaned_lines = []
+        removed_leading_title = False
         for line in lines:
             stripped_line = line.strip()
             # Supprime si la ligne commence par print( ou appelle un outil
             if (stripped_line.lower().startswith('print(') and any(t in stripped_line.lower() for t in ["insight", "search", "interview"])) or \
                (any(stripped_line.lower().startswith(t + '(') for t in ["insight_forge", "panorama_search", "quick_search", "interview_agents", "insightforge", "panoramasearch", "quicksearch", "interviewagents"])):
                 continue
+            # Supprimer la première ligne non vide si c'est une répétition d'un titre de section (ex: "Modélisation de l'Aléa Judiciaire...")
+            if not removed_leading_title and stripped_line:
+                removed_leading_title = True
+                clean_check = re.sub(r'^[#\s\d\.\-\*]+|\*+$', '', stripped_line).strip()
+                if len(clean_check) < 110 and any(
+                    kw in clean_check.lower()
+                    for kw in [
+                        "cartographie factuelle",
+                        "modélisation de l'aléa",
+                        "dynamiques comportementales",
+                        "recommandations d'arbitrage",
+                        "journal d'audience",
+                    ]
+                ):
+                    continue
             cleaned_lines.append(line)
             
-        return '\n'.join(cleaned_lines).strip()
+        final_text = '\n'.join(cleaned_lines).strip()
+        # Corriger toute coquille de répétition de chiffre dans un montant (ex: "223 2223,00 $" -> "223 223,00 $")
+        final_text = re.sub(r'\b(\d{1,3})[\s\u00a0](\d)\2{3}([.,]\d{2}\s*\$)', r'\1 \2\2\2\3', final_text)
+        return final_text
     
     def _get_tools_description(self) -> str:
         """生成工具描述文本 (en français pour le LLM)"""

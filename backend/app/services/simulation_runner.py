@@ -697,32 +697,18 @@ class SimulationRunner:
             results = []
             defense_wins = 0
             
+            from scripts.run_legal_simulation import (
+                evaluate_verdict_is_defense_win,
+                extract_verdict_quantum,
+                extract_max_claim_amount,
+                normalize_legal_results_verdicts,
+            )
+            max_claim = extract_max_claim_amount(context)
             for r_num in sorted(rounds_data.keys()):
                 r_info = rounds_data[r_num]
                 if not r_info["verdict"]:
                     continue
-                    
-                verdict_upper = r_info["verdict"].upper()
-                is_defense_win = False
-                
-                if "[DÉCISION COLLÉGIALE - CONSENSUS :" in verdict_upper:
-                    header = verdict_upper.split(']')[0]
-                    is_defense_win = "DÉFENSE" in header
-                elif litigation_type == "civil":
-                    has_responsible = "RESPONSABLE" in verdict_upper and not re.search(r'\bNON[- ]+RESPONSABLE\b', verdict_upper)
-                    has_condemnation = any(k in verdict_upper for k in ["CONDAMNE", "CONDAMNER"])
-                    if has_responsible or has_condemnation:
-                        is_defense_win = False
-                    else:
-                        is_defense_win = any(k in verdict_upper for k in ["NON RESPONSABLE", "NON-RESPONSABLE", "REJETTE", "REJET", "DEBOUTE", "REFUSE", "SANS FONDEMENT"])
-                else:
-                    has_guilty = "COUPABLE" in verdict_upper and not re.search(r'\bNON[- ]+COUPABLE\b', verdict_upper)
-                    has_condemnation = any(k in verdict_upper for k in ["CONDAMNE", "CONDAMNER"])
-                    if has_guilty or has_condemnation:
-                        is_defense_win = False
-                    else:
-                        is_defense_win = any(k in verdict_upper for k in ["NON COUPABLE", "RELAXE", "ACQUITTEMENT", "ACQUITTE", "NON-COUPABLE", "REJETTE", "REFUSE"])
-                        
+                is_defense_win = evaluate_verdict_is_defense_win(r_info["verdict"], litigation_type)
                 if is_defense_win:
                     defense_wins += 1
                     
@@ -730,6 +716,7 @@ class SimulationRunner:
                     "iteration": r_num,
                     "judge_personality": r_info["judge_personality"],
                     "is_defense_win": is_defense_win,
+                    "awarded_quantum": extract_verdict_quantum(r_info["verdict"], max_claim_amount=max_claim),
                     "transcript": r_info["transcript"],
                     "clerk_analysis": r_info["clerk_analysis"],
                     "verdict": r_info["verdict"]
@@ -740,7 +727,7 @@ class SimulationRunner:
                 
             win_rate = (defense_wins / len(results)) * 100
             
-            reconstructed_data = {
+            reconstructed_data = normalize_legal_results_verdicts({
                 "context": context,
                 "iterations": len(results),
                 "win_rate": win_rate,
@@ -748,7 +735,7 @@ class SimulationRunner:
                 "litigation_type": litigation_type,
                 "run_mode": "courtroom",
                 "details": results
-            }
+            })
         else:
             # Mode Oasis (Simulation Publique)
             agent_stances = {}
@@ -1896,9 +1883,37 @@ class SimulationRunner:
                     with open(config_path, 'r', encoding='utf-8') as f:
                         config_data = json.load(f)
                         litigation_type = config_data.get("litigation_type", "civil")
+                    ctx_lower = context[:6000].lower()
+                    if litigation_type == "criminal" and any(k in ctx_lower for k in ["chambre civile", "c.c.q.", "c.p.c.", "in solidum", "demande reconventionnelle", "clause pénale"]):
+                        litigation_type = "civil"
+                        config_data["litigation_type"] = "civil"
+                        with open(config_path, 'w', encoding='utf-8') as f:
+                            json.dump(config_data, f, ensure_ascii=False, indent=2)
                     logger.info(f"Loaded litigation_type '{litigation_type}' from config for simulation {simulation_id}")
             except Exception as config_err:
                 logger.error(f"Error reading litigation_type from simulation config: {config_err}")
+
+            # v2: Injecter automatiquement les lignes de force du Radar d'Anticipation Tactique (radar_analysis.json) si présentes
+            try:
+                radar_path = os.path.join(cls.RUN_STATE_DIR, simulation_id, "radar_analysis.json")
+                if os.path.exists(radar_path):
+                    with open(radar_path, 'r', encoding='utf-8') as f:
+                        radar_data = json.load(f)
+                    radar_lines = []
+                    for side_key, side_label in [("plaintiff", "DEMANDEUR / POURSUITE"), ("defense", "DÉFENSE")]:
+                        opps = radar_data.get(side_key)
+                        if isinstance(opps, list) and opps:
+                            radar_lines.append(f"--- Vecteurs Tactiques Radar ({side_label}) ---")
+                            for opp in opps[:4]:
+                                radar_lines.append(
+                                    f"* [{opp.get('node_name')}] {opp.get('vector_name')} ({opp.get('impact')}) : {opp.get('match_plan')}"
+                                )
+                    if radar_lines:
+                        context += "\n\n=== BRIEFING DU RADAR D'ANTICIPATION TACTIQUE (LIGNES DE FORCE & FAILLES DÉTECTÉES) ===\n"
+                        context += "\n".join(radar_lines) + "\n"
+                        logger.info(f"Injected Radar Tactical Briefing into courtroom context for {simulation_id}")
+            except Exception as radar_err:
+                logger.warning(f"Could not inject radar_analysis.json into courtroom context: {radar_err}")
 
             runner = LegalSimulationRunner(
                 context=context, 
@@ -2248,27 +2263,13 @@ class SimulationRunner:
                         if state_def.negative_interactions_count == 0:
                             state_def.mood = "Neutre"
 
-                    # Determine winner-specific reflections & extract awarded financial quantum (Bugs A & B)
+                    # Determine winner-specific reflections & extract awarded financial quantum (Bugs A & B + Ultra Petita clamping)
                     is_defense_win = res.get("is_defense_win", False)
-                    import re as _re
-
-                    def _extract_quantum(verdict_str: str) -> float:
-                        if not verdict_str:
-                            return 0.0
-                        # Chercher les montants près de condamne / total / somme / accorde
-                        matches = _re.findall(r'(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2}))\s*\$', verdict_str)
-                        vals = []
-                        for m in matches:
-                            cleaned = m.replace(' ', '').replace('\u00a0', '').replace(',', '.')
-                            try:
-                                v = float(cleaned)
-                                if v > 50.0:
-                                    vals.append(v)
-                            except ValueError:
-                                pass
-                        return max(vals) if vals else 0.0
-
-                    awarded_quantum = _extract_quantum(juge_verdict)
+                    from scripts.run_legal_simulation import extract_verdict_quantum, extract_max_claim_amount
+                    max_claim = extract_max_claim_amount(context)
+                    awarded_quantum = res.get("awarded_quantum") or extract_verdict_quantum(juge_verdict, max_claim_amount=max_claim)
+                    if max_claim > 0 and awarded_quantum > max_claim:
+                        awarded_quantum = max_claim
                     res["awarded_quantum"] = awarded_quantum
                     prev_quantum = results[-2].get("awarded_quantum", awarded_quantum) if len(results) >= 2 else awarded_quantum
                     quantum_delta = awarded_quantum - prev_quantum

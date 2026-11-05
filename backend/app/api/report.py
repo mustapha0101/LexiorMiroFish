@@ -374,8 +374,9 @@ def _generate_legal_report(task_id, report_id, simulation_id, graph_id, simulati
         
         if os.path.exists(results_path):
             try:
+                from scripts.run_legal_simulation import normalize_legal_results_verdicts
                 with open(results_path, 'r', encoding='utf-8') as f:
-                    res_data = json.load(f)
+                    res_data = normalize_legal_results_verdicts(json.load(f))
                     win_rate = res_data.get("win_rate", 50.0)
                     iterations = res_data.get("iterations", 50)
                     defense_wins = res_data.get("defense_wins", 25)
@@ -1758,8 +1759,9 @@ def negotiate_with_opponent():
         win_rate = 50.0 # Par défaut
         if os.path.exists(results_path):
             try:
+                from scripts.run_legal_simulation import normalize_legal_results_verdicts
                 with open(results_path, 'r', encoding='utf-8') as f:
-                    res_data = json.load(f)
+                    res_data = normalize_legal_results_verdicts(json.load(f))
                     win_rate = res_data.get("win_rate", 50.0)
             except Exception:
                 pass
