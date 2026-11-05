@@ -241,6 +241,34 @@ class TestLexiorSimulatorV2(unittest.TestCase):
         self.assertAlmostEqual(avg_q, 6575.445, places=2)
         self.assertGreater(total_actuarial_exposure, max_q)
 
+    def test_09_cognitive_memory_persistence_roundtrip(self):
+        """Vérifie la persistance sans conflit de verrou de CognitiveMemoryService (JSON + Kuzu)."""
+        import os
+        import shutil
+        from app.services.cognitive_memory import CognitiveMemoryService, CognitiveAgentState
+
+        sim_id = "test_graph_v2_unit"
+        try:
+            state = CognitiveAgentState(
+                agent_id="juge_test",
+                name="Juge de l'Instance",
+                tensions={"Légalité vs Équité": 0.62, "Rapidité vs Exhaustivité": 0.45},
+                beliefs={"Crédibilité de la Défense": {"favorable": 0.35}, "Crédibilité du Demandeur": {"favorable": 0.78}},
+                mood="Analytique (Round 2)",
+                recent_reflection="Round 1: Preuve documentaire solide."
+            )
+            CognitiveMemoryService.save_agent_state(sim_id, state)
+            loaded = CognitiveMemoryService.get_agent_state(
+                sim_id, "juge_test", "Juge civiliste"
+            )
+            self.assertAlmostEqual(loaded.tensions["Légalité vs Équité"], 0.62, places=2)
+            self.assertEqual(loaded.mood, "Analytique (Round 2)")
+            self.assertEqual(loaded.recent_reflection, "Round 1: Preuve documentaire solide.")
+        finally:
+            base_dir = os.path.dirname(os.path.dirname(__file__))
+            shutil.rmtree(os.path.join(base_dir, "uploads", "simulations", sim_id), ignore_errors=True)
+            shutil.rmtree(os.path.join(base_dir, "uploads", "kuzu", sim_id), ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()

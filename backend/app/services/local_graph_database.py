@@ -32,7 +32,12 @@ class LocalGraphDatabase:
         import random
 
         with self._LOCK:
-            # Cache databases by (graph_dir, read_only) to keep read-only and read-write instances isolated
+            # Si une instance read-write est déjà ouverte dans ce processus pour ce graph_dir, la réutiliser pour éviter tout conflit de verrou Kuzu !
+            rw_key = (self.graph_dir, False)
+            if self.read_only and rw_key in self._KUZU_DATABASES:
+                rw_entry = self._KUZU_DATABASES[rw_key]
+                if isinstance(rw_entry, dict) and rw_entry.get("db") and not rw_entry["db"].is_closed:
+                    self.read_only = False
             cache_key = (self.graph_dir, self.read_only)
             
             # If the database is in cache but was closed (e.g. ref_count reached 0 previously), remove it
@@ -46,7 +51,12 @@ class LocalGraphDatabase:
                 db_instance = None
                 for attempt in range(max_attempts):
                     try:
-                        db_instance = kuzu.Database(self.graph_dir, read_only=self.read_only, max_db_size=1024 * 1024 * 1024)
+                        db_instance = kuzu.Database(
+                            self.graph_dir,
+                            read_only=self.read_only,
+                            buffer_pool_size=64 * 1024 * 1024,
+                            max_db_size=1024 * 1024 * 1024
+                        )
                         break
                     except RuntimeError as e:
                         err_str = str(e).lower()
@@ -58,7 +68,12 @@ class LocalGraphDatabase:
                                 # Fallback to read-only if we cannot acquire the lock (e.g. locked by another process)
                                 if not self.read_only:
                                     try:
-                                        db_instance = kuzu.Database(self.graph_dir, read_only=True, max_db_size=1024 * 1024 * 1024)
+                                        db_instance = kuzu.Database(
+                                            self.graph_dir,
+                                            read_only=True,
+                                            buffer_pool_size=64 * 1024 * 1024,
+                                            max_db_size=1024 * 1024 * 1024
+                                        )
                                         self.read_only = True
                                         cache_key = (self.graph_dir, True)
                                         break
@@ -72,7 +87,12 @@ class LocalGraphDatabase:
                             shutil.rmtree(self.graph_dir, ignore_errors=True)
                             os.makedirs(self.graph_dir, exist_ok=True)
                             try:
-                                db_instance = kuzu.Database(self.graph_dir, read_only=self.read_only, max_db_size=1024 * 1024 * 1024)
+                                db_instance = kuzu.Database(
+                                    self.graph_dir,
+                                    read_only=self.read_only,
+                                    buffer_pool_size=64 * 1024 * 1024,
+                                    max_db_size=1024 * 1024 * 1024
+                                )
                                 break
                             except RuntimeError:
                                 if attempt < max_attempts - 1:

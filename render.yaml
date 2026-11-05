@@ -10,7 +10,7 @@ services:
     env: docker
     dockerfilePath: backend/Dockerfile.backend
     dockerContext: .
-    plan: starter # Persistent disks require a paid plan (Starter or higher)
+    plan: standard # 1 CPU, 2 GB RAM recommended for Kuzu DB + SQLite FTS5 + PyMuPDF
     healthCheckPath: /health
     envVars:
       - key: LLM_API_KEY

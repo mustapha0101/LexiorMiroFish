@@ -100,7 +100,10 @@ class CognitiveMemoryService:
                 "personality": attributes.get("personality", ""),
                 "tensions": attributes.get("tensions", {}),
                 "beliefs": attributes.get("beliefs", {}),
-                "recent_reflection": attributes.get("recent_reflection", "")
+                "recent_reflection": attributes.get("recent_reflection", ""),
+                "mood": attributes.get("mood", "Neutre"),
+                "negative_interactions_count": attributes.get("negative_interactions_count", 0),
+                "attention_budget": attributes.get("attention_budget")
             }
             
             with open(cache_path, 'w', encoding='utf-8') as cf:
@@ -131,7 +134,32 @@ class CognitiveMemoryService:
 
     @classmethod
     def get_agent_state(cls, simulation_id: str, agent_id: str, agent_name: str = "") -> Optional[CognitiveAgentState]:
-        """Récupère l'état d'un agent. Crée un état par défaut si aucun n'existe en base."""
+        """Récupère l'état d'un agent depuis le cache JSON rapide ou Kuzu DB. Crée un état par défaut si aucun n'existe."""
+        # 1. Lecture prioritaire depuis cognitive_states_cache.json (évite tout conflit de verrou Kuzu read-only vs read-write)
+        try:
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            cache_path = os.path.join(base_dir, 'uploads', 'simulations', simulation_id, 'cognitive_states_cache.json')
+            if os.path.exists(cache_path):
+                with open(cache_path, 'r', encoding='utf-8') as cf:
+                    cache_data = json.load(cf)
+                if agent_id in cache_data:
+                    a_data = cache_data[agent_id]
+                    return CognitiveAgentState(
+                        agent_id=agent_id,
+                        name=a_data.get("name", agent_name or f"Agent_{agent_id}"),
+                        personality=a_data.get("personality", ""),
+                        tensions=a_data.get("tensions"),
+                        beliefs=a_data.get("beliefs"),
+                        meta_narrative=a_data.get("meta_narrative", ""),
+                        recent_reflection=a_data.get("recent_reflection", ""),
+                        mood=a_data.get("mood", "Neutre"),
+                        negative_interactions_count=a_data.get("negative_interactions_count", 0),
+                        attention_budget=a_data.get("attention_budget")
+                    )
+        except Exception as cache_read_err:
+            logger.debug(f"Cache read fallback for agent {agent_id}: {cache_read_err}")
+
+        # 2. Fallback Kuzu DB
         try:
             with cls._get_db(simulation_id, read_only=True) as db:
                 query = "MATCH (n:Node_CognitiveState {uuid: $uuid}) RETURN n.name, n.summary, n.attributes"
