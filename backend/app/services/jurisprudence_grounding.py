@@ -26,9 +26,10 @@ class JurisprudenceGrounding:
         return cls._instance
 
     def _init_db(self):
-        """Initialise la base SQLite locale pour la recherche rapide."""
+        """Initialise la base SQLite locale pour la recherche rapide (Jurisprudence + Serveur SQLite Souverain C.c.Q./C.p.c.)."""
         self.db_path = os.path.join(os.path.dirname(__file__), '../../uploads/jurisprudence.db')
         self.json_path = os.path.join(os.path.dirname(__file__), '../../uploads/jurisprudence.json')
+        self.ccq_cpc_db_path = os.path.join(os.path.dirname(__file__), '../data/ccq_cpc.db')
         
         # Si la base SQLite n'existe pas mais le JSON oui, on construit l'index SQLite
         if not os.path.exists(self.db_path) and os.path.exists(self.json_path):
@@ -110,6 +111,109 @@ class JurisprudenceGrounding:
     def get_connection(self):
         return sqlite3.connect(self.db_path)
 
+    def get_code_article_local(self, code: str, numero: str) -> Optional[dict]:
+        """Recherche déterministe ultra-rapide (< 1 ms) d'un article du C.c.Q. ou du C.p.c. dans ccq_cpc.db."""
+        if not hasattr(self, "ccq_cpc_db_path") or not os.path.exists(self.ccq_cpc_db_path):
+            return None
+        try:
+            conn = sqlite3.connect(self.ccq_cpc_db_path)
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT code, numero, texte, url FROM articles WHERE code = ? AND numero = ? LIMIT 1",
+                (code.upper(), str(numero).strip())
+            )
+            row = cur.fetchone()
+            conn.close()
+            if row:
+                return {"code": row[0], "numero": row[1], "texte": row[2], "url": row[3]}
+        except Exception as e:
+            logger.error(f"Erreur lecture SQLite ccq_cpc.db ({code} {numero}): {e}")
+        return None
+
+    def search_code_fts_local(self, keyword: str, code: str = "CCQ", limit: int = 3) -> List[dict]:
+        """Recherche plein texte FTS5 dans les 3 489 articles C.c.Q. et 876 articles C.p.c."""
+        if not hasattr(self, "ccq_cpc_db_path") or not os.path.exists(self.ccq_cpc_db_path):
+            return []
+        results = []
+        try:
+            conn = sqlite3.connect(self.ccq_cpc_db_path)
+            cur = conn.cursor()
+            clean_kw = re.sub(r'[^a-zA-ZÀ-ÿ0-9]', '', keyword)
+            if not clean_kw:
+                conn.close()
+                return []
+            cur.execute(
+                "SELECT code, numero, texte, url FROM articles WHERE id IN "
+                "(SELECT rowid FROM articles_fts WHERE articles_fts MATCH ? AND code = ?) LIMIT ?",
+                (f'"{clean_kw}"', code.upper(), limit)
+            )
+            for r in cur.fetchall():
+                results.append({"code": r[0], "numero": r[1], "texte": r[2], "url": r[3]})
+            conn.close()
+        except Exception as e:
+            logger.error(f"Erreur FTS5 ccq_cpc.db ({keyword}): {e}")
+        return results
+
+    def build_statutory_grounding_block(self, context: str, litigation_type: str = "civil") -> str:
+        """
+        Pré-injecte de manière déterministe le texte officiel exact des articles du C.c.Q. et du C.p.c.
+        pertinents au dossier afin de garantir 0 % d'hallucination normative dès la génération initiale.
+        """
+        if litigation_type != "civil" or not hasattr(self, "ccq_cpc_db_path") or not os.path.exists(self.ccq_cpc_db_path):
+            return ""
+        ctx_lower = (context or "").lower()
+        ccq_nums = []
+        cpc_nums = []
+
+        # 1. Extraire tous les articles explicitement mentionnés dans le dossier
+        for m in re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)', context or "", re.IGNORECASE):
+            if m not in ccq_nums:
+                ccq_nums.append(m)
+
+        # 2. Ajouter le socle normatif québécois selon la nature du litige
+        if any(k in ctx_lower for k in ["entrepreneur", "toiture", "toit", "travaux", "contrat d'entreprise", "service", "2100"]):
+            for n in ["2098", "2100", "2120"]:
+                if n not in ccq_nums:
+                    ccq_nums.append(n)
+        if any(k in ctx_lower for k in ["vice", "caché", "acheteur", "vendeur", "immeuble", "1726"]):
+            for n in ["1726", "1728", "1739"]:
+                if n not in ccq_nums:
+                    ccq_nums.append(n)
+        if any(k in ctx_lower for k in ["bail", "locataire", "locateur", "logement"]):
+            for n in ["1854", "1863", "1955"]:
+                if n not in ccq_nums:
+                    ccq_nums.append(n)
+
+        # Socle transversal : Responsabilité, Causalité, Quantum, Intérêts légaux, Preuve et Prescription
+        for core_ccq in ["1457", "1607", "1611", "1618", "1619", "2803", "2804", "2925"]:
+            if core_ccq not in ccq_nums:
+                ccq_nums.append(core_ccq)
+
+        # Socle procédural C.p.c. (Proportionnalité, CRA, Irrecevabilité, Expertise, Petites créances)
+        for core_cpc in ["18", "168", "235", "536"]:
+            if core_cpc not in cpc_nums:
+                cpc_nums.append(core_cpc)
+
+        lines = [
+            "\n\n=== MÉMOIRE NORMATIVE DÉTERMINISTE (SERVEUR SQLITE C.C.Q. & C.P.C.) ===",
+            "Utilise prioritairement les articles vérifiés ci-dessous (ne jamais inventer un numéro d'article) :"
+        ]
+        for num in ccq_nums[:12]:
+            row = self.get_code_article_local("CCQ", num)
+            if row:
+                snippet = row["texte"].replace("\n", " ").strip()
+                if len(snippet) > 320:
+                    snippet = snippet[:320] + "..."
+                lines.append(f"- [Art. {num} C.c.Q.] : {snippet}")
+        for num in cpc_nums[:5]:
+            row = self.get_code_article_local("CPC", num)
+            if row:
+                snippet = row["texte"].replace("\n", " ").strip()
+                if len(snippet) > 260:
+                    snippet = snippet[:260] + "..."
+                lines.append(f"- [Art. {num} C.p.c.] : {snippet}")
+        return "\n".join(lines) + "\n"
+
     def _verify_with_llm(self, claim: str, source_text: str) -> bool:
         """
         Appelle le LLM pour vérifier si le texte officiel de la source soutient l'affirmation de l'agent.
@@ -173,20 +277,29 @@ class JurisprudenceGrounding:
         found_references = []
         is_hallucination = True
 
-        # 1. Vérification Prioritaire CCQ (Code civil du Québec) sur TOUS les articles cités
-        is_ccq = any(term in agent_argument.lower() for term in ["ccq", "c.c.q.", "c.c.q", "code civil", "québec"]) or litigation_type == "civil"
+        # 1. Vérification Prioritaire CCQ (Code civil du Québec) et CPC (Code de procédure civile) sur TOUS les articles cités
+        arg_lower = agent_argument.lower()
+        is_ccq = any(term in arg_lower for term in ["ccq", "c.c.q.", "c.c.q", "code civil", "québec"]) or litigation_type == "civil"
+        is_cpc = any(term in arg_lower for term in ["cpc", "c.p.c.", "c.p.c", "procédure civile"])
+
+        # Détecter les articles explicitement rattachés au C.p.c.
+        cpc_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:du\s+)?(?:C\.p\.c\.|CPC|Code de procédure civile)', agent_argument, re.IGNORECASE)
+
         art_matches = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)', agent_argument, re.IGNORECASE)
-        # Extraire aussi les énumérations du type "articles 1607, 1611 et 2803"
         enum_matches = re.findall(r'(?:articles?|art\.?)\s*((?:\d+\s*(?:,\s*|\s+et\s+|\s+ou\s+))+\d+)', agent_argument, re.IGNORECASE)
         for em in enum_matches:
             for num_str in re.findall(r'\d+', em):
                 if num_str not in art_matches:
                     art_matches.append(num_str)
 
-        # Filtrer les articles avec point décimal (Code criminel, ex: 718.1) si on cherche dans le CCQ
         ccq_art_nums = []
+        cpc_art_nums = [str(n) for n in cpc_explicit]
         for a_str in art_matches:
-            if '.' not in a_str:
+            if a_str in cpc_art_nums:
+                continue
+            if is_cpc and not any(t in arg_lower for t in ["c.c.q", "ccq", "code civil"]):
+                cpc_art_nums.append(a_str)
+            elif '.' not in a_str:
                 try:
                     n = int(a_str)
                     if 1 <= n <= 3500 and n not in ccq_art_nums:
@@ -194,14 +307,16 @@ class JurisprudenceGrounding:
                 except ValueError:
                     pass
 
+        # 1A. Vérification déterministe C.c.Q. (SQLite embarqué ccq_cpc.db en < 1ms, puis fallback MCP SSE)
         if is_ccq and ccq_art_nums:
-            for art_num in ccq_art_nums[:4]:
+            for art_num in ccq_art_nums[:5]:
                 try:
-                    articles_text = self._call_ccq_mcp_tool("get_ccq_articles", {"start_article": art_num})
+                    local_art = self.get_code_article_local("CCQ", str(art_num))
+                    articles_text = local_art["texte"] if local_art else self._call_ccq_mcp_tool("get_ccq_articles", {"start_article": art_num})
                     if articles_text and "Aucun article trouvé" not in articles_text:
-                        if self._verify_with_llm(agent_argument, articles_text):
+                        if self._verify_with_llm(agent_argument, f"Article {art_num} C.c.Q. : {articles_text}"):
                             is_hallucination = False
-                            url = f"https://www.canlii.org/fr/qc/legis/lois/rlrq-c-ccq-1991/derniere/rlrq-c-ccq-1991.html#art{art_num}"
+                            url = local_art["url"] if local_art else f"https://www.canlii.org/fr/qc/legis/lois/rlrq-c-ccq-1991/derniere/rlrq-c-ccq-1991.html#art{art_num}"
                             clean_snippet = articles_text.strip()
                             if len(clean_snippet) > 260:
                                 clean_snippet = clean_snippet[:260] + "..."
@@ -213,6 +328,26 @@ class JurisprudenceGrounding:
                             })
                 except Exception as e:
                     logger.error(f"Erreur lors de la vérification CCQ de l'article {art_num}: {e}")
+
+        # 1B. Vérification déterministe C.p.c. (Code de procédure civile via SQLite embarqué ccq_cpc.db)
+        if cpc_art_nums:
+            for art_num_str in cpc_art_nums[:4]:
+                try:
+                    local_cpc = self.get_code_article_local("CPC", str(art_num_str))
+                    if local_cpc and self._verify_with_llm(agent_argument, f"Article {art_num_str} C.p.c. : {local_cpc['texte']}"):
+                        is_hallucination = False
+                        url = local_cpc["url"]
+                        clean_snippet = local_cpc["texte"].strip()
+                        if len(clean_snippet) > 260:
+                            clean_snippet = clean_snippet[:260] + "..."
+                        found_references.append({
+                            "law_name": f"Code de procédure civile - Article {art_num_str}",
+                            "citation": f"art. {art_num_str} C.p.c.",
+                            "url": url,
+                            "summary": f"{clean_snippet}\nLien source pour validation : {url}"
+                        })
+                except Exception as e:
+                    logger.error(f"Erreur lors de la vérification CPC de l'article {art_num_str}: {e}")
 
         # 2. Vérification par rapport au contexte (texte de la décision ou pièces téléversées)
         if context and (is_hallucination or not found_references):

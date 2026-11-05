@@ -2093,6 +2093,13 @@ class SimulationRunner:
                 actions_file_path = os.path.join(cls.RUN_STATE_DIR, simulation_id, "actions.jsonl")
                 
             round_idx = start_round
+            chamber_idx = 1
+            chamber_start_idx = 0
+            chamber_archetypes = [
+                "Imprévisible et analytique du quantum (scrute le lien de causalité art. 1607-1611 C.c.Q. et les détails techniques).",
+                "Formaliste strict (exige la preuve écrite rigoureuse sous l'art. 2803 C.c.Q. et applique la loi à la lettre).",
+                "Sensible à l'équité contractuelle (protège la partie vulnérable et sanctionne sévèrement le manquement au devoir de conseil art. 2100 C.c.Q.)."
+            ]
             while True:
                 state = cls.get_run_state(simulation_id)
                 if not state:
@@ -2104,7 +2111,7 @@ class SimulationRunner:
                 state.current_round = round_idx
                 cls._save_run_state(state)
 
-                # Update runner's context with previous verdicts to ensure state persistence
+                # Update runner's context with previous verdicts of the CURRENT chamber to ensure state persistence
                 current_context = context
                 
                 # Check for and append all injected stimuli to context so they are preserved
@@ -2114,15 +2121,16 @@ class SimulationRunner:
                     for stim in injected_stimuli:
                         current_context += f"- [STIMULUS INJECTÉ] : {stim}\n"
                 
-                # Build history of previous verdicts (factually structured summary to avoid prompt bleeding or role confusion)
-                if len(results) > 0:
-                    prev_verdicts_summary = "\n\n=== VERDICTS PRÉCÉDENTS ET HISTORIQUE DU PROCÈS ===\n"
-                    prev_verdicts_summary += "Le Juge a déjà statué lors des sessions précédentes. Voici les décisions rendues :\n"
-                    for r_res in results:
-                        prev_verdicts_summary += f"[HISTORIQUE SIMULATION - ROUND {r_res['iteration']}] Verdict: {r_res['verdict']} | Fondement: {r_res.get('clerk_analysis', '')[:300]}... | Posture: {r_res.get('judge_personality', '')}\n"
+                # Build history of previous verdicts within the active judicial chamber
+                chamber_results = results[chamber_start_idx:]
+                if len(chamber_results) > 0:
+                    prev_verdicts_summary = f"\n\n=== VERDICTS PRÉCÉDENTS ET HISTORIQUE DU PROCÈS (CHAMBRE D'AUDIENCE #{chamber_idx}) ===\n"
+                    prev_verdicts_summary += "Le Juge de cette chambre a déjà statué lors des rounds précédents. Voici les décisions rendues :\n"
+                    for r_res in chamber_results:
+                        prev_verdicts_summary += f"[HISTORIQUE CHAMBRE #{chamber_idx} - ROUND {r_res['iteration']}] Verdict: {r_res['verdict']} | Fondement: {r_res.get('clerk_analysis', '')[:300]}... | Posture: {r_res.get('judge_personality', '')}\n"
                     prev_verdicts_summary += "\nDirectives de cohérence :\n"
-                    prev_verdicts_summary += "1. Le Juge doit obligatoirement maintenir son verdict précédent (la culpabilité ou responsabilité) par souci de cohérence, SAUF si un nouveau fait (STIMULUS) a été injecté depuis la dernière décision et juste après celle-ci, auquel cas le Juge peut prononcer un revirement si ce nouveau fait est déterminant.\n"
-                    prev_verdicts_summary += "2. Les Avocats doivent adapter leur plaidoirie en fonction du dernier verdict rendu (la défense cherche à infirmer le verdict de culpabilité précédent si un fait nouveau le permet ; le procureur cherche à le consolider).\n"
+                    prev_verdicts_summary += "1. Le Juge maintient sa qualification de responsabilité par souci de cohérence, mais peut ajuster le quantum financier si la Défense démontre une faille sur le lien de causalité (art. 1607, 1611 C.c.Q.) ou le fardeau de preuve (art. 2803 C.c.Q.), ou si un nouveau fait (STIMULUS) est déterminant.\n"
+                    prev_verdicts_summary += "2. Les Avocats doivent adapter leur plaidoirie au dernier délibéré rendu.\n"
                     current_context += prev_verdicts_summary
                 
                 runner.context = current_context
@@ -2496,13 +2504,15 @@ class SimulationRunner:
                     total_stimuli = len(state.injected_stimuli) if hasattr(state, 'injected_stimuli') and state.injected_stimuli else 0
                     cls._record_cognitive_state_history(simulation_id, round_idx, objections_count, total_stimuli)
 
-                    # Bug A Fix : Arrêt Dynamique par Convergence d'Entropie PIE (Early Stopping)
+                    # Bug A + Architecture v2 : Arrêt Dynamique PIE & Rotation Multi-Chambres (Monte-Carlo x Dialectique)
                     curr_judge_pe = state_judge.tensions.get("procedure_vs_equite", 0.5)
                     curr_judge_belief = state_judge.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.5)
                     delta_pe = abs(curr_judge_pe - prev_judge_pe)
                     delta_belief = abs(curr_judge_belief - prev_judge_belief)
                     res["delta_pie"] = round(max(delta_pe, delta_belief), 4)
+                    res["chamber_id"] = chamber_idx
 
+                    rounds_in_chamber = len(results) - chamber_start_idx
                     def_lower = defense_speech.lower()
                     verdict_lower = juge_verdict.lower()
                     explicit_concession = any(
@@ -2510,22 +2520,48 @@ class SimulationRunner:
                             "accepte la condamnation", "acquiesce", "ne conteste plus le montant",
                             "concède le quantum", "reconnaît devoir la somme"
                         ]
-                    ) or ("irrévocable" in verdict_lower and round_idx >= 4)
+                    ) or ("irrévocable" in verdict_lower and rounds_in_chamber >= 3)
 
-                    if round_idx >= 4 and (
-                        (delta_pe < 0.01 and delta_belief < 0.01 and abs(quantum_delta) < 1.0)
-                        or explicit_concession
-                    ):
-                        conv_msg = (
-                            f"⚡ ARRÊT DYNAMIQUE PIE (Early Stopping) au Round {round_idx} : "
-                            f"Convergence dialectique et cognitive atteinte (ΔPIE = {max(delta_pe, delta_belief):.3f} < 0.01, "
-                            f"Quantum stabilisé à {awarded_quantum:,.2f} $). Clôture automatique de l'audience."
+                    chamber_converged = rounds_in_chamber >= 4 or (
+                        rounds_in_chamber >= 3 and (
+                            (delta_pe < 0.01 and delta_belief < 0.01 and abs(quantum_delta) < 1.0)
+                            or explicit_concession
                         )
-                        logger.info(conv_msg)
-                        log_agent_action("STIMULUS", "Moteur PIE (Convergence)", 0, conv_msg, result="Early stopping triggered")
-                        state.total_rounds = round_idx
-                        cls._save_run_state(state)
-                        break
+                    )
+
+                    if chamber_converged:
+                        # Si total_rounds >= 8 et qu'il reste d'autres profils de juges à tester (Chambres 2 et 3), ouvrir une nouvelle Chambre Monte-Carlo !
+                        if state.total_rounds >= 8 and judge_type != "collegiate" and chamber_idx < 3 and round_idx < state.total_rounds:
+                            next_arch = chamber_archetypes[chamber_idx % len(chamber_archetypes)]
+                            if next_arch == runner.judge_personality:
+                                next_arch = chamber_archetypes[(chamber_idx + 1) % len(chamber_archetypes)]
+                            rot_msg = (
+                                f"⚖️ CONVERGENCE CHAMBRE #{chamber_idx} atteinte au Round {round_idx} "
+                                f"(Quantum stabilisé : {awarded_quantum:,.2f} $). "
+                                f"Ouverture de la CHAMBRE D'AUDIENCE #{chamber_idx + 1} (Monte-Carlo Multi-Juges) avec un nouveau profil de magistrat : '{next_arch}'."
+                            )
+                            logger.info(rot_msg)
+                            log_agent_action("STIMULUS", f"Greffe (Rotation Chambre #{chamber_idx + 1})", 0, rot_msg, result="New judicial chamber opened")
+                            chamber_idx += 1
+                            chamber_start_idx = len(results)
+                            runner.judge_personality = next_arch
+                            runner.is_new_chamber_opening = True
+                            # Réinitialiser les jauges PIE du nouveau juge pour la nouvelle chambre
+                            state_judge.personality = next_arch
+                            state_judge.tensions["procedure_vs_equite"] = 0.55 if "Formaliste" in next_arch else (0.70 if "équité" in next_arch else 0.50)
+                            state_judge.beliefs["culpabilite_accuse"] = {"coupable": 0.60, "innocent": 0.40}
+                            CognitiveMemoryService.save_agent_state(simulation_id, state_judge)
+                        else:
+                            conv_msg = (
+                                f"⚡ ARRÊT DYNAMIQUE PIE (Early Stopping) au Round {round_idx} (Chambre #{chamber_idx}) : "
+                                f"Convergence dialectique et actuarielle atteinte sur {chamber_idx} chambre(s) "
+                                f"(ΔPIE = {max(delta_pe, delta_belief):.3f} < 0.01, Quantum final : {awarded_quantum:,.2f} $). Clôture automatique de l'audience."
+                            )
+                            logger.info(conv_msg)
+                            log_agent_action("STIMULUS", "Moteur PIE (Convergence)", 0, conv_msg, result="Early stopping triggered")
+                            state.total_rounds = round_idx
+                            cls._save_run_state(state)
+                            break
 
                 except Exception as db_err:
                     logger.error(f"Erreur lors de la mise à jour des états PIE dans la simulation juridique: {db_err}")

@@ -27,9 +27,12 @@ class LegalAgents:
     def get_defense_lawyer_prompt(context: str, litigation_type: str = "civil") -> str:
         if litigation_type == "civil":
             client_ref = "la partie défenderesse (selon les faits du dossier)"
-            failure_ref = "les failles dans les prétentions de la partie demanderesse, contester le lien de causalité ou le quantum réclamé, et citer les articles pertinents du Code civil du Québec (ex: art. 1457, 1607, 1611, 2100, 2803 C.c.Q.) et la jurisprudence applicable"
+            failure_ref = (
+                "les failles procédurales et substantielles de la demande : vérifier d'abord la prescription extinctive (art. 2925 C.c.Q.) et la proportionnalité/recevabilité (art. 18 et 168 C.p.c.), "
+                "contester le lien de causalité direct et immédiat ou invoquer l'état préexistant (art. 1607 et 1611 C.c.Q.), et attaquer la force probante des factures estimées ou expertises (art. 2803 C.c.Q. et art. 235 C.p.c.) afin de rejeter ou d'amputer significativement le quantum réclamé"
+            )
             counter_ref = "les arguments de l'Avocat du Demandeur"
-            rule4_ref = "le Code civil du Québec (C.c.Q.), le Code de procédure civile (C.p.c.) ou les lois et jurisprudences civiles applicables"
+            rule4_ref = "le Code civil du Québec (C.c.Q.), le Code de procédure civile (C.p.c.) et les pièces versées au dossier"
             dist_ref = "Ne confonds pas le Code criminel avec les règles de responsabilité civile."
         else:
             client_ref = "ton client (le prévenu/l'accusé)"
@@ -60,9 +63,13 @@ Règles absolues d'immersion :
     def get_prosecutor_prompt(context: str, litigation_type: str = "civil") -> str:
         if litigation_type == "civil":
             role_title = "l'Avocat du Demandeur (représentant la partie demanderesse identifiée au dossier)"
-            mission_ref = "démontrer la responsabilité civile ou contractuelle de la partie défenderesse avec rigueur, prouver la faute, le préjudice et le lien de causalité, et obtenir la condamnation intégrale au quantum réclamé"
+            mission_ref = (
+                "démontrer la responsabilité civile ou contractuelle de la partie défenderesse selon la prépondérance de preuve (art. 2804 C.c.Q.), "
+                "verrouiller le lien de causalité et la prévisibilité du préjudice (art. 1607 et 1611 C.c.Q.) face aux tentatives de réduction du quantum, "
+                "et réclamer la condamnation intégrale au capital assortie des intérêts au taux légal et de l'indemnité additionnelle prévue à l'article 1619 C.c.Q. (ainsi que les frais de justice)"
+            )
             counter_ref = "l'Avocat de la Défense"
-            rule4_ref = "le Code civil du Québec (C.c.Q.), le Code de procédure civile (C.p.c.) ou les lois et jurisprudences civiles applicables"
+            rule4_ref = "le Code civil du Québec (C.c.Q.), le Code de procédure civile (C.p.c.) et les pièces versées au dossier"
             dist_ref = "Ne confonds pas le Code criminel avec les règles de responsabilité civile."
         else:
             role_title = "le Procureur aux poursuites criminelles et pénales (DPCP)"
@@ -93,7 +100,11 @@ Règles absolues d'immersion :
     def get_judge_prompt(context: str, personality: str, litigation_type: str = "civil") -> str:
         if litigation_type == "civil":
             parties_ref = "l'Avocat de la Défense et de l'Avocat du Demandeur"
-            verdict_ref = "déclarant si le défendeur est RESPONSABLE ou NON RESPONSABLE, et le montant de l'indemnisation ou la résolution contractuelle éventuelle"
+            verdict_ref = (
+                "structuré selon la rigueur d'un jugement québécois : (1) Recevabilité, prescription (art. 2925 C.c.Q.) et cadre procédural (C.p.c.), "
+                "(2) Responsabilité au fond (RESPONSABLE ou NON RESPONSABLE), (3) Analyse du lien de causalité et liquidation détaillée poste par poste du quantum (art. 1607, 1611, 2803 C.c.Q.), "
+                "et (4) Dispositif final chiffré mentionnant le montant total accordé avec intérêts au taux légal et l'indemnité additionnelle prévue à l'article 1619 C.c.Q."
+            )
         else:
             parties_ref = "l'Avocat de la Défense et du Procureur"
             verdict_ref = "déclarant si l'accusé est COUPABLE ou NON COUPABLE, et la peine éventuelle"

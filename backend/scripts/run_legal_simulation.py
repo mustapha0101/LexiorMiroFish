@@ -131,18 +131,22 @@ class LegalSimulationRunner:
             return "\n".join(lines) + "\n"
         
         transcript = []
+        statutory_block = self.grounding.build_statutory_grounding_block(self.context, self.litigation_type)
+        grounded_context = self.context + statutory_block
+
         debate_history_prosecutor = [
-            {"role": "user", "content": f"Veuillez présenter votre réquisitoire initial et vos arguments principaux contre la défense en vous basant sur les faits du dossier."}
+            {"role": "user", "content": f"Veuillez présenter votre réquisitoire initial et vos arguments principaux contre la défense en vous basant sur les faits du dossier et les articles du C.c.Q. / C.p.c. vérifiés."}
         ]
         debate_history_defense = []
 
-        # Audition initiale du Témoin / Expert technique du dossier au Round 1 (Bug D)
-        if iter_id == 1:
+        # Audition initiale du Témoin / Expert technique du dossier au Round 1 (ou à l'ouverture d'une nouvelle Chambre)
+        if iter_id == 1 or getattr(self, 'is_new_chamber_opening', False):
+            self.is_new_chamber_opening = False
             witness_sys = (
                 "Tu es le Témoin Technique / Expert indépendant cité dans les pièces du dossier (ex: l'entrepreneur ou l'expert ayant inspecté les lieux et constaté les dommages).\n"
                 "Présente à la barre du Tribunal, en 4 à 6 phrases factuelles, précises et neutres à la première personne, tes constatations techniques matérielles telles qu'elles ressortent strictement du contexte de l'affaire (état des lieux, cause technique des dégradations, estimés ou travaux correctifs constatés).\n"
                 "Ne cite aucun article de loi et ne prends pas parti juridiquement : livre uniquement ton témoignage technique factuel sous serment.\n\n"
-                f"Contexte de l'affaire :\n{self.filter_context(self.context, 'judge')}"
+                f"Contexte de l'affaire :\n{self.filter_context(grounded_context, 'judge')}"
             )
             msg_witness = _strip_meta_and_citations(
                 self._call_llm(witness_sys, [{"role": "user", "content": "Veuillez livrer votre déposition technique factuelle devant le Tribunal."}])
@@ -172,7 +176,7 @@ class LegalSimulationRunner:
                     on_action_callback("STIMULUS", "Système (Alerte)", 0, f"📢 Fait nouveau ou stimulus détecté à l'audience. Le tribunal autorise un tour de réplique supplémentaire.")
             
             # Procureur / Demandeur
-            prosecutor_sys = LegalAgents.get_prosecutor_prompt(self.filter_context(self.context, "prosecutor"), self.litigation_type)
+            prosecutor_sys = LegalAgents.get_prosecutor_prompt(self.filter_context(grounded_context, "prosecutor"), self.litigation_type)
             msg_proc = _strip_meta_and_citations(self._call_llm(prosecutor_sys, debate_history_prosecutor))
             
             # Vérification Grounding Procureur avec boucle de régénération
@@ -217,7 +221,7 @@ class LegalSimulationRunner:
             debate_history_defense.append({"role": "user", "content": f"{agent1_name} dit: {msg_proc}"})
             
             # Défense
-            defense_sys = LegalAgents.get_defense_lawyer_prompt(self.filter_context(self.context, "defense"), self.litigation_type)
+            defense_sys = LegalAgents.get_defense_lawyer_prompt(self.filter_context(grounded_context, "defense"), self.litigation_type)
             msg_def = _strip_meta_and_citations(self._call_llm(defense_sys, debate_history_defense))
             
             # Vérification Grounding Défense avec boucle de régénération
@@ -321,7 +325,7 @@ class LegalSimulationRunner:
                 on_action_callback("VERDICT", "Le Tribunal Collégial", 0, verdict, result=verdict)
         else:
             logger.info("Délibéré du juge...")
-            judge_sys = LegalAgents.get_judge_prompt(self.filter_context(self.context, "judge"), current_personality, self.litigation_type)
+            judge_sys = LegalAgents.get_judge_prompt(self.filter_context(grounded_context, "judge"), current_personality, self.litigation_type)
             judge_history = [{"role": "user", "content": "Voici la transcription du débat:\n" + "\n".join(transcript) + "\n\nQuel est votre verdict ?"}]
             verdict = _strip_meta_and_citations(self._call_llm(judge_sys, judge_history))
             transcript.append(f"JUGE: {verdict}")

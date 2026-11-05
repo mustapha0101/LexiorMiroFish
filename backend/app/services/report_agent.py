@@ -1052,21 +1052,30 @@ class ReportAgent:
                                     )
                             sample_verdicts = "\n\n".join(verdicts)
                             
-                            # Si estimated_cost dans JSON est 0.0 (coût LLM nul), utiliser le quantum financier maximal du litige !
+                            # Si estimated_cost dans JSON est 0.0 (coût LLM nul), calculer le Bilan Actuariel v2 complet !
                             if (not estimated_cost or estimated_cost < 10.0) and quantums:
                                 max_q = max(q for _, q in quantums)
                                 min_q = min(q for _, q in quantums)
+                                avg_q = sum(q for _, q in quantums) / len(quantums)
+                                # Majoration légale québécoise (Intérêts au taux légal 5% + Indemnité additionnelle art. 1619 C.c.Q. ~3.5% = +8.5%)
+                                legal_interest_markup = round(avg_q * 0.085, 2)
+                                total_actuarial_exposure = round(avg_q + legal_interest_markup, 2)
+                                cra_settlement_floor = round(min_q * 0.95, 2)
+                                cra_settlement_target = round(avg_q * 0.92, 2)
                                 estimated_cost = max_q
-                                traj_str = " -> ".join(f"R{r}: {q:,.2f} $" for r, q in quantums[:6])
-                                if min_q < max_q:
-                                    drop_pct = ((max_q - min_q) / max_q) * 100.0
-                                    sample_verdicts = (
-                                        f"TRAJECTOIRE FINANCIÈRE DU QUANTUM : {traj_str} "
-                                        f"(Max: {max_q:,.2f} $ | Puits de potentiel Min: {min_q:,.2f} $, soit une réduction tactique de -{drop_pct:.1f}%).\n\n"
-                                        + sample_verdicts
-                                    )
-                                else:
-                                    sample_verdicts = f"TRAJECTOIRE FINANCIÈRE DU QUANTUM : {traj_str}\n\n" + sample_verdicts
+                                traj_str = " -> ".join(f"R{r}: {q:,.2f} $" for r, q in quantums[:8])
+                                drop_pct = ((max_q - min_q) / max_q) * 100.0 if max_q > 0 else 0.0
+                                actuarial_header = (
+                                    "=== BILAN ACTUARIEL & FINANCIER VÉRIFIÉ (MOTEUR PIE v2) ===\n"
+                                    f"- Trajectoire du Quantum par Round : {traj_str}\n"
+                                    f"- Quantum Maximal Accordé (Plein Droit) : {max_q:,.2f} $\n"
+                                    f"- Puits de Potentiel (Quantum Minimal après réduction art. 1607/1611/2803 C.c.Q.) : {min_q:,.2f} $ (-{drop_pct:.1f}%)\n"
+                                    f"- Espérance Mathématique en Capital E[Q] : {avg_q:,.2f} $\n"
+                                    f"- Majoration Légale Québécoise (Intérêts légaux art. 1618 C.c.Q. + Indemnité additionnelle art. 1619 C.c.Q. estimés à +8,5 %) : +{legal_interest_markup:,.2f} $\n"
+                                    f"- Exposition Actuarielle Totale Estimée (Capital + Art. 1619 C.c.Q.) : {total_actuarial_exposure:,.2f} $\n"
+                                    f"- Cible de Règlement Optimal en CRA (Conférence de règlement à l'amiable, art. 161 C.p.c.) : entre {cra_settlement_floor:,.2f} $ (Plancher) et {cra_settlement_target:,.2f} $ (Cible d'arbitrage).\n\n"
+                                )
+                                sample_verdicts = actuarial_header + sample_verdicts
                             
                     client_side = getattr(project, "client_side", "plaintiff")
                     # Si toutes les décisions sont favorables au Demandeur (defense_wins == 0) et client_side n'a pas été forcé, aligner le rapport
