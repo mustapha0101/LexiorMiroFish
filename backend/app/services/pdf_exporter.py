@@ -172,8 +172,26 @@ class SimulationPDFExporter:
                     lines.append(' '.join(current_line))
             return lines
 
+        def _sanitize_pdf_text(text: str, strip_md_bold: bool = True) -> str:
+            if not text:
+                return ""
+            s = str(text)
+            # 1. Supprimer les placeholders non résolus
+            s = re.sub(r'\[À insérer[^\]]*\]', '', s, flags=re.IGNORECASE)
+            # 2. Nettoyer les séquences LaTeX / Markdown autour du symbole $
+            s = re.sub(r'\\+\$', '$', s)
+            s = re.sub(r'\$\s*\\mathfrak\{[^}]*\}\s*\$', '$', s)
+            # 3. Dédupliquer les blocs "Sources officielles et citations :" s'il y en a plusieurs dans une même intervention
+            parts = re.split(r'(\*\*Sources officielles et citations\s*:\*\*)', s, flags=re.IGNORECASE)
+            if len(parts) > 3:
+                s = parts[0] + parts[1] + parts[2]
+            if strip_md_bold:
+                s = s.replace('**', '')
+            return s.strip()
+
         def draw_text(text, fontsize=9.5, color=(0.1, 0.1, 0.1), bold=False, line_spacing=13, italic=False):
             nonlocal page, y
+            text = _sanitize_pdf_text(text, strip_md_bold=True)
             font = font_bold if bold else (font_italic if italic else font_reg)
             lines = wrap_text(text, font, fontsize, printable_width)
             for line in lines:
@@ -330,7 +348,7 @@ class SimulationPDFExporter:
                             
                         page.insert_text((margin_left + 25, ya + 20), t_str, fontsize=7.5, color=(0.3, 0.3, 0.3), fontname="helvetica")
                         
-                        bar_label = f"Tension Équité: {t_pe*100:.0f}%"
+                        bar_label = f"Tension Équité : {int(round(t_pe*100))} %"
                         progress_val = t_pe
                     else:
                         t_es = a_data.get("exploration_vs_security", 0.5)
@@ -340,7 +358,7 @@ class SimulationPDFExporter:
                         t_str = f"Exploration/Sécurité: {t_es:.2f}  |  Coopération/Domination: {t_cd:.2f}  |  Vérité/Survie Sociale: {t_ts:.2f}"
                         page.insert_text((margin_left + 25, ya + 20), t_str, fontsize=7.5, color=(0.3, 0.3, 0.3), fontname="helvetica")
                         
-                        bar_label = f"Vérité vs Survie Sociale: {t_ts*100:.0f}%"
+                        bar_label = f"Vérité vs Survie Sociale : {int(round(t_ts*100))} %"
                         progress_val = t_ts
                         
                     # Dessiner la barre
@@ -354,7 +372,7 @@ class SimulationPDFExporter:
                     if fill_w > 0:
                         page.draw_rect(fitz.Rect(bar_x, bar_y, bar_x + fill_w, bar_y + bar_h), color=(0.71, 0.54, 0.24), fill=(0.71, 0.54, 0.24), width=0.5)
                         
-                    page.insert_text((bar_x + bar_w + 10, bar_y + 3), bar_label, fontsize=6.5, color=(0.5, 0.5, 0.5), fontname="helvetica")
+                    page.insert_text((bar_x + bar_w + 10, bar_y + 3.5), bar_label, fontsize=7.5, color=(0.45, 0.45, 0.45), fontname="helvetica")
                     ya += 48
                     
                 y += card_height + 15
@@ -858,6 +876,9 @@ class ReportPDFExporter:
 
         def draw_rich_text(text, fontsize=9.5, color=(0.15, 0.15, 0.15), line_spacing=13, is_bullet=False):
             nonlocal page, y
+            text = re.sub(r'\[À insérer[^\]]*\]', '', str(text), flags=re.IGNORECASE)
+            text = re.sub(r'\\+\$', '$', text)
+            text = re.sub(r'\$\s*\\mathfrak\{[^}]*\}\s*\$', '$', text)
             lines = wrap_rich_text(text, font_reg, fontsize, printable_width - (15 if is_bullet else 0))
             for line in lines:
                 if y + line_spacing > margin_bottom:

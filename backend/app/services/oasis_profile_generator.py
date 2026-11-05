@@ -927,13 +927,13 @@ Tu dois créer exactement {count} profils correspondants aux rôles décrits ci-
 
 Chaque profil dans la liste doit respecter scrupuleusement la structure JSON suivante :
 - "username" : un identifiant court, en minuscules, sans espaces (ex: "lanceur_alerte_99", "expert_cyber", "citoyen_inquiet").
-- "name" : Le nom d'affichage de l'utilisateur en français (ex: "Marc Lavoie", "Apex Software Relations", "Dr. Sophie Martin").
+- "name" : Le nom d'affichage de l'utilisateur en français (ex: "Marc Lavoie", "Association des consommateurs du Québec", "Dr. Sophie Martin").
 - "bio" : Une courte biographie accrocheuse en français pour le profil de réseau social (environ 150 caractères).
 - "persona" : Une description très détaillée (en français, minimum 3-4 phrases) du profil psychologique, de son opinion, de sa façon de s'exprimer (ton, style), de son attitude envers l'affaire, et de sa réaction attendue face aux preuves ou révélations.
 - "age" : un entier entre 18 et 65 ans.
 - "gender" : "male" ou "female".
 - "mbti" : un type MBTI valide à 4 lettres (ex: "INTJ", "ENFP", "ISTJ", "ESFJ").
-- "country" : Le pays de résidence (par exemple, "Canada", "France").
+- "country" : Le pays ou la province de résidence (par exemple, "Québec, Canada", "Canada").
 - "profession" : La profession ou le rôle social de la personne (en français).
 - "interested_topics" : Une liste de 3 à 5 sujets ou mots-clés d'intérêt liés à l'affaire (en français).
 

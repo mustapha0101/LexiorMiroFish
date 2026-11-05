@@ -466,8 +466,21 @@ class SimulationRunner:
                         t_sum += a_rec.get("truth_vs_social_survival", 0.5)
                     entropy = round(t_sum / max(1, len(agents_records)), 3)
                 else:
-                    # Courtroom cache fallback
-                    entropy = 0.5
+                    # Courtroom cache : calculer la véritable entropie narrative de Shannon (Bug B fix)
+                    try:
+                        litigation_type = "civil"
+                        config_path = os.path.join(cls.RUN_STATE_DIR, simulation_id, "simulation_config.json")
+                        if os.path.exists(config_path):
+                            with open(config_path, 'r', encoding='utf-8') as f:
+                                config_data = json.load(f)
+                                litigation_type = config_data.get("litigation_type", "civil")
+                        agent1_name = "Le Procureur" if litigation_type == "criminal" else "Avocat du Demandeur"
+                        state_judge = CognitiveMemoryService.get_agent_state(simulation_id, "0", "Le Juge")
+                        state_proc = CognitiveMemoryService.get_agent_state(simulation_id, "1", agent1_name)
+                        state_def = CognitiveMemoryService.get_agent_state(simulation_id, "2", "Avocat de la Défense")
+                        entropy = cls._calculate_narrative_entropy(state_judge, state_proc, state_def, objections_count, total_stimuli)
+                    except Exception:
+                        entropy = 0.5
             
             record = {
                 "round": round_num,
@@ -2227,57 +2240,124 @@ class SimulationRunner:
                         if state_def.negative_interactions_count == 0:
                             state_def.mood = "Neutre"
 
-                    # Determine winner-specific reflections
+                    # Determine winner-specific reflections & extract awarded financial quantum (Bugs A & B)
                     is_defense_win = res.get("is_defense_win", False)
+                    import re as _re
+
+                    def _extract_quantum(verdict_str: str) -> float:
+                        if not verdict_str:
+                            return 0.0
+                        # Chercher les montants près de condamne / total / somme / accorde
+                        matches = _re.findall(r'(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2}))\s*\$', verdict_str)
+                        vals = []
+                        for m in matches:
+                            cleaned = m.replace(' ', '').replace('\u00a0', '').replace(',', '.')
+                            try:
+                                v = float(cleaned)
+                                if v > 50.0:
+                                    vals.append(v)
+                            except ValueError:
+                                pass
+                        return max(vals) if vals else 0.0
+
+                    awarded_quantum = _extract_quantum(juge_verdict)
+                    res["awarded_quantum"] = awarded_quantum
+                    prev_quantum = results[-2].get("awarded_quantum", awarded_quantum) if len(results) >= 2 else awarded_quantum
+                    quantum_delta = awarded_quantum - prev_quantum
+
+                    # Sauvegarder l'état PIE précédent du Juge pour le calcul de convergence (Bug A)
+                    prev_judge_pe = state_judge.tensions.get("procedure_vs_equite", 0.5)
+                    prev_judge_belief = state_judge.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.5)
                     
-                    # 1. Update beliefs and tensions based on winner
+                    # 1. Update beliefs and tensions dynamically for ALL 3 courtroom agents (Bug B fix)
                     if is_defense_win:
                         p_coupable = state_judge.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.5)
                         new_p_coupable = max(0.10, p_coupable - 0.15)
                         state_judge.beliefs["culpabilite_accuse"] = {"coupable": new_p_coupable, "innocent": 1.0 - new_p_coupable}
-                        
                         state_judge.tensions["procedure_vs_equite"] = max(0.20, state_judge.tensions.get("procedure_vs_equite", 0.5) - 0.08)
-                        state_def.beliefs["culpabilite_accuse"] = {"coupable": 0.05, "innocent": 0.95}
+
+                        # Dynamique Avocat du Demandeur (en recul -> hausse de prudence et ouverture à la négociation)
+                        proc_belief = max(0.45, state_proc.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.80) - 0.08)
+                        state_proc.beliefs["culpabilite_accuse"] = {"coupable": round(proc_belief, 2), "innocent": round(1.0 - proc_belief, 2)}
+                        state_proc.tensions["procedure_vs_equite"] = round(max(0.45, state_proc.tensions.get("procedure_vs_equite", 0.85) - 0.06), 2)
+                        state_proc.tensions["offensive_vs_negociation"] = round(max(0.35, state_proc.tensions.get("offensive_vs_negociation", 0.80) - 0.08), 2)
+                        state_proc.tensions["prudence_vs_rapidite"] = round(min(0.85, state_proc.tensions.get("prudence_vs_rapidite", 0.40) + 0.07), 2)
+
+                        # Dynamique Avocat de la Défense (en position de force -> offensive accrue)
+                        def_belief = max(0.05, state_def.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.15) - 0.04)
+                        state_def.beliefs["culpabilite_accuse"] = {"coupable": round(def_belief, 2), "innocent": round(1.0 - def_belief, 2)}
+                        state_def.tensions["procedure_vs_equite"] = round(min(0.65, state_def.tensions.get("procedure_vs_equite", 0.30) + 0.05), 2)
+                        state_def.tensions["offensive_vs_negociation"] = round(min(0.85, state_def.tensions.get("offensive_vs_negociation", 0.45) + 0.07), 2)
+                        state_def.tensions["prudence_vs_rapidite"] = round(max(0.35, state_def.tensions.get("prudence_vs_rapidite", 0.70) - 0.05), 2)
                         
                         # Default values in case dynamic generation fails
                         j_meta = (
-                            f"Les arguments de la défense m'ont convaincu de prononcer un verdict de relaxe au round {round_idx}."
+                            f"Les arguments de la défense m'ont convaincu de prononcer un verdict d'acquittement au round {round_idx}."
                             if litigation_type == "criminal" else
-                            f"Les arguments de la défense m'ont convaincu de rejeter la demande pour vice caché au round {round_idx}."
+                            f"Les arguments de la défense m'ont convaincu de rejeter la demande au round {round_idx}."
                         )
                         j_refl = (
                             "L'équité naturelle impose le bénéfice du doute en l'absence de preuves matérielles incontestables."
                             if litigation_type == "criminal" else
-                            "L'acheteur n'a pas démontré avoir exercé la diligence raisonnable requise lors de l'acquisition."
+                            "La partie demanderesse n'a pas démontré de manière prépondérante le bien-fondé de sa réclamation."
                         )
                         
                         p_meta = (
                             f"Revers tactique au round {round_idx}. Les arguments de la défense ont ébranlé notre position."
                             if litigation_type == "criminal" else
-                            f"Revers au round {round_idx}. Les éléments prouvant le vice caché doivent être présentés avec plus de rigueur."
+                            f"Revers au round {round_idx}. Nos éléments de preuve doivent être consolidés."
                         )
                         p_refl = (
                             "Je dois recentrer ma plaidoirie sur des éléments factuels incontestables au prochain round."
                             if litigation_type == "criminal" else
-                            "Le fardeau de la preuve repose sur nous ; nous devons mieux démontrer le caractère grave et antérieur du défaut."
+                            "Le fardeau de la preuve repose sur nous (art. 2803 C.c.Q.) ; nous devons resserrer le lien de causalité."
                         )
                         
                         d_meta = (
                             f"Succès tactique au round {round_idx}. Le juge a accueilli favorablement nos doutes raisonnables."
                             if litigation_type == "criminal" else
-                            f"Avantage à la défense au round {round_idx}. Notre contestation sur la diligence raisonnable a porté ses fruits."
+                            f"Avantage à la défense au round {round_idx}. Notre contestation a porté ses fruits."
                         )
                         d_refl = (
                             "Nous avons démontré l'insuffisance des preuves de l'accusation."
                             if litigation_type == "criminal" else
-                            "L'acheteur a procédé à l'achat en pleine connaissance de cause ou sans l'inspection pré-achat requise."
+                            "La contestation du lien de causalité et de la preuve adverse a convaincu le Tribunal."
                         )
                     else:
                         p_coupable = state_judge.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.5)
-                        new_p_coupable = min(0.90, p_coupable + 0.15)
-                        state_judge.beliefs["culpabilite_accuse"] = {"coupable": new_p_coupable, "innocent": 1.0 - new_p_coupable}
-                        
-                        state_judge.tensions["procedure_vs_equite"] = min(0.80, state_judge.tensions.get("procedure_vs_equite", 0.5) + 0.08)
+                        # Si la défense a réussi à faire réduire le quantum (ex: Puits de Potentiel au Round 2), le juge module sa jauge
+                        if quantum_delta < -50.0:
+                            new_p_coupable = max(0.55, p_coupable - 0.05)
+                            state_judge.tensions["procedure_vs_equite"] = round(max(0.45, state_judge.tensions.get("procedure_vs_equite", 0.5) - 0.04), 2)
+                        else:
+                            new_p_coupable = min(0.90, p_coupable + 0.15)
+                            state_judge.tensions["procedure_vs_equite"] = round(min(0.80, state_judge.tensions.get("procedure_vs_equite", 0.5) + 0.08), 2)
+                        state_judge.beliefs["culpabilite_accuse"] = {"coupable": round(new_p_coupable, 2), "innocent": round(1.0 - new_p_coupable, 2)}
+
+                        # Dynamique Avocat du Demandeur & Avocat de la Défense selon l'évolution du quantum et des rounds
+                        if quantum_delta < -50.0:
+                            # La Défense a réussi une percée sur le quantum (ex: art. 1607/1611 C.c.Q.)
+                            proc_belief = max(0.72, state_proc.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.80) - 0.05)
+                            state_proc.tensions["offensive_vs_negociation"] = round(min(0.92, state_proc.tensions.get("offensive_vs_negociation", 0.80) + 0.06), 2)
+                            state_proc.tensions["prudence_vs_rapidite"] = round(min(0.65, state_proc.tensions.get("prudence_vs_rapidite", 0.40) + 0.08), 2)
+
+                            def_belief = max(0.22, state_def.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.15) + 0.08)
+                            state_def.tensions["procedure_vs_equite"] = round(min(0.52, state_def.tensions.get("procedure_vs_equite", 0.30) + 0.08), 2)
+                            state_def.tensions["offensive_vs_negociation"] = round(min(0.68, state_def.tensions.get("offensive_vs_negociation", 0.45) + 0.09), 2)
+                        else:
+                            # Le Demandeur consolide la condamnation intégrale -> La Défense recule vers la négociation/concession
+                            proc_belief = min(0.95, state_proc.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.80) + 0.04)
+                            state_proc.tensions["procedure_vs_equite"] = round(min(0.92, state_proc.tensions.get("procedure_vs_equite", 0.85) + 0.02), 2)
+                            state_proc.tensions["offensive_vs_negociation"] = round(min(0.90, state_proc.tensions.get("offensive_vs_negociation", 0.80) + 0.03), 2)
+                            state_proc.tensions["prudence_vs_rapidite"] = round(max(0.28, state_proc.tensions.get("prudence_vs_rapidite", 0.40) - 0.03), 2)
+
+                            def_belief = min(0.75, state_def.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.15) + 0.12)
+                            state_def.tensions["procedure_vs_equite"] = round(max(0.18, state_def.tensions.get("procedure_vs_equite", 0.30) - 0.03), 2)
+                            state_def.tensions["offensive_vs_negociation"] = round(max(0.20, state_def.tensions.get("offensive_vs_negociation", 0.45) - 0.07), 2)
+                            state_def.tensions["prudence_vs_rapidite"] = round(min(0.88, state_def.tensions.get("prudence_vs_rapidite", 0.70) + 0.05), 2)
+
+                        state_proc.beliefs["culpabilite_accuse"] = {"coupable": round(proc_belief, 2), "innocent": round(1.0 - proc_belief, 2)}
+                        state_def.beliefs["culpabilite_accuse"] = {"coupable": round(def_belief, 2), "innocent": round(1.0 - def_belief, 2)}
                         
                         # Default values in case dynamic generation fails
                         j_meta = (
@@ -2415,6 +2495,37 @@ class SimulationRunner:
                     
                     total_stimuli = len(state.injected_stimuli) if hasattr(state, 'injected_stimuli') and state.injected_stimuli else 0
                     cls._record_cognitive_state_history(simulation_id, round_idx, objections_count, total_stimuli)
+
+                    # Bug A Fix : Arrêt Dynamique par Convergence d'Entropie PIE (Early Stopping)
+                    curr_judge_pe = state_judge.tensions.get("procedure_vs_equite", 0.5)
+                    curr_judge_belief = state_judge.beliefs.get("culpabilite_accuse", {}).get("coupable", 0.5)
+                    delta_pe = abs(curr_judge_pe - prev_judge_pe)
+                    delta_belief = abs(curr_judge_belief - prev_judge_belief)
+                    res["delta_pie"] = round(max(delta_pe, delta_belief), 4)
+
+                    def_lower = defense_speech.lower()
+                    verdict_lower = juge_verdict.lower()
+                    explicit_concession = any(
+                        kw in def_lower for kw in [
+                            "accepte la condamnation", "acquiesce", "ne conteste plus le montant",
+                            "concède le quantum", "reconnaît devoir la somme"
+                        ]
+                    ) or ("irrévocable" in verdict_lower and round_idx >= 4)
+
+                    if round_idx >= 4 and (
+                        (delta_pe < 0.01 and delta_belief < 0.01 and abs(quantum_delta) < 1.0)
+                        or explicit_concession
+                    ):
+                        conv_msg = (
+                            f"⚡ ARRÊT DYNAMIQUE PIE (Early Stopping) au Round {round_idx} : "
+                            f"Convergence dialectique et cognitive atteinte (ΔPIE = {max(delta_pe, delta_belief):.3f} < 0.01, "
+                            f"Quantum stabilisé à {awarded_quantum:,.2f} $). Clôture automatique de l'audience."
+                        )
+                        logger.info(conv_msg)
+                        log_agent_action("STIMULUS", "Moteur PIE (Convergence)", 0, conv_msg, result="Early stopping triggered")
+                        state.total_rounds = round_idx
+                        cls._save_run_state(state)
+                        break
 
                 except Exception as db_err:
                     logger.error(f"Erreur lors de la mise à jour des états PIE dans la simulation juridique: {db_err}")

@@ -26,10 +26,10 @@ class LegalAgents:
     @staticmethod
     def get_defense_lawyer_prompt(context: str, litigation_type: str = "civil") -> str:
         if litigation_type == "civil":
-            client_ref = "le défendeur (Apex Software)"
-            failure_ref = "les arguments du demandeur, minimiser la responsabilité civile de ton client et citer des jurisprudences civiles favorables"
+            client_ref = "la partie défenderesse (selon les faits du dossier)"
+            failure_ref = "les failles dans les prétentions de la partie demanderesse, contester le lien de causalité ou le quantum réclamé, et citer les articles pertinents du Code civil du Québec (ex: art. 1457, 1607, 1611, 2100, 2803 C.c.Q.) et la jurisprudence applicable"
             counter_ref = "les arguments de l'Avocat du Demandeur"
-            rule4_ref = "le Code civil du Québec (C.c.Q.) ou des lois/jurisprudences civiles applicables (ex: article 1726 C.c.Q. pour les vices cachés, obligations contractuelles)"
+            rule4_ref = "le Code civil du Québec (C.c.Q.), le Code de procédure civile (C.p.c.) ou les lois et jurisprudences civiles applicables"
             dist_ref = "Ne confonds pas le Code criminel avec les règles de responsabilité civile."
         else:
             client_ref = "ton client (le prévenu/l'accusé)"
@@ -59,14 +59,14 @@ Règles absolues d'immersion :
     @staticmethod
     def get_prosecutor_prompt(context: str, litigation_type: str = "civil") -> str:
         if litigation_type == "civil":
-            role_title = "l'Avocat du Demandeur (NovaTech)"
-            mission_ref = "démontrer la responsabilité civile du défendeur avec rigueur, de prouver le vice caché technique, et d'obtenir réparation pour le préjudice subi"
+            role_title = "l'Avocat du Demandeur (représentant la partie demanderesse identifiée au dossier)"
+            mission_ref = "démontrer la responsabilité civile ou contractuelle de la partie défenderesse avec rigueur, prouver la faute, le préjudice et le lien de causalité, et obtenir la condamnation intégrale au quantum réclamé"
             counter_ref = "l'Avocat de la Défense"
-            rule4_ref = "le Code civil du Québec (C.c.Q.) ou des lois/jurisprudences civiles applicables (ex: article 1726 C.c.Q. pour les vices cachés, obligations contractuelles)"
+            rule4_ref = "le Code civil du Québec (C.c.Q.), le Code de procédure civile (C.p.c.) ou les lois et jurisprudences civiles applicables"
             dist_ref = "Ne confonds pas le Code criminel avec les règles de responsabilité civile."
         else:
-            role_title = "le Procureur de la République"
-            mission_ref = "démontrer la culpabilité de l'accusé avec rigueur et d'appliquer strictement la loi"
+            role_title = "le Procureur aux poursuites criminelles et pénales (DPCP)"
+            mission_ref = "démontrer la culpabilité de l'accusé hors de tout doute raisonnable avec rigueur et d'appliquer strictement le Code criminel"
             counter_ref = "l'Avocat de la Défense"
             rule4_ref = "les articles de loi précis (ex: article 264 ou 264.1(1)a) du Code criminel)"
             dist_ref = "Ne confonds pas le Code civil du Québec (C.c.Q.) avec des infractions de droit criminel."
@@ -122,9 +122,9 @@ Tu dois écouter le débat, puis rendre un délibéré clair et motivé, {verdic
         if litigation_type == "civil":
             plaintiff_title = "l'Avocat du Demandeur"
             defendant_title = "l'Avocat de la Défense"
-            forbidden_ref = "le Procureur ou le Ministère Public (qui sont des termes exclusifs au droit criminel)"
+            forbidden_ref = "le Procureur ou la Couronne (qui sont des termes exclusifs au droit criminel)"
         else:
-            plaintiff_title = "le Procureur (Ministère Public)"
+            plaintiff_title = "le Procureur aux poursuites criminelles et pénales (DPCP)"
             defendant_title = "l'Avocat de la Défense"
             forbidden_ref = "l'Avocat du Demandeur"
 
@@ -140,6 +140,7 @@ Règles absolues d'immersion et de vocabulaire :
 3. Tu dois utiliser impérativement les bons titres des parties et avocats intervenants dans ce procès :
    - Pour la partie poursuivante/demanderesse, utilise toujours le terme : "{plaintiff_title}". Tu ne dois JAMAIS utiliser "{forbidden_ref}".
    - Pour la partie qui se défend, utilise toujours le terme : "{defendant_title}".
+4. INTERDICTION ABSOLUE D'ESPACES RÉSERVÉS (PLACEHOLDERS) : N'écris JAMAIS de texte entre crochets du type "[À insérer si disponible, sinon omettre]", "[Date]", ou "[Nom]". Si une métadonnée n'est pas mentionnée, omet-la directement sans laisser de balise.
 """
 
     @staticmethod

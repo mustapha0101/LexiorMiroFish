@@ -737,7 +737,7 @@ const acquittalRateLabel = computed(() => {
   if (props.clientSide === 'plaintiff') {
     return isCivil.value ? "TAUX DE SUCCÈS (DEMANDE)" : "TAUX DE CONDAMNATION"
   }
-  return isCivil.value ? "TAUX DE REJET" : "TAUX DE RELAXE"
+  return isCivil.value ? "TAUX DE REJET" : "TAUX D'ACQUITTEMENT"
 })
 
 const chatTargetAdversaryOptionLabel = computed(() => {

@@ -93,12 +93,65 @@ class LegalSimulationRunner:
         logger.info(f"--- Itération {iter_id} | Juge: {current_personality} ---")
         
         agent1_name = "Le Procureur" if self.litigation_type == "criminal" else "Avocat du Demandeur"
+        import re
+
+        def _strip_meta_and_citations(text: str) -> str:
+            if not text:
+                return ""
+            # 1. Couper tout bloc "Sources officielles et citations" généré spontanément par le LLM
+            text = re.split(r'\n*\*\*Sources officielles et citations\s*:\*\*', text, flags=re.IGNORECASE)[0].strip()
+            # 2. Supprimer les excuses méta-discursives liées au Grounding Guardrail en début de plaidoirie
+            meta_patterns = [
+                r"^(?:Monsieur le Juge,?\s*|Madame la Juge,?\s*|Votre Honneur,?\s*|Honorable Cour,?\s*|Le Tribunal,?\s*)?(?:J'ai pris note de l'objection[^.\n]*\.?\s*)",
+                r"^(?:Je vous prie d'excuser[^.\n]*\.?\s*)",
+                r"^(?:Je m'engage à reformuler[^.\n]*\.?\s*)",
+                r"^(?:Suite à l'objection soulevée[^.\n]*\.?\s*)",
+                r"^(?:Veuillez excuser cette imprécision[^.\n]*\.?\s*)",
+            ]
+            for pat in meta_patterns:
+                text = re.sub(pat, "", text, flags=re.IGNORECASE).strip()
+            # 3. Supprimer les espaces réservés (placeholders) résiduels
+            text = re.sub(r'\[À insérer[^\]]*\]', '', text, flags=re.IGNORECASE)
+            return text.strip()
+
+        def _format_dedup_refs(refs: list) -> str:
+            if not refs:
+                return ""
+            seen = set()
+            lines = ["\n\n**Sources officielles et citations :**"]
+            for r in refs:
+                key = (r.get("law_name", "").strip().lower(), r.get("citation", "").strip().lower())
+                if key in seen:
+                    continue
+                seen.add(key)
+                lines.append(f"- **[{r['law_name']}]({r['url']})** (Citation: `{r['citation']}`)")
+                if r.get("summary"):
+                    desc = r['summary'].replace('\n', '\n  ')
+                    lines.append(f"  *Description :* {desc}")
+            return "\n".join(lines) + "\n"
         
         transcript = []
         debate_history_prosecutor = [
             {"role": "user", "content": f"Veuillez présenter votre réquisitoire initial et vos arguments principaux contre la défense en vous basant sur les faits du dossier."}
         ]
         debate_history_defense = []
+
+        # Audition initiale du Témoin / Expert technique du dossier au Round 1 (Bug D)
+        if iter_id == 1:
+            witness_sys = (
+                "Tu es le Témoin Technique / Expert indépendant cité dans les pièces du dossier (ex: l'entrepreneur ou l'expert ayant inspecté les lieux et constaté les dommages).\n"
+                "Présente à la barre du Tribunal, en 4 à 6 phrases factuelles, précises et neutres à la première personne, tes constatations techniques matérielles telles qu'elles ressortent strictement du contexte de l'affaire (état des lieux, cause technique des dégradations, estimés ou travaux correctifs constatés).\n"
+                "Ne cite aucun article de loi et ne prends pas parti juridiquement : livre uniquement ton témoignage technique factuel sous serment.\n\n"
+                f"Contexte de l'affaire :\n{self.filter_context(self.context, 'judge')}"
+            )
+            msg_witness = _strip_meta_and_citations(
+                self._call_llm(witness_sys, [{"role": "user", "content": "Veuillez livrer votre déposition technique factuelle devant le Tribunal."}])
+            )
+            if msg_witness:
+                transcript.append(f"TEMOIN_EXPERT: {msg_witness}")
+                if on_action_callback:
+                    on_action_callback("SPEECH_WITNESS", "Témoin / Expert Technique", 3, msg_witness)
+                debate_history_prosecutor[0]["content"] += f"\n\nDéposition du Témoin / Expert Technique à la barre : {msg_witness}"
         
         # 2. Phase de Débat (De base 2 tours, +1 tour de réplique si un stimulus est injecté)
         tour = 0
@@ -118,9 +171,9 @@ class LegalSimulationRunner:
                 if on_action_callback:
                     on_action_callback("STIMULUS", "Système (Alerte)", 0, f"📢 Fait nouveau ou stimulus détecté à l'audience. Le tribunal autorise un tour de réplique supplémentaire.")
             
-            # Procureur
+            # Procureur / Demandeur
             prosecutor_sys = LegalAgents.get_prosecutor_prompt(self.filter_context(self.context, "prosecutor"), self.litigation_type)
-            msg_proc = self._call_llm(prosecutor_sys, debate_history_prosecutor)
+            msg_proc = _strip_meta_and_citations(self._call_llm(prosecutor_sys, debate_history_prosecutor))
             
             # Vérification Grounding Procureur avec boucle de régénération
             for attempt in range(3):
@@ -129,17 +182,15 @@ class LegalSimulationRunner:
                     break
                 logger.info(f"Procureur Hallucination détectée (Essai {attempt+1}/3). Régénération en cours...")
                 correction_prompt = (
-                    f"ATTENTION : Votre plaidoyer précédent contenait une hallucination juridique ou une citation erronée.\n"
-                    f"Erreur/Objection : {check_proc['objection_message']}\n"
-                    f"Veuillez reformuler entièrement votre intervention. Assurez-vous d'utiliser uniquement "
-                    f"des arrêts canadiens réels ou le code de loi approprié. "
-                    f"Ne confondez pas le Code civil du Québec (C.c.Q.) avec des infractions de droit criminel."
+                    f"INSTRUCTION SYSTÈME INTERNE : Votre brouillon précédent contenait une référence hors-graphe ({check_proc['objection_message']}).\n"
+                    f"Reformulez directement votre plaidoirie depuis le début en utilisant uniquement les articles de loi et les faits du dossier.\n"
+                    f"INTERDICTION ABSOLUE : Ne mentionnez JAMAIS qu'une objection, une erreur ou une reformulation a eu lieu (n'écrivez jamais 'J'ai pris note de l'objection', 'Je vous prie d'excuser' ou 'Je reformule'). Commencez directement votre plaidoirie devant le Tribunal."
                 )
                 retry_history = debate_history_prosecutor + [
                     {"role": "assistant", "content": msg_proc},
                     {"role": "user", "content": correction_prompt}
                 ]
-                msg_proc = self._call_llm(prosecutor_sys, retry_history)
+                msg_proc = _strip_meta_and_citations(self._call_llm(prosecutor_sys, retry_history))
             
             # Post-traitement final après les tentatives de correction
             check_proc = self.grounding.verify_argument(msg_proc, role="prosecutor", context=self.context, litigation_type=self.litigation_type)
@@ -149,30 +200,25 @@ class LegalSimulationRunner:
                 logger.warning(f"Procureur : Hallucination persistante détectée. Nettoyage du plaidoyer par le système.")
                 clean_sys = (
                     "Tu es un assistant de réécriture juridique de Lexior.\n"
-                    "Récris le plaidoyer suivant en retirant TOUTE citation d'article de loi, de code civil, de code criminel ou d'arrêt de jurisprudence.\n"
-                    "Conserve intacts le sens, le ton et les arguments factuels ou techniques. Ne fais aucune mention d'articles ou de décisions de justice précis (ex: 'article 1726', 'arrêt R. c. X', 'Code civil')."
+                    "Récris le plaidoyer suivant en retirant TOUTE citation d'article de loi, de code civil, de code criminel ou d'arrêt de jurisprudence non vérifié.\n"
+                    "Conserve intacts le sens, le ton et les arguments factuels ou techniques. Ne mentionne jamais d'objection ni de correction."
                 )
-                msg_proc = self._call_llm(clean_sys, [{"role": "user", "content": msg_proc}])
+                msg_proc = _strip_meta_and_citations(self._call_llm(clean_sys, [{"role": "user", "content": msg_proc}]))
+                msg_proc_display = msg_proc
             else:
                 refs = check_proc.get("found_references", [])
-                if refs:
-                    msg_proc += "\n\n**Sources officielles et citations :**\n"
-                    for r in refs:
-                        msg_proc += f"- **[{r['law_name']}]({r['url']})** (Citation: `{r['citation']}`)\n"
-                        if r.get("summary"):
-                            desc = r['summary'].replace('\n', '\n  ')
-                            msg_proc += f"  *Description :* {desc}\n"
+                msg_proc_display = msg_proc + _format_dedup_refs(refs)
                 
-            transcript.append(f"PROCUREUR: {msg_proc}")
+            transcript.append(f"PROCUREUR: {msg_proc_display}")
             if on_action_callback:
-                on_action_callback("SPEECH_PROSECUTOR", agent1_name, 1, msg_proc)
+                on_action_callback("SPEECH_PROSECUTOR", agent1_name, 1, msg_proc_display)
                 
             debate_history_prosecutor.append({"role": "assistant", "content": msg_proc})
             debate_history_defense.append({"role": "user", "content": f"{agent1_name} dit: {msg_proc}"})
             
             # Défense
             defense_sys = LegalAgents.get_defense_lawyer_prompt(self.filter_context(self.context, "defense"), self.litigation_type)
-            msg_def = self._call_llm(defense_sys, debate_history_defense)
+            msg_def = _strip_meta_and_citations(self._call_llm(defense_sys, debate_history_defense))
             
             # Vérification Grounding Défense avec boucle de régénération
             for attempt in range(3):
@@ -181,17 +227,15 @@ class LegalSimulationRunner:
                     break
                 logger.info(f"Défense Hallucination détectée (Essai {attempt+1}/3). Régénération en cours...")
                 correction_prompt = (
-                    f"ATTENTION : Votre plaidoyer précédent contenait une hallucination juridique ou une citation erronée.\n"
-                    f"Erreur/Objection : {check_def['objection_message']}\n"
-                    f"Veuillez reformuler entièrement votre intervention. Assurez-vous d'utiliser uniquement "
-                    f"des arrêts canadiens réels ou le code de loi approprié. "
-                    f"Ne confondez pas le Code civil du Québec (C.c.Q.) avec des infractions de droit criminel."
+                    f"INSTRUCTION SYSTÈME INTERNE : Votre brouillon précédent contenait une référence hors-graphe ({check_def['objection_message']}).\n"
+                    f"Reformulez directement votre plaidoirie depuis le début en utilisant uniquement les articles de loi et les faits du dossier.\n"
+                    f"INTERDICTION ABSOLUE : Ne mentionnez JAMAIS qu'une objection, une erreur ou une reformulation a eu lieu (n'écrivez jamais 'J'ai pris note de l'objection', 'Je vous prie d'excuser' ou 'Je reformule'). Commencez directement votre plaidoirie devant le Tribunal."
                 )
                 retry_history = debate_history_defense + [
                     {"role": "assistant", "content": msg_def},
                     {"role": "user", "content": correction_prompt}
                 ]
-                msg_def = self._call_llm(defense_sys, retry_history)
+                msg_def = _strip_meta_and_citations(self._call_llm(defense_sys, retry_history))
                 
             # Post-traitement final après les tentatives de correction
             check_def = self.grounding.verify_argument(msg_def, role="defense", context=self.context, litigation_type=self.litigation_type)
@@ -201,23 +245,18 @@ class LegalSimulationRunner:
                 logger.warning("Défense : Hallucination persistante détectée. Nettoyage du plaidoyer par le système.")
                 clean_sys = (
                     "Tu es un assistant de réécriture juridique de Lexior.\n"
-                    "Récris le plaidoyer suivant en retirant TOUTE citation d'article de loi, de code civil, de code criminel ou d'arrêt de jurisprudence.\n"
-                    "Conserve intacts le sens, le ton et les arguments factuels ou techniques. Ne fais aucune mention d'articles ou de décisions de justice précis (ex: 'article 1726', 'arrêt R. c. X', 'Code civil')."
+                    "Récris le plaidoyer suivant en retirant TOUTE citation d'article de loi, de code civil, de code criminel ou d'arrêt de jurisprudence non vérifié.\n"
+                    "Conserve intacts le sens, le ton et les arguments factuels ou techniques. Ne mentionne jamais d'objection ni de correction."
                 )
-                msg_def = self._call_llm(clean_sys, [{"role": "user", "content": msg_def}])
+                msg_def = _strip_meta_and_citations(self._call_llm(clean_sys, [{"role": "user", "content": msg_def}]))
+                msg_def_display = msg_def
             else:
                 refs = check_def.get("found_references", [])
-                if refs:
-                    msg_def += "\n\n**Sources officielles et citations :**\n"
-                    for r in refs:
-                        msg_def += f"- **[{r['law_name']}]({r['url']})** (Citation: `{r['citation']}`)\n"
-                        if r.get("summary"):
-                            desc = r['summary'].replace('\n', '\n  ')
-                            msg_def += f"  *Description :* {desc}\n"
+                msg_def_display = msg_def + _format_dedup_refs(refs)
                 
-            transcript.append(f"DEFENSE: {msg_def}")
+            transcript.append(f"DEFENSE: {msg_def_display}")
             if on_action_callback:
-                on_action_callback("SPEECH_DEFENSE", "Avocat de la Défense", 2, msg_def)
+                on_action_callback("SPEECH_DEFENSE", "Avocat de la Défense", 2, msg_def_display)
                 
             debate_history_defense.append({"role": "assistant", "content": msg_def})
             debate_history_prosecutor.append({"role": "user", "content": f"La Défense dit: {msg_def}"})
@@ -284,7 +323,7 @@ class LegalSimulationRunner:
             logger.info("Délibéré du juge...")
             judge_sys = LegalAgents.get_judge_prompt(self.filter_context(self.context, "judge"), current_personality, self.litigation_type)
             judge_history = [{"role": "user", "content": "Voici la transcription du débat:\n" + "\n".join(transcript) + "\n\nQuel est votre verdict ?"}]
-            verdict = self._call_llm(judge_sys, judge_history)
+            verdict = _strip_meta_and_citations(self._call_llm(judge_sys, judge_history))
             transcript.append(f"JUGE: {verdict}")
             is_defense_win = evaluate_verdict(verdict)
             if on_action_callback:
@@ -293,7 +332,7 @@ class LegalSimulationRunner:
         # 4. Phase de Greffier (Analyste)
         clerk_sys = LegalAgents.get_clerk_prompt(self.litigation_type)
         clerk_history = [{"role": "user", "content": "Analyse du verdict et des arguments décisifs:\n" + "\n".join(transcript)}]
-        clerk_analysis = self._call_llm(clerk_sys, clerk_history)
+        clerk_analysis = _strip_meta_and_citations(self._call_llm(clerk_sys, clerk_history))
         if on_action_callback:
             on_action_callback("CLERK_ANALYSIS", "Le Greffier", 4, clerk_analysis, result="Analysis completed")
         

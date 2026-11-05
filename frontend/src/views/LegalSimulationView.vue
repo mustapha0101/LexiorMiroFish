@@ -81,12 +81,12 @@
             <div class="win-dashboard">
               <div class="win-circle" :style="winStyle">
                 <span class="win-rate">{{ winRate }}%</span>
-                <span class="win-label">{{ isCivil ? 'Chances de Rejet' : 'Chances de Relaxe' }}</span>
+                <span class="win-label">{{ isCivil ? 'Chances de Rejet' : "Chances d'Acquittement" }}</span>
               </div>
               <div class="win-stats-details">
                 <div class="stat-detail-item">
                   <span class="stat-number text-win">{{ simResults ? simResults.defense_wins : 0 }}</span>
-                  <span class="stat-label">{{ isCivil ? 'Rejets de la Demande' : 'Relaxes / Acquittements' }}</span>
+                  <span class="stat-label">{{ isCivil ? 'Rejets de la Demande' : 'Acquittements' }}</span>
                 </div>
                 <div class="stat-detail-item">
                   <span class="stat-number text-loss">{{ simResults ? (simResults.iterations - simResults.defense_wins) : 0 }}</span>
@@ -128,7 +128,7 @@
                     <span class="trial-judge-personality-short">{{ getJudgePersonalityShort(trial.judge_personality) }}</span>
                   </div>
                   <span class="verdict-badge" :class="trial.is_defense_win ? 'badge-win' : 'badge-loss'">
-                    {{ trial.is_defense_win ? (isCivil ? 'REJET' : 'RELAXE') : (isCivil ? 'RESPONSABLE' : 'CONDAMNÉ') }}
+                    {{ trial.is_defense_win ? (isCivil ? 'REJET' : 'ACQUITTÉ') : (isCivil ? 'RESPONSABLE' : 'CONDAMNÉ') }}
                   </span>
                 </div>
               </div>

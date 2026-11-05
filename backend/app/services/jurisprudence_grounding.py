@@ -167,84 +167,104 @@ class JurisprudenceGrounding:
     def verify_argument(self, agent_argument: str, role: str = "prosecutor", context: Optional[str] = None, litigation_type: str = "civil") -> dict:
         """
         Vérifie si l'argument de l'agent est ancré dans la réalité juridique
-        en interrogeant d'abord le contexte de la décision téléversée,
-        puis en interrogeant l'API A2AJ et le MCP du Code Civil du Québec.
+        en interrogeant prioritairement le Serveur MCP du Code civil du Québec (pour tous les articles cités),
+        puis le contexte des pièces du dossier et l'API A2AJ / SQLite local.
         """
         found_references = []
         is_hallucination = True
 
-        # 0. Vérification par rapport au contexte (notamment le texte de la décision téléversée)
-        if context:
-            try:
-                # Si le contexte (le texte du jugement réel) valide l'affirmation, ce n'est pas une hallucination
-                if self._verify_with_llm(agent_argument, context):
-                    is_hallucination = False
-                    
-                    # Tenter d'extraire une citation ou l'article mentionné dans l'argument
-                    citation_match = re.search(r'(?:R\.\s+c\.\s+\w+,\s+\d{4}\s+QCCQ\s+\d+|article\s+\d+(?:\.\d+)?(?:(?:\(\d+\))?a\))?|art\.\s+\d+(?:\.\d+)?(?:(?:\(\d+\))?a\))?)', agent_argument, re.IGNORECASE)
-                    citation_str = citation_match.group(0) if citation_match else "Décision téléversée"
-                    
-                    found_references.append({
-                        "law_name": "Pièces et texte de la décision téléversée",
-                        "citation": citation_str,
-                        "url": "https://www.canlii.org",
-                        "summary": "Cette référence/citation est directement validée par les pièces et le texte du jugement téléversé dans le dossier.\nLien source pour validation : https://www.canlii.org"
-                    })
-            except Exception as context_check_err:
-                logger.error(f"Erreur lors de la vérification de l'argument par rapport au contexte: {context_check_err}")
-        
-        # 1. Vérification CCQ (Code Civil du Québec)
-        is_ccq = any(term in agent_argument.lower() for term in ["ccq", "c.c.q.", "c.c.q", "code civil", "québec"])
-        
-        art_match = re.search(r'(?:article|art\.?)\s*(\d+(?:\.\d+)?)', agent_argument, re.IGNORECASE)
-        art_str = art_match.group(1) if art_match else ""
-        
-        # S'il y a un point décimal dans le numéro de l'article (ex: 718.1), ce n'est pas du CCQ mais probablement le Code criminel
-        if is_ccq and '.' in art_str:
-            is_ccq = False
-            
-        if is_hallucination and is_ccq:
-            if art_match:
+        # 1. Vérification Prioritaire CCQ (Code civil du Québec) sur TOUS les articles cités
+        is_ccq = any(term in agent_argument.lower() for term in ["ccq", "c.c.q.", "c.c.q", "code civil", "québec"]) or litigation_type == "civil"
+        art_matches = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)', agent_argument, re.IGNORECASE)
+        # Extraire aussi les énumérations du type "articles 1607, 1611 et 2803"
+        enum_matches = re.findall(r'(?:articles?|art\.?)\s*((?:\d+\s*(?:,\s*|\s+et\s+|\s+ou\s+))+\d+)', agent_argument, re.IGNORECASE)
+        for em in enum_matches:
+            for num_str in re.findall(r'\d+', em):
+                if num_str not in art_matches:
+                    art_matches.append(num_str)
+
+        # Filtrer les articles avec point décimal (Code criminel, ex: 718.1) si on cherche dans le CCQ
+        ccq_art_nums = []
+        for a_str in art_matches:
+            if '.' not in a_str:
                 try:
-                    art_num = int(float(art_str))
+                    n = int(a_str)
+                    if 1 <= n <= 3500 and n not in ccq_art_nums:
+                        ccq_art_nums.append(n)
+                except ValueError:
+                    pass
+
+        if is_ccq and ccq_art_nums:
+            for art_num in ccq_art_nums[:4]:
+                try:
                     articles_text = self._call_ccq_mcp_tool("get_ccq_articles", {"start_article": art_num})
                     if articles_text and "Aucun article trouvé" not in articles_text:
-                        # Validation par LLM
                         if self._verify_with_llm(agent_argument, articles_text):
+                            is_hallucination = False
+                            url = f"https://www.canlii.org/fr/qc/legis/lois/rlrq-c-ccq-1991/derniere/rlrq-c-ccq-1991.html#art{art_num}"
+                            clean_snippet = articles_text.strip()
+                            if len(clean_snippet) > 260:
+                                clean_snippet = clean_snippet[:260] + "..."
+                            found_references.append({
+                                "law_name": f"Code civil du Québec - Article {art_num}",
+                                "citation": f"art. {art_num} C.c.Q.",
+                                "url": url,
+                                "summary": f"{clean_snippet}\nLien source pour validation : {url}"
+                            })
+                except Exception as e:
+                    logger.error(f"Erreur lors de la vérification CCQ de l'article {art_num}: {e}")
+
+        # 2. Vérification par rapport au contexte (texte de la décision ou pièces téléversées)
+        if context and (is_hallucination or not found_references):
+            try:
+                if self._verify_with_llm(agent_argument, context):
+                    is_hallucination = False
+                    # Si le MCP CCQ était hors-ligne mais que des articles CCQ sont cités et validés par le dossier, créer les références précises
+                    if is_ccq and ccq_art_nums and not found_references:
+                        for art_num in ccq_art_nums[:4]:
+                            url = f"https://www.canlii.org/fr/qc/legis/lois/rlrq-c-ccq-1991/derniere/rlrq-c-ccq-1991.html#art{art_num}"
+                            found_references.append({
+                                "law_name": f"Code civil du Québec - Article {art_num}",
+                                "citation": f"art. {art_num} C.c.Q.",
+                                "url": url,
+                                "summary": f"Disposition du Code civil du Québec validée par les pièces du dossier.\nLien source pour validation : {url}"
+                            })
+                    elif not found_references:
+                        citation_match = re.search(r'(?:R\.\s+c\.\s+\w+,\s+\d{4}\s+QCCQ\s+\d+|article\s+\d+(?:\.\d+)?(?:(?:\(\d+\))?a\))?|art\.\s+\d+(?:\.\d+)?(?:(?:\(\d+\))?a\))?)', agent_argument, re.IGNORECASE)
+                        citation_str = citation_match.group(0) if citation_match else "Pièces du dossier"
+                        found_references.append({
+                            "law_name": "Pièces et preuve versées au dossier",
+                            "citation": citation_str,
+                            "url": "https://www.canlii.org",
+                            "summary": "Cette référence est directement validée par les pièces et faits admis au dossier."
+                        })
+            except Exception as context_check_err:
+                logger.error(f"Erreur lors de la vérification de l'argument par rapport au contexte: {context_check_err}")
+
+        # 3. Recherche par mots-clés CCQ si aucun numéro d'article explicite n'a été trouvé
+        if is_hallucination and is_ccq and not ccq_art_nums:
+            keywords = [w for w in re.findall(r'[a-zA-ZÀ-ÿ]+', agent_argument) if len(w) > 4]
+            if keywords:
+                search_kw = keywords[0]
+                articles_text = self._call_ccq_mcp_tool("search_ccq_keywords", {"keyword": search_kw})
+                if articles_text and "Aucun article trouvé" not in articles_text:
+                    matches = re.findall(r'Article\s+(\d+)', articles_text)
+                    for num in matches[:2]:
+                        if not is_hallucination:
+                            break
+                        art_num = int(num)
+                        single_art_text = self._call_ccq_mcp_tool("get_ccq_articles", {"start_article": art_num})
+                        if single_art_text and self._verify_with_llm(agent_argument, single_art_text):
                             is_hallucination = False
                             url = f"https://www.canlii.org/fr/qc/legis/lois/rlrq-c-ccq-1991/derniere/rlrq-c-ccq-1991.html#art{art_num}"
                             found_references.append({
                                 "law_name": f"Code civil du Québec - Article {art_num}",
                                 "citation": f"art. {art_num} C.c.Q.",
                                 "url": url,
-                                "summary": (articles_text[:200] + "..." if len(articles_text) > 200 else articles_text) + f"\nLien source pour validation : {url}"
+                                "summary": f"Article {art_num} validé via le Serveur MCP C.c.Q.\nLien source pour validation : {url}"
                             })
-                except Exception as e:
-                    logger.error(f"Erreur lors de la vérification CCQ de l'article {art_str}: {e}")
-            else:
-                keywords = [w for w in re.findall(r'[a-zA-ZÀ-ÿ]+', agent_argument) if len(w) > 4]
-                if keywords:
-                    search_kw = keywords[0]
-                    articles_text = self._call_ccq_mcp_tool("search_ccq_keywords", {"keyword": search_kw})
-                    if articles_text and "Aucun article trouvé" not in articles_text:
-                        matches = re.findall(r'Article\s+(\d+)', articles_text)
-                        for num in matches[:2]:
-                            if not is_hallucination:
-                                break
-                            art_num = int(num)
-                            # Validation par LLM
-                            single_art_text = self._call_ccq_mcp_tool("get_ccq_articles", {"start_article": art_num})
-                            if single_art_text and self._verify_with_llm(agent_argument, single_art_text):
-                                is_hallucination = False
-                                url = f"https://www.canlii.org/fr/qc/legis/lois/rlrq-c-ccq-1991/derniere/rlrq-c-ccq-1991.html#art{art_num}"
-                                found_references.append({
-                                    "law_name": f"Code civil du Québec - Article {art_num}",
-                                    "citation": f"art. {art_num} C.c.Q.",
-                                    "url": url,
-                                    "summary": f"Article {art_num} trouvé par recherche du mot-clé '{search_kw}'\nLien source pour validation : {url}"
-                                })
    
-        # 2. Vérification A2AJ (Jurisprudence et lois canadiennes)
+        # 4. Vérification A2AJ (Jurisprudence et lois canadiennes)
         if is_hallucination:
             query_terms = self._extract_query_terms(agent_argument)
             if query_terms:
@@ -290,7 +310,7 @@ class JurisprudenceGrounding:
                 if litigation_type == "civil":
                     objection_msg = "OBJECTION DU DEMANDEUR : La jurisprudence ou loi citée est inexistante ou inapplicable au dossier. Veuillez vous baser sur des textes réels."
                 else:
-                    objection_msg = "OBJECTION DU MINISTÈRE PUBLIC : La jurisprudence ou loi citée est inexistante ou inapplicable au dossier. Veuillez vous baser sur des textes réels."
+                    objection_msg = "OBJECTION DU PROCUREUR (DPCP) : La jurisprudence ou loi citée est inexistante ou inapplicable au dossier. Veuillez vous baser sur des textes réels."
                 
             return {
                 "is_hallucination": True,
@@ -399,12 +419,12 @@ class JurisprudenceGrounding:
             logger.warning("CCQ MCP circuit breaker is active. Skipping call.")
             return None
         
-        sse_url = 'https://lexior-ccq-mcp.onrender.com/sse'
+        sse_url = os.environ.get('MCP_CCQ_SSE_URL', 'https://lexior-ccq-mcp.onrender.com/sse')
         req = urllib.request.Request(sse_url, headers={'User-Agent': 'Mozilla/5.0'})
         
         try:
-            # Reduced timeout from 10 to 3
-            response = urllib.request.urlopen(req, timeout=3)
+            # Timeout adapté au cold-start Render (8s)
+            response = urllib.request.urlopen(req, timeout=8)
             post_url = None
             response_queue = queue.Queue()
             
@@ -442,7 +462,7 @@ class JurisprudenceGrounding:
             if not post_url:
                 logger.warning("Failed to obtain post_url from CCQ MCP SSE stream. Triggering circuit breaker.")
                 if hasattr(self, "_mcp_offline_until"):
-                    self._mcp_offline_until = time.time() + 300
+                    self._mcp_offline_until = time.time() + 45
                 return None
                 
             payload = {
@@ -465,8 +485,7 @@ class JurisprudenceGrounding:
                 method='POST'
             )
             
-            # Reduced timeout from 5 to 3
-            urllib.request.urlopen(post_req, timeout=3)
+            urllib.request.urlopen(post_req, timeout=6)
             
             for _ in range(80):
                 try:
@@ -479,9 +498,9 @@ class JurisprudenceGrounding:
                     continue
             return None
         except Exception as e:
-            logger.error(f"Error querying CCQ MCP in grounding: {e}. Activating circuit breaker for 5 minutes.")
+            logger.error(f"Error querying CCQ MCP in grounding: {e}. Activating circuit breaker for 45 seconds.")
             if hasattr(self, "_mcp_offline_until"):
-                self._mcp_offline_until = time.time() + 300
+                self._mcp_offline_until = time.time() + 45
             return None
 
     def _query_a2aj_search(self, query: str) -> List[dict]:

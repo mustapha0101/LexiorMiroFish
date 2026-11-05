@@ -36,7 +36,7 @@ def create_app(config_class=Config):
     
     if should_log_startup:
         logger.info("=" * 50)
-        logger.info("MiroFish Backend en cours de démarrage...")
+        logger.info("Lexior Simulator Backend en cours de démarrage...")
         logger.info("=" * 50)
     
     # 启用CORS
@@ -71,10 +71,10 @@ def create_app(config_class=Config):
     # 健康检查
     @app.route('/health')
     def health():
-        return {'status': 'ok', 'service': 'MiroFish Backend'}
+        return {'status': 'ok', 'service': 'Lexior Simulator Backend'}
     
     if should_log_startup:
-        logger.info("MiroFish Backend démarré avec succès")
+        logger.info("Lexior Simulator Backend démarré avec succès")
     
     return app
 

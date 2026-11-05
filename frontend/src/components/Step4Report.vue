@@ -657,7 +657,7 @@ const winLabel = computed(() => {
   if (clientSide.value === 'plaintiff') {
     return isCivil.value ? 'Chances de Succès (Demande)' : 'Chances de Condamnation'
   }
-  return isCivil.value ? 'Chances de Rejet' : 'Chances de Relaxe'
+  return isCivil.value ? 'Chances de Rejet' : "Chances d'Acquittement"
 })
 
 const positiveCount = computed(() => {
@@ -675,7 +675,7 @@ const positiveLabel = computed(() => {
   if (clientSide.value === 'plaintiff') {
     return isCivil.value ? 'Succès de la Demande' : 'Condamnations'
   }
-  return isCivil.value ? 'Rejets de la Demande' : 'Relaxes / Acquittements'
+  return isCivil.value ? 'Rejets de la Demande' : 'Acquittements'
 })
 
 const negativeCount = computed(() => {
@@ -691,7 +691,7 @@ const negativeLabel = computed(() => {
     return 'Interactions Défavorables'
   }
   if (clientSide.value === 'plaintiff') {
-    return isCivil.value ? 'Rejets de la Demande' : 'Relaxes / Acquittements'
+    return isCivil.value ? 'Rejets de la Demande' : 'Acquittements'
   }
   return isCivil.value ? 'Responsabilités' : 'Condamnations'
 })
