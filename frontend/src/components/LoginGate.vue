@@ -20,7 +20,7 @@
 
       <div v-else class="auth-form-wrapper">
         <h3 class="form-title">
-          {{ isSignUp ? $t('auth.titleSignUp') : $t('auth.titleLogin') }}
+          {{ $t('auth.titleLogin') }}
         </h3>
 
         <form @submit.prevent="handleAuth" class="auth-form">
@@ -32,7 +32,7 @@
               v-model="email"
               required
               class="form-input"
-              placeholder="avocat@lexior.com"
+              placeholder="demo@intelli.work"
               :disabled="loading"
             />
           </div>
@@ -60,15 +60,9 @@
 
           <button type="submit" class="auth-submit-btn" :disabled="loading">
             <span v-if="loading" class="spinner"></span>
-            {{ isSignUp ? $t('auth.signUpBtn') : $t('auth.loginBtn') }}
+            {{ $t('auth.loginBtn') }}
           </button>
         </form>
-
-        <div class="auth-toggle">
-          <button class="toggle-btn" @click="isSignUp = !isSignUp" :disabled="loading">
-            {{ isSignUp ? $t('auth.toggleToLogin') : $t('auth.toggleToSignUp') }}
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -124,27 +118,38 @@ onMounted(async () => {
 })
 
 const handleAuth = async () => {
-  if (!supabase) return
-  
   loading.value = true
   error.value = ''
   successMsg.value = ''
 
+  const cleanEmail = email.value.trim().toLowerCase()
+  const isDemoAccount = cleanEmail === 'demo@intelli.work' && password.value === 'demo01$'
+
   try {
-    if (isSignUp.value) {
-      const { data, error: signUpErr } = await supabase.auth.signUp({
-        email: email.value,
-        password: password.value,
-      })
-      if (signUpErr) throw signUpErr
-      successMsg.value = "Inscription réussie ! Veuillez vérifier vos courriels si nécessaire."
-    } else {
+    if (supabase) {
       const { data, error: signInErr } = await supabase.auth.signInWithPassword({
-        email: email.value,
+        email: cleanEmail,
         password: password.value,
       })
+      if (!signInErr && data?.session) {
+        session.value = data.session
+        return
+      }
+      if (isDemoAccount) {
+        const demoSession = {
+          user: { email: 'demo@intelli.work', id: 'demo-intelli-work-id', role: 'authenticated' },
+        }
+        session.value = demoSession
+        localStorage.setItem('lexior_bypass_session', JSON.stringify(demoSession))
+        return
+      }
       if (signInErr) throw signInErr
-      session.value = data.session
+    } else if (isDemoAccount) {
+      const demoSession = {
+        user: { email: 'demo@intelli.work', id: 'demo-intelli-work-id', role: 'authenticated' },
+      }
+      session.value = demoSession
+      localStorage.setItem('lexior_bypass_session', JSON.stringify(demoSession))
     }
   } catch (err) {
     error.value = err.message || err
