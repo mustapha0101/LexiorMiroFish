@@ -152,6 +152,41 @@
         <!-- 右栏：交互控制台 -->
         <div class="right-panel">
           <div class="console-box">
+            <!-- Exemples Prêts à Simuler en 1 Clic (SAAQ & Cour du Québec) -->
+            <div class="console-section preset-cases-section">
+              <div class="console-header">
+                <span class="console-label">⚡ DOSSIERS PRÊTS À SIMULER EN 1 CLIC (SAAQ / TAQ & COUR DU QUÉBEC)</span>
+                <span class="console-meta">L.A.A. / C.C.Q. / C.P.C.</span>
+              </div>
+              <div class="preset-cases-grid">
+                <div
+                  v-for="preset in legalPresets"
+                  :key="preset.id"
+                  class="preset-case-card"
+                  :class="{ active: selectedPresetId === preset.id }"
+                  @click="selectPresetCase(preset, false)"
+                >
+                  <div class="preset-card-top">
+                    <span class="preset-badge" :class="preset.badgeClass">{{ preset.badge }}</span>
+                    <span class="preset-quantum">{{ preset.claimAmount }}</span>
+                  </div>
+                  <div class="preset-title">{{ preset.title }}</div>
+                  <div class="preset-subtitle">{{ preset.subtitle }}</div>
+                  <div class="preset-actions" @click.stop>
+                    <button class="preset-btn-load" @click="selectPresetCase(preset, false)">
+                      📥 Charger
+                    </button>
+                    <button class="preset-btn-preview" @click="previewPresetCase(preset)">
+                      👁️ Lire
+                    </button>
+                    <button class="preset-btn-run" @click="selectPresetCase(preset, true)">
+                      ⚡ Simuler en 1 clic
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- 上传区域 -->
             <div class="console-section">
               <div class="console-header">
@@ -288,18 +323,18 @@
     <div v-if="showDemoPreview" class="preview-modal-overlay" @click.self="showDemoPreview = false">
       <div class="preview-modal-box">
         <div class="preview-modal-header">
-          <h3 class="preview-modal-title">📄 {{ $t('home.demoFileName') }}</h3>
+          <h3 class="preview-modal-title">📄 {{ activePreviewTitle }}</h3>
           <button class="preview-modal-close-btn" @click="showDemoPreview = false">×</button>
         </div>
         <div class="preview-modal-body">
-          <pre class="preview-modal-text">{{ $t('home.demoFileContent') }}</pre>
+          <pre class="preview-modal-text">{{ activePreviewContent }}</pre>
         </div>
         <div class="preview-modal-footer">
           <button class="preview-modal-cancel-btn" @click="showDemoPreview = false">
             {{ $t('common.close') }}
           </button>
           <button class="preview-modal-confirm-btn" @click="loadDemoAndClose">
-            ⚡ {{ $t('home.loadDemoBtn').replace('✨ ', '').replace('✨', '') }}
+            ⚡ Charger dans le simulateur
           </button>
         </div>
       </div>
@@ -320,6 +355,166 @@ const router = useRouter()
 const loginGate = ref(null)
 const session = ref(null)
 const { t } = useI18n()
+
+const selectedPresetId = ref('')
+const previewPreset = ref(null)
+
+const legalPresets = [
+  {
+    id: 'saaq_1_irr_taq',
+    badge: 'SAAQ / TAQ #1',
+    badgeClass: 'badge-saaq',
+    claimAmount: '84 600 $',
+    title: 'Pelletier c. SAAQ — Fin d\'IRR & État préexistant',
+    subtitle: 'Art. 2, 14, 49 et 73 L.a.a. | Arrêt Productions Pram (Décompensation lombaire L4-S1 vs arthrose)',
+    fileName: 'dossier_saaq_1_pelletier_irr_etat_preexistant_taq.txt',
+    simulationName: 'SAAQ #1 — Pelletier c. SAAQ (Fin IRR & État préexistant - TAQ)',
+    requirement: 'Simuler l\'audience contradictoire devant le Tribunal administratif du Québec (TAQ - Section des affaires sociales) dans le recours de Marc-André Pelletier contre la Société de l\'assurance automobile du Québec (SAAQ). Évaluer la demande totale de 84 600,00 $ (65 800 $ d\'arrérages d\'IRR sous l\'art. 14 L.a.a., 14 300 $ de séquelles permanentes classe 3 sous l\'art. 73 L.a.a. et 4 500 $ de frais) face à la défense de la SAAQ fondée sur l\'état dégénératif préexistant (IRM D-3, expertise D-4) et la fin d\'IRR sous l\'art. 49 L.a.a.',
+    content: `DOSSIER DE LITIGE ADMINISTRATIF ET MÉDICO-LÉGAL (SAAQ / TAQ - SECTION DES AFFAIRES SOCIALES)
+Juridiction : Tribunal administratif du Québec (TAQ) — Révision d'une décision de la Société de l'assurance automobile du Québec (SAAQ)
+Nature du recours : Contestation en vertu de l'article 83.34 de la Loi sur l'assurance automobile (RLRQ c. A-25, L.a.a.) et du Code civil du Québec (fardeau de preuve art. 2803 et 2804 C.c.Q.).
+
+PARTIES EN CAUSE :
+- Partie Requérante (Demandeur) : Monsieur Marc-André Pelletier, charpentier-menuisier (48 ans).
+- Partie Intimée (Défenderesse) : Société de l'assurance automobile du Québec (SAAQ).
+
+1. FAITS ADMIS ET CHRONOLOGIE DE L'ACCIDENT :
+- Le 14 janvier 2024 (Pièce P-1 : Rapport d'accident de police), le véhicule de Monsieur Pelletier est percuté à l'arrière à une vitesse estimée à 45 km/h alors qu'il était immobilisé à un feu rouge.
+- À l'urgence (Pièce P-2 : Feuille sommaire d'urgence du 14 janvier 2024), le médecin diagnostique une entorse cervico-lombaire de grade II (whiplash) sans fracture visible à la radiographie simple.
+- La SAAQ accepte initialement la réclamation en vertu des articles 2 et 14 L.a.a. et verse une indemnité de remplacement du revenu (IRR) de 1 175,00 $ par semaine à compter du 21 janvier 2024.
+- Une IRM lombaire réalisée le 18 mai 2024 (Pièce D-3 : Rapport d'imagerie par résonance magnétique) révèle une discopathie dégénérative pluri-étagée L4-L5 et L5-S1 avec arthrose facettaire modérée et protrusion discale L5-S1 sans compression radiculaire franche.
+- Le 12 septembre 2024, à la suite de l'expertise du médecin évaluateur de la SAAQ, le Dr Bruno Lavigne, orthopédiste (Pièce D-4), la SAAQ rend une décision en révision (Pièce D-5) mettant fin à l'IRR en vertu de l'article 49 L.a.a., au motif que l'entorse lombaire causée par l'accident est consolidée sans séquelle permanente (0 % SUTT sous l'art. 73 L.a.a.) et que les douleurs persistantes découlent exclusivement de l'état dégénératif préexistant personnel de M. Pelletier.
+
+2. PRÉTENTIONS ET MONTANTS RÉCLAMÉS PAR LE REQUÉRANT (DEMANDE TOTALE : 84 600,00 $) :
+- M. Pelletier dépose une contre-expertise du Dr Henri Courchesne, physiatre (Pièce P-6), soutenant que son état dégénératif lombaire était totalement asymptomatique avant l'accident du 14 janvier 2024 (attesté par son dossier CNESST vierge et ses 2 000 heures travaillées en 2023, Pièce P-7) et que l'accident a agi comme facteur déclencheur ayant décompensé de façon permanente sa colonne lombaire (jurisprudence Productions Pram inc. c. Lemay).
+- Conclusions chiffrées de la demande devant le TAQ (Total réclamé : 84 600,00 $) :
+  a) Rétroactivité et maintien de l'indemnité de remplacement du revenu (IRR, art. 14 L.a.a.) sur 56 semaines (65 800,00 $) ;
+  b) Indemnité forfaitaire pour préjudice non pécuniaire / séquelles permanentes de classe 3 au rachis lombaire en vertu de l'article 73 L.a.a. et du Règlement sur le barème des dommages corporels (14 300,00 $) ;
+  c) Remboursement intégral des frais d'expertise privée et frais de traitements chiropratiques non autorisés (4 500,00 $).
+
+3. MOYENS DE DÉFENSE DE LA SAAQ (INTIMÉE) :
+- La SAAQ soutient que la présomption de simultanéité (post hoc ergo propter hoc) ne suffit pas à établir le lien causal médical requis par l'article 2 L.a.a. et l'article 2803 C.c.Q.
+- Selon le rapport biomécanique et orthopédique D-4, une entorse lombaire de grade II se résorbe physiologiquement en 6 à 12 semaines ; l'absence d'oedème osseux traumatique à l'IRM D-3 démontre que la protrusion L5-S1 est d'origine purement dégénérative et évolue pour son propre compte.
+- Subsidiairement, même si le Tribunal reconnaissait une aggravation temporaire ou une séquelle résiduelle mineure de classe 1 (douleurs intermittentes, ~3 200 $ sous l'art. 73 L.a.a.), M. Pelletier avait recouvré la capacité d'exercer un emploi convenable léger au plus tard à la date du rapport D-4 (art. 45 et 49 L.a.a.), et les traitements chiropratiques réclamés ne respectent pas les conditions réglementaires de prescription médicale préalable.`
+  },
+  {
+    id: 'saaq_2_emploi_convenable',
+    badge: 'SAAQ / TAQ #2',
+    badgeClass: 'badge-saaq',
+    claimAmount: '69 200 $',
+    title: 'Arsenault c. SAAQ — Capacité d\'exercer un emploi convenable',
+    subtitle: 'Art. 45 et 49 L.a.a. | Camionneuse lourde réorientée comme commis à la répartition',
+    fileName: 'dossier_saaq_2_arsenault_emploi_convenable_art45.txt',
+    simulationName: 'SAAQ #2 — Arsenault c. SAAQ (Emploi convenable art. 45 L.a.a.)',
+    requirement: 'Simuler l\'audience contradictoire devant le Tribunal administratif du Québec (TAQ) dans le litige opposant Sophie Arsenault à la SAAQ concernant la détermination d\'un emploi convenable de commis à la répartition (art. 45 et 49 L.a.a.). Évaluer la demande totale de 69 200,00 $ (62 400 $ d\'arrérages d\'IRR et 6 800 $ de frais d\'évaluation privée) face à l\'autorité de la chose jugée sur les limitations fonctionnelles reconnues (Pièce P-2).',
+    content: `DOSSIER DE LITIGE SAAQ #2 — CAPACITÉ D'EXERCER UN EMPLOI CONVENABLE (ART. 45 ET 49 L.A.A.)
+Juridiction : Tribunal administratif du Québec (TAQ - Section des affaires sociales)
+Nature du litige : Contestation de la détermination d'un emploi convenable de répartiteur en transport (art. 45 L.a.a.) et de la fin de l'Indemnité de remplacement du revenu (IRR, art. 49 L.a.a.).
+
+PARTIES :
+- Requérante (Demanderesse) : Madame Sophie Arsenault, conductrice de camion lourd semi-remorque (54 ans, scolarité de Secondaire IV).
+- Intimée (Défenderesse) : Société de l'assurance automobile du Québec (SAAQ).
+
+1. FAITS ET PIÈCES AU DOSSIER :
+- Le 3 novembre 2022, Mme Arsenault subit une fracture comminutive de l'épaule droite lors d'une collision frontale sur l'autoroute 20 (Pièce P-1).
+- La SAAQ lui reconnaît des séquelles permanentes (SUTT, art. 73 L.a.a.) et des limitations fonctionnelles permanentes interdisant tout soulèvement de charges de plus de 10 kg et tout travail répétitif au-dessus du niveau des épaules (Pièce P-2 : Rapport d'évaluation médicale de la SAAQ), la rendant définitivement incapable de reprendre son emploi de camionneuse lourde (art. 14 L.a.a.).
+- Le 15 octobre 2024, à la suite d'un rapport d'évaluation des possibilités professionnelles (Pièce D-1), la SAAQ rend une décision en révision (Pièce D-2) déterminant que Mme Arsenault est capable d'exercer à temps plein l'emploi convenable de « Commis à la répartition et au suivi de flotte » en vertu de l'article 45 L.a.a., mettant ainsi fin à sa pleine IRR au terme du délai d'un an prévu à l'article 49 L.a.a.
+
+2. RÉCLAMATION DE LA REQUÉRANTE (DEMANDE TOTALE : 69 200,00 $) :
+- Mme Arsenault dépose un rapport d'ergothérapie et d'orientation professionnelle indépendant (Pièce P-3) concluant qu'elle ne maîtrise pas les logiciels informatiques de logistique exigés par les employeurs modernes et que ses douleurs chroniques cervicales associées limitent sa posture assise prolongée devant un écran.
+- Elle réclame l'annulation de la décision D-2 et le rétablissement intégral de son IRR (62 400,00 $ sur 24 mois d'arrérages et maintien futur), ainsi que 6 800,00 $ de frais d'évaluation privée.
+
+3. POSITION DE LA DÉFENSE (SAAQ) :
+- La SAAQ fait valoir qu'en vertu de l'article 45 L.a.a., la capacité d'exercer un emploi convenable s'apprécie au regard des limitations fonctionnelles médicalement reconnues (qui ne comportent aucune restriction quant à la posture assise ou au travail à l'ordinateur dans la décision finale P-2, passée en force de chose jugée).
+- De plus, Mme Arsenault cumule 22 ans d'expérience dans le secteur du transport routier (connaissance des feuilles de route, des heures de conduite C.s.r. et de la géographie routière), et la SAAQ lui a offert une formation d'appoint en bureautique de 12 semaines qu'elle a refusé de compléter (Pièce D-3).`
+  },
+  {
+    id: 'saaq_3_immunite_civile',
+    badge: 'SAAQ / CIVIL #3',
+    badgeClass: 'badge-saaq',
+    claimAmount: '78 500 $',
+    title: 'Benali c. Livraison Boréale & SAAQ — Immunité No-Fault',
+    subtitle: 'Art. 1 et 83.57 L.a.a. vs Art. 1457 C.c.Q. | Bris de hayon hydraulique lors du déchargement',
+    fileName: 'dossier_saaq_3_benali_immunite_civile_art83_57_laa.txt',
+    simulationName: 'SAAQ #3 — Benali c. Livraison Boréale & SAAQ (Immunité art. 83.57 L.a.a.)',
+    requirement: 'Simuler l\'audience contradictoire devant la Cour du Québec (Chambre civile) dans l\'action en responsabilité civile de Karim Benali (78 500,00 $ réclamés sous l\'art. 1457 C.c.Q., incluant 15 000 $ sous l\'art. 51 C.p.c.) contre Entreprises de Livraison Boréale inc. et son assureur, avec mise en cause de la SAAQ. Évaluer le moyen d\'irrecevabilité fondé sur l\'immunité civile absolue du régime no-fault de la SAAQ (art. 1 et 83.57 L.a.a., art. 168 C.p.c.).',
+    content: `DOSSIER DE LITIGE SAAQ #3 — IMMUNITÉ CIVILE NO-FAULT ET NOTION D'ACCIDENT D'AUTOMOBILE (ART. 1 ET 83.57 L.A.A. / ART. 1457 C.C.Q.)
+Juridiction : Cour du Québec (Chambre civile)
+Nature du litige : Action en responsabilité civile extracontractuelle (art. 1457 C.c.Q.) et moyen d'irrecevabilité fondé sur l'immunité civile absolue du régime d'assurance automobile (art. 1, 2 et 83.57 L.a.a., art. 168 C.p.c.).
+
+PARTIES :
+- Demandeur : Monsieur Karim Benali.
+- Défendeurs : Entreprises de Livraison Boréale inc. et son assureur responsabilité civile, Assurances Générales Saint-Laurent inc., avec mise en cause de la Société de l'assurance automobile du Québec (SAAQ).
+
+1. FAITS ET PIÈCES AU DOSSIER :
+- Le 22 février 2025, M. Benali aidait le chauffeur d'un camion de livraison appartenant à Entreprises de Livraison Boréale inc. (stationné dans l'entrée glacée de M. Benali, moteur en marche et hayon élévateur hydraulique déployé) à décharger une palette d'électroménagers (Pièce P-1).
+- Alors que M. Benali se trouvait sur le hayon élévateur du camion, un bris du câble hydraulique du hayon (dû à un défaut d'entretien documenté dans le carnet mécanique Pièce P-2) a provoqué le basculement brusque de la plateforme, projetant M. Benali au sol et lui causant une fracture du tibia-péroné.
+- M. Benali poursuit Entreprises de Livraison Boréale inc. et son assureur devant la Cour du Québec (Chambre civile) en vertu des articles 1457 et 1465 C.c.Q., réclamant un total de 78 500,00 $ :
+  a) Perte de revenus nette non compensée : 38 500,00 $ ;
+  b) Dommages non pécuniaires (douleurs, souffrances et perte de jouissance de la vie) : 25 000,00 $ ;
+  c) Remboursement des honoraires extrajudiciaires d'avocat en vertu de l'article 51 C.p.c. : 15 000,00 $.
+
+2. MOYENS DE LA DÉFENSE ET APPLICATION DE LA LOI SUR L'ASSURANCE AUTOMOBILE (L.A.A.) :
+- Les Défendeurs opposent l'irrecevabilité totale du recours civil (art. 168 C.p.c. et art. 83.57 L.a.a.) au motif que le préjudice corporel a été causé par l'usage du camion et de son équipement intégré lors du déchargement (« préjudice causé par une automobile, par son usage ou par son chargement » au sens de l'article 1 L.a.a., tel qu'interprété de façon large et libérale par la Cour suprême du Canada dans Amos c. ICBC et Westmount (Ville) c. Rossy).
+- Subsidiairement, même si l'exclusion relative à « l'entretien ou la réparation d'une automobile » de l'article 1 L.a.a. était soulevée par le Demandeur, M. Benali n'effectuait lui-même aucune action d'entretien du camion au moment de la chute, de sorte que son seul recours relève exclusivement de la SAAQ. En tout état de cause, la demande de 15 000 $ sous l'art. 51 C.p.c. est infondée, le débat sur le partage de compétence entre la Cour civile et la SAAQ étant sérieux.`
+  },
+  {
+    id: 'paragon_homes_2022qccq10057',
+    badge: 'COUR DU QUÉBEC',
+    badgeClass: 'badge-civil',
+    claimAmount: '71 928 $',
+    title: 'Robertson c. Maisons Paragon Homes (2022 QCCQ 10057)',
+    subtitle: 'Dol (art. 1401 C.c.Q.), marge cachée de 15 % sur kit préfabriqué & rejet art. 51 C.p.c.',
+    fileName: 'dossier_robertson_c_murray_paragon_homes_2022qccq10057.txt',
+    simulationName: 'Robertson c. Maisons Paragon Homes inc. (2022 QCCQ 10057)',
+    requirement: 'Simuler l\'audience contradictoire devant la Cour du Québec (Chambre civile) dans le litige opposant Scott Robertson et Josée Charbonneau à Nicole Murray, François Murray et Maisons Paragon Homes inc. Évaluer la demande principale de 71 928,15 $ (restitution de 41 117,15 $, troubles et inconvénients de 5 000 $, honoraires extrajudiciaires de 25 811 $ sous l\'art. 51 C.p.c.), la responsabilité in solidum (art. 1457 et 1526 C.c.Q.) et la demande reconventionnelle de 51 646,53 $.',
+    content: `DOSSIER DE LITIGE CIVIL ET COMMERCIAL — COUR DU QUÉBEC (CHAMBRE CIVILE)
+Référence de test : Robertson et Charbonneau c. Murray et Maisons Paragon Homes inc.
+Nature : Action en réduction d'obligation / restitution pour dol (art. 1399, 1401, 1407 C.c.Q.), responsabilité extracontractuelle in solidum (art. 1457, 1526 C.c.Q.), abus de procédure (art. 51 C.p.c.) et demande reconventionnelle (51 646,53 $).
+
+1. FAITS ET PIÈCES DU DOSSIER :
+- Les demandeurs Scott Robertson et Josée Charbonneau concluent un contrat à coût majoré (cost-plus 15 %) avec Nicole Murray pour l'autoconstruction de leur résidence à partir d'un « Kit Paragon » vendu par Maisons Paragon Homes inc. (dirigée par François Murray).
+- La brochure promotionnelle remise aux demandeurs (Pièce P-3 : « Comprendre votre Contrat ») affirme expressément qu'aucune marge de profit de 15 % n'est prélevée sur le Kit Paragon lui-même, le profit étant déjà inclus dans le prix du kit (223 223,00 $).
+- Or, les demandeurs découvrent en cours de chantier (Pièce P-7 : contrat de design et courriel D-4.2 de François Murray) qu'une commission/marge occulte de 41 117,15 $ a été facturée et partagée entre Maisons Paragon Homes inc. et Nicole Murray sur le Kit Paragon.
+- Les demandeurs suspendent le paiement des dernières factures et réclament un total de 71 928,15 $ :
+  a) 41 117,15 $ en restitution de la marge occulte (art. 1401 et 1407 C.c.Q.) ;
+  b) 5 000,00 $ pour troubles, stress et inconvénients ;
+  c) 25 811,00 $ en remboursement d'honoraires extrajudiciaires d'avocats pour abus (art. 51 C.p.c.).
+- Les défendeurs déposent une demande reconventionnelle de 51 646,53 $ pour factures impayées et perte de profit sur la fin du chantier.`
+  }
+]
+
+const activePreviewTitle = computed(() => {
+  if (previewPreset.value) return previewPreset.value.fileName
+  return t('home.demoFileName')
+})
+
+const activePreviewContent = computed(() => {
+  if (previewPreset.value) return previewPreset.value.content
+  return t('home.demoFileContent')
+})
+
+const selectPresetCase = (preset, autoStart = false) => {
+  selectedPresetId.value = preset.id
+  previewPreset.value = preset
+  const blob = new Blob([preset.content], { type: 'text/plain' })
+  const presetFile = new File([blob], preset.fileName, { type: 'text/plain' })
+  files.value = [presetFile]
+  formData.value.simulationName = preset.simulationName
+  formData.value.simulationRequirement = preset.requirement
+  formData.value.simulationMode = 'legal'
+
+  if (autoStart) {
+    startSimulation()
+  } else if (dashboardSection.value) {
+    dashboardSection.value.scrollIntoView({ behavior: 'smooth' })
+  }
+}
+
+const previewPresetCase = (preset) => {
+  previewPreset.value = preset
+  showDemoPreview.value = true
+}
 
 const stats = ref({
   totalSimulations: 0,
@@ -370,7 +565,11 @@ const showDemoPreview = ref(false)
 
 const loadDemoAndClose = () => {
   showDemoPreview.value = false
-  loadDemoData()
+  if (previewPreset.value) {
+    selectPresetCase(previewPreset.value, false)
+  } else {
+    loadDemoData()
+  }
 }
 
 // 表单数据
@@ -1520,5 +1719,139 @@ html[lang="en"] .workflow-list {
 .preview-modal-confirm-btn:hover {
   background: transparent;
   color: var(--orange);
+}
+
+/* Exemples Prêts à Simuler en 1 Clic (SAAQ & Cour du Québec) */
+.preset-cases-section {
+  margin-bottom: 18px;
+}
+
+.preset-cases-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .preset-cases-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.preset-case-card {
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preset-case-card:hover {
+  border-color: #0B1220;
+  background: #F1F5F9;
+  transform: translateY(-1px);
+}
+
+.preset-case-card.active {
+  border: 2px solid var(--orange);
+  background: #FFFBEB;
+}
+
+.preset-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preset-badge {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+
+.badge-saaq {
+  background: #0B1220;
+  color: #38BDF8;
+}
+
+.badge-civil {
+  background: #065F46;
+  color: #ECFDF5;
+}
+
+.preset-quantum {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.preset-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #0B1220;
+  line-height: 1.25;
+}
+
+.preset-subtitle {
+  font-size: 0.73rem;
+  color: #475569;
+  line-height: 1.35;
+}
+
+.preset-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.preset-btn-load,
+.preset-btn-preview,
+.preset-btn-run {
+  font-size: 0.71rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-btn-load {
+  background: #FFFFFF;
+  border: 1px solid #94A3B8;
+  color: #0F172A;
+}
+
+.preset-btn-load:hover {
+  background: #E2E8F0;
+}
+
+.preset-btn-preview {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #334155;
+}
+
+.preset-btn-preview:hover {
+  background: #F1F5F9;
+}
+
+.preset-btn-run {
+  background: #0B1220;
+  border: 1px solid #0B1220;
+  color: var(--orange);
+  margin-left: auto;
+}
+
+.preset-btn-run:hover {
+  background: var(--orange);
+  color: #0B1220;
 }
 </style>

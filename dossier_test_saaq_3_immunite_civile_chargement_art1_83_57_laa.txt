@@ -1,0 +1,20 @@
+DOSSIER DE LITIGE SAAQ #3 — IMMUNITÉ CIVILE NO-FAULT ET NOTION D'ACCIDENT D'AUTOMOBILE (ART. 1 ET 83.57 L.A.A. / ART. 1457 C.C.Q.)
+Juridiction : Cour du Québec (Chambre civile)
+Nature du litige : Action en responsabilité civile extracontractuelle (art. 1457 C.c.Q.) et moyen d'irrecevabilité fondé sur l'immunité civile absolue du régime d'assurance automobile (art. 1, 2 et 83.57 L.a.a., art. 168 C.p.c.).
+
+PARTIES :
+- Demandeur : Monsieur Karim Benali.
+- Défendeurs : Entreprises de Livraison Boréale inc. et son assureur responsabilité civile, Assurances Générales Saint-Laurent inc., avec mise en cause de la Société de l'assurance automobile du Québec (SAAQ).
+
+1. FAITS ET PIÈCES AU DOSSIER :
+- Le 22 février 2025, M. Benali aidait le chauffeur d'un camion de livraison appartenant à Entreprises de Livraison Boréale inc. (stationné dans l'entrée glacée de M. Benali, moteur en marche et hayon élévateur hydraulique déployé) à décharger une palette d'électroménagers (Pièce P-1).
+- Alors que M. Benali se trouvait sur le hayon élévateur du camion, un bris du câble hydraulique du hayon (dû à un défaut d'entretien documenté dans le carnet mécanique Pièce P-2) a provoqué le basculement brusque de la plateforme, projetant M. Benali au sol et lui causant une fracture du tibia-péroné.
+- M. Benali poursuit Entreprises de Livraison Boréale inc. et son assureur devant la Cour du Québec (Chambre civile) en vertu des articles 1457 et 1465 C.c.Q., réclamant un total de 78 500,00 $ :
+  a) Perte de revenus nette non compensée : 38 500,00 $ ;
+  b) Dommages non pécuniaires (douleurs, souffrances et perte de jouissance de la vie) : 25 000,00 $ ;
+  c) Remboursement des honoraires extrajudiciaires d'avocat en vertu de l'article 51 C.p.c. : 15 000,00 $.
+
+2. MOYENS DE LA DÉFENSE ET APPLICATION DE LA LOI SUR L'ASSURANCE AUTOMOBILE (L.A.A.) :
+- Les Défendeurs opposent l'irrecevabilité totale du recours civil (art. 168 C.p.c. et art. 83.57 L.a.a.) au motif que le préjudice corporel a été causé par l'usage du camion et de son équipement intégré lors du déchargement (« préjudice causé par une automobile, par son usage ou par son chargement » au sens de l'article 1 L.a.a., tel qu'interprété de façon large et libérale par la Cour suprême du Canada dans Amos c. ICBC et Westmount (Ville) c. Rossy).
+- Subsidiairement, même si l'exclusion relative à « l'entretien ou la réparation d'une automobile » de l'article 1 L.a.a. était soulevée par le Demandeur, M. Benali n'effectuait lui-même aucune action d'entretien du camion au moment de la chute, de sorte que son seul recours relève exclusivement de la SAAQ. En tout état de cause, la demande de 15 000 $ sous l'art. 51 C.p.c. est infondée, le débat sur le partage de compétence entre la Cour civile et la SAAQ étant sérieux.
+

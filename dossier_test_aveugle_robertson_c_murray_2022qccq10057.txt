@@ -1,0 +1,79 @@
+COUR DU QUÉBEC — CHAMBRE CIVILE (DISTRICT DE GATINEAU)
+DOSSIER N° : 550-22-019244-191
+MÉMOIRE PRÉ-AUDIENCE DES PARTIES ET INVENTAIRE DES PIÈCES (TEST À L'AVEUGLE AVANT JUGEMENT)
+
+PARTIES AU LITIGE :
+- DEMANDEURS : Scott Robertson et Josée Charbonneau (ci-après les « Clients »)
+- DÉFENDEURS :
+  1. Nicole Murray, faisant affaire sous les raisons sociales « Gestion N. Murray » et « Maisons Paragon »
+  2. François Murray (fondateur et représentant ayant négocié avec les Clients)
+  3. Maisons Paragon Homes inc. (« Paragon inc. »)
+
+========================================================================
+1. CHRONOLOGIE DES FAITS ET PIÈCES VERSÉES AU DOSSIER (CONSENSOIRES)
+========================================================================
+
+1.1 Au printemps 2018, les demandeurs Josée Charbonneau et Scott Robertson disposent d'un budget maximal de 650 000 $ (visant un coût de construction d'environ 600 000 $) pour construire une résidence neuve.
+1.2 Attirés par une affiche de chantier et le site web de Maisons Paragon, ils consultent la documentation promotionnelle de Paragon :
+   - Pièce P-3 (Document « Understanding your Contract ») : promet par écrit que le système de gestion de construction Paragon permet aux clients de réaliser des économies de 20 % à 30 % par rapport au prix d'un entrepreneur général (« This fee will, of course, pay for itself and return you an additional 20% to 30% savings on your home »), soit une économie promise de 130 000 $ à 195 000 $ sur leur budget.
+   - Le document P-3 certifie quatre engagements formels :
+     * « 42.1 All quotes are an open Book; »
+     * « 42.2 We will make no profit on trades or materials; »
+     * « 42.3 Our fees are always fixed and based on square footage of living space (25 $ à 30 $ du pied carré); »
+     * « 42.4 As project managers, our remuneration does not come from trades or material suppliers. »
+   - Pièce D-4.2 (Courriel du 3 mai 2018 de François Murray aux Clients) : M. Murray écrit « We have been in business for 30 years and we have built this way for over 450 clients just like you » et répète « nobody else is making a "buck" on your head ».
+   - Pièce D-8 (Brochure « Maison en kit personnalisé et préfabriqué ») : laisse entendre que Paragon fabrique en usine une maison préfabriquée prête à assembler et détient des concepts exclusifs et une équipe complète d'architecture.
+
+1.3 Structure contractuelle tripartite imposée par Paragon :
+   - Pièce P-5 (Contrat de gestion de projet) : signé entre les Clients et Nicole Murray (Gestion N. Murray). Prévoit des honoraires fixes de gestion basés sur la superficie habitable et stipule qu'aucun profit n'est réalisé sur les matériaux ou sous-traitants. Comporte une clause pénale d'indemnité de résiliation unilatérale de 23 969,00 $.
+   - Pièce P-7 (Contrat de design architectural) : signé entre les Clients et Nicole Murray pour la confection des plans de construction.
+   - Pièce P-13 et P-15 (Projet de Contrat d'achat du « Home Package Kit ») : conclu avec la société Maisons Paragon Homes inc. (dont François Murray et Nicole Murray sont les deux seuls actionnaires) au prix de 223 223,00 $ (représentant 37 % du budget total de 600 000 $).
+
+1.4 Découverte des faits et rupture des relations (mai à novembre 2018 — 7 mois de démarches) :
+   - Entre mai et novembre 2018, les Clients versent un total de 41 117,15 $ à Paragon en vertu du Contrat de gestion et du Contrat de design.
+   - Lorsque le prix du « Kit Paragon » (Pièce P-13 : 223 223,00 $) et les estimations de coûts leur sont soumis après plusieurs mois, le coût global dépasse largement leur budget maximal de 650 000 $, rendant le projet irréalisable.
+   - Faits admis lors des interrogatoires préalables et de l'instruction (Témoignage et contre-interrogatoire de François Murray) :
+     1) Contrairement à la brochure D-8, Paragon ne possède aucune usine et ne fabrique rien : elle achète des matériaux standards chez des fournisseurs tiers et les revend aux clients sous l'étiquette « Maison en kit ».
+     2) Contrairement à la promesse écrite « We will make no profit on trades or materials » (Pièce P-3 et Contrat de gestion P-5), François Murray admet que Maisons Paragon Homes inc. réalise un profit substantiel non divulgué sur la vente des matériaux composant le Kit de 223 223,00 $.
+     3) François Murray admet également que Paragon n'a aucun architecte à l'interne et ajoute une marge secrète de 15 % sur la facture du technologue externe pour les plans de design (Contrat P-7) sans en informer les Clients.
+     4) Les plans remis par Paragon sont conçus spécifiquement pour le « Kit Paragon » et ne peuvent pas être utilisés tels quels par les Clients avec un autre entrepreneur général après la rupture.
+
+========================================================================
+2. PRÉTENTIONS ET RÉCLAMATIONS CHIFFRÉES DES DEMANDEURS (ROBERTSON & CHARBONNEAU)
+========================================================================
+Réclamation totale en demande : 71 928,15 $ (plus intérêts au taux légal et indemnité additionnelle de l'art. 1619 C.c.Q.), ventilée en 3 postes :
+
+POSTE 1 — Nullité ab initio des contrats pour dol et pratiques trompeuses, et restitution intégrale : 41 117,15 $
+- Fondements juridiques : articles 1399, 1400, 1401, 1407, 1699, 1700 et 1701 du Code civil du Québec (C.c.Q.) ainsi que les articles 219, 222 d) et 272 de la Loi sur la protection du consommateur (L.p.c.).
+- Argument : Le consentement des Clients a été vicié par le stratagème dolosif des trois contrats permettant de camoufler des profits sur les matériaux (Kit P-13) et une marge de 15 % sur les plans (P-7) tout en promettant par écrit « zéro profit sur les matériaux » (P-3, D-4.2). Les plans étant inutilisables pour les Clients, ceux-ci n'ont tiré aucun avantage réel des prestations et ont droit à la restitution intégrale des 41 117,15 $ versés (art. 1699 et 1701 C.c.Q.).
+
+POSTE 2 — Dommages-intérêts compensatoires pour troubles, stress et inconvénients : 5 000,00 $
+- Fondements juridiques : articles 1457, 1458, 1607 et 1611 C.c.Q.
+- Argument : Perte de 7 mois (mai à novembre 2018), stress financier aigu causé par les estimations trompeuses de Paragon et obligation de reprendre tout le projet à zéro (~700 $ / mois pendant 7 mois = 5 000,00 $).
+
+POSTE 3 — Remboursement des honoraires extrajudiciaires pour abus de procédure : 25 811,00 $
+- Fondements juridiques : articles 51 à 54 du Code de procédure civile (C.p.c.).
+- Argument : Les Clients soutiennent que la défense et la demande reconventionnelle de Paragon sont manifestement mal fondées et abusives au vu des aveux de M. Murray sur les marges cachées.
+
+CONDAMNATION SOLIDAIRE (IN SOLIDUM) DEMANDÉE :
+- Les Clients demandent que Nicole Murray (responsabilité contractuelle), François Murray personnellement et Maisons Paragon Homes inc. (responsabilité extracontractuelle pour fausses représentations et participation au stratagème, art. 1457 et 1526 C.c.Q.) soient condamnés in solidum.
+
+========================================================================
+3. MOYENS DE DÉFENSE ET DEMANDE RECONVENTIONNELLE DES DÉFENDEURS (PARAGON & MURRAY)
+========================================================================
+Réclamation totale en demande reconventionnelle : 51 646,53 $
+
+MOYEN 1 — Contestation de la nullité et refus de restitution (ou réduction pour valeur des services rendus) :
+- Paragon soutient que les Clients savaient dès le départ qu'ils devraient acheter un Kit de matériaux auprès de Maisons Paragon Homes inc. (P-13) et qu'il est normal qu'une entreprise commerciale réalise un profit sur la vente d'un kit.
+- Subsidiairement, en vertu des articles 1699 et 1700 C.c.Q., Paragon plaide que les services de gestion et les plans de design ont bel et bien été exécutés pendant 7 mois et que la restitution par équivalent doit déduire la valeur des heures et des plans fournis aux Clients afin d'éviter un enrichissement injustifié.
+
+MOYEN 2 — Absence de lien contractuel de François Murray et de Maisons Paragon Homes inc. (Art. 1440 C.c.Q.) :
+- Seule Nicole Murray (Gestion N. Murray) est signataire du Contrat de gestion (P-5) et du Contrat de design (P-7). François Murray et Maisons Paragon Homes inc. invoquent l'effet relatif des contrats (art. 1440 C.c.Q.) et la personnalité juridique distincte (art. 309 et 317 C.c.Q.) pour demander le rejet de l'action à leur égard.
+
+MOYEN 3 — Contestation des honoraires extrajudiciaires (25 811,00 $) sous l'art. 51 C.p.c. :
+- Les Défendeurs rappellent la jurisprudence constante de la Cour d'appel du Québec (notamment Biron c. 150 Marchand Holdings inc., 2020 QCCA 1537 et Ville de Sherbrooke c. Homans, 2021 QCCA 1866) selon laquelle la barre de l'abus de procédure (art. 51 C.p.c.) est très élevée et le fait de présenter une défense qui échoue au fond ne constitue pas un abus donnant droit au remboursement des frais d'avocat.
+
+DEMANDE RECONVENTIONNELLE DE PARAGON (51 646,53 $) :
+1) Indemnité de résiliation contractuelle : 23 969,00 $ (invoquant la résiliation unilatérale sans motif par les Clients sous les art. 2125 et 2129 C.c.Q. et la clause pénale du Contrat de gestion P-5).
+2) Remboursement des honoraires extrajudiciaires de Paragon : 27 677,53 $ (alléguant que la poursuite des Clients est abusive sous l'art. 51 C.p.c.).
+

@@ -1,0 +1,27 @@
+DOSSIER DE LITIGE ADMINISTRATIF ET MÉDICO-LÉGAL (SAAQ / TAQ - SECTION DES AFFAIRES SOCIALES)
+Juridiction : Tribunal administratif du Québec (TAQ) — Révision d'une décision de la Société de l'assurance automobile du Québec (SAAQ)
+Nature du recours : Contestation en vertu de l'article 83.34 de la Loi sur l'assurance automobile (RLRQ c. A-25, L.a.a.) et du Code civil du Québec (fardeau de preuve art. 2803 et 2804 C.c.Q.).
+
+PARTIES EN CAUSE :
+- Partie Requérante (Demandeur) : Monsieur Marc-André Pelletier, charpentier-menuisier (48 ans).
+- Partie Intimée (Défenderesse) : Société de l'assurance automobile du Québec (SAAQ).
+
+1. FAITS ADMIS ET CHRONOLOGIE DE L'ACCIDENT :
+- Le 14 janvier 2024 (Pièce P-1 : Rapport d'accident de police), le véhicule de Monsieur Pelletier est percuté à l'arrière à une vitesse estimée à 45 km/h alors qu'il était immobilisé à un feu rouge.
+- À l'urgence (Pièce P-2 : Feuille sommaire d'urgence du 14 janvier 2024), le médecin diagnostique une entorse cervico-lombaire de grade II (whiplash) sans fracture visible à la radiographie simple.
+- La SAAQ accepte initialement la réclamation en vertu des articles 2 et 14 L.a.a. et verse une indemnité de remplacement du revenu (IRR) de 1 175,00 $ par semaine à compter du 21 janvier 2024.
+- Une IRM lombaire réalisée le 18 mai 2024 (Pièce D-3 : Rapport d'imagerie par résonance magnétique) révèle une discopathie dégénérative pluri-étagée L4-L5 et L5-S1 avec arthrose facettaire modérée et protrusion discale L5-S1 sans compression radiculaire franche.
+- Le 12 septembre 2024, à la suite de l'expertise du médecin évaluateur de la SAAQ, le Dr Bruno Lavigne, orthopédiste (Pièce D-4), la SAAQ rend une décision en révision (Pièce D-5) mettant fin à l'IRR en vertu de l'article 49 L.a.a., au motif que l'entorse lombaire causée par l'accident est consolidée sans séquelle permanente (0 % SUTT sous l'art. 73 L.a.a.) et que les douleurs persistantes découlent exclusivement de l'état dégénératif préexistant personnel de M. Pelletier.
+
+2. PRÉTENTIONS ET MONTANTS RÉCLAMÉS PAR LE REQUÉRANT (DEMANDE TOTALE : 84 600,00 $) :
+- M. Pelletier dépose une contre-expertise du Dr Henri Courchesne, physiatre (Pièce P-6), soutenant que son état dégénératif lombaire était totalement asymptomatique avant l'accident du 14 janvier 2024 (attesté par son dossier CNESST vierge et ses 2 000 heures travaillées en 2023, Pièce P-7) et que l'accident a agi comme facteur déclencheur ayant décompensé de façon permanente sa colonne lombaire (jurisprudence Productions Pram inc. c. Lemay).
+- Conclusions chiffrées de la demande devant le TAQ (Total réclamé : 84 600,00 $) :
+  a) Rétroactivité et maintien de l'indemnité de remplacement du revenu (IRR, art. 14 L.a.a.) sur 56 semaines (65 800,00 $) ;
+  b) Indemnité forfaitaire pour préjudice non pécuniaire / séquelles permanentes de classe 3 au rachis lombaire en vertu de l'article 73 L.a.a. et du Règlement sur le barème des dommages corporels (14 300,00 $) ;
+  c) Remboursement intégral des frais d'expertise privée et frais de traitements chiropratiques non autorisés (4 500,00 $).
+
+3. MOYENS DE DÉFENSE DE LA SAAQ (INTIMÉE) :
+- La SAAQ soutient que la présomption de simultanéité (post hoc ergo propter hoc) ne suffit pas à établir le lien causal médical requis par l'article 2 L.a.a. et l'article 2803 C.c.Q.
+- Selon le rapport biomécanique et orthopédique D-4, une entorse lombaire de grade II se résorbe physiologiquement en 6 à 12 semaines ; l'absence d'oedème osseux traumatique à l'IRM D-3 démontre que la protrusion L5-S1 est d'origine purement dégénérative et évolue pour son propre compte.
+- Subsidiairement, même si le Tribunal reconnaissait une aggravation temporaire ou une séquelle résiduelle mineure de classe 1 (douleurs intermittentes, ~3 200 $ sous l'art. 73 L.a.a.), M. Pelletier avait recouvré la capacité d'exercer un emploi convenable léger au plus tard à la date du rapport D-4 (art. 45 et 49 L.a.a.), et les traitements chiropratiques réclamés ne respectent pas les conditions réglementaires de prescription médicale préalable.
+
