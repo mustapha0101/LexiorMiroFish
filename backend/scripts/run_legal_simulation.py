@@ -253,6 +253,15 @@ def normalize_legal_results_verdicts(res_data: dict) -> dict:
         if is_def_win:
             defense_wins += 1
 
+        q_list_col = extract_collegiate_quantums(verdict_txt, max_claim_amount=max_claim)
+        if q_list_col:
+            det["collegiate_quantums"] = q_list_col
+            non_zero_col = [q for q in q_list_col if q > 0]
+            det["min_positive_quantum"] = min(non_zero_col) if non_zero_col else 0.0
+            det["max_collegiate_quantum"] = max(q_list_col)
+            sorted_col = sorted(q_list_col)
+            det["majority_executable_quantum"] = sorted_col[len(sorted_col) // 2]
+
         # Corriger l'en-tête collégial si présent
         judge_splits = _re_mod.split(r'(?:^|\n)\s*-\s*Juge\s+\d+\s*\([^)]*\)\s*:\s*', verdict_txt, flags=_re_mod.IGNORECASE)
         if len(judge_splits) >= 3:
@@ -260,12 +269,19 @@ def normalize_legal_results_verdicts(res_data: dict) -> dict:
             total_j = len(indiv)
             def_j_wins = sum(1 for jv in indiv if evaluate_verdict_is_defense_win(jv, lit_type))
             winning_votes = def_j_wins if is_def_win else (total_j - def_j_wins)
-            consensus_label = "Défense (Majorité)" if is_def_win else (
-                "Poursuite (Majorité)" if lit_type == "criminal" else "Demandeur (Majorité)"
-            )
+            maj_q = det.get("majority_executable_quantum", 0.0)
+            ref_max = max_claim if max_claim > 0 else (max(q_list_col) if q_list_col else 0.0)
+            if not is_def_win and q_list_col and ref_max > 0 and 0 < maj_q < ref_max * 0.5:
+                consensus_label = f"Accueil Partiel ({winning_votes}/{total_j}) — Dispositif Majoritaire Exécutoire : {maj_q:,.2f} $"
+                header_str = f"[DÉCISION COLLÉGIALE - CONSENSUS : {consensus_label}]"
+            else:
+                consensus_label = "Défense (Majorité)" if is_def_win else (
+                    "Poursuite (Majorité)" if lit_type == "criminal" else "Demandeur (Majorité)"
+                )
+                header_str = f"[DÉCISION COLLÉGIALE - CONSENSUS : {consensus_label} ({winning_votes}/{total_j})]"
             verdict_txt = _re_mod.sub(
                 r'\[DÉCISION COLLÉGIALE - CONSENSUS\s*:[^\]]*\]',
-                f"[DÉCISION COLLÉGIALE - CONSENSUS : {consensus_label} ({winning_votes}/{total_j})]",
+                header_str,
                 verdict_txt,
                 count=1,
             )
@@ -279,12 +295,6 @@ def normalize_legal_results_verdicts(res_data: dict) -> dict:
             ca = _re_mod.sub(r'\bcoupables?\b', 'responsables', ca, flags=_re_mod.IGNORECASE)
             det["clerk_analysis"] = ca
 
-        q_list_col = extract_collegiate_quantums(verdict_txt, max_claim_amount=max_claim)
-        if q_list_col:
-            det["collegiate_quantums"] = q_list_col
-            non_zero_col = [q for q in q_list_col if q > 0]
-            det["min_positive_quantum"] = min(non_zero_col) if non_zero_col else 0.0
-            det["max_collegiate_quantum"] = max(q_list_col)
         q_val = extract_verdict_quantum(verdict_txt, max_claim_amount=max_claim)
         if q_val > 0 or is_def_win or q_list_col:
             det["awarded_quantum"] = q_val
@@ -383,7 +393,9 @@ class LegalSimulationRunner:
             for pat in meta_patterns:
                 text = re.sub(pat, "", text, flags=re.IGNORECASE).strip()
             # 3. Supprimer les espaces réservés (placeholders) résiduels
-            text = re.sub(r'\[À insérer[^\]]*\]', '', text, flags=re.IGNORECASE)
+            text = re.sub(r'\[(?:À insérer|Date|Signature|Lieu|Nom)[^\]]*\]', '', text, flags=re.IGNORECASE)
+            text = re.sub(r'Prononcé\s+à\s+[^\n.]*,\s+ce\s*\.?', '', text, flags=re.IGNORECASE)
+            text = re.sub(r'\bRLRQ\s+c\.\s*A-(?!\d)', 'RLRQ c. A-25', text)
             return text.strip()
 
         def _format_dedup_refs(refs: list) -> str:
@@ -406,8 +418,21 @@ class LegalSimulationRunner:
         statutory_block = self.grounding.build_statutory_grounding_block(self.context, self.litigation_type)
         grounded_context = self.context + statutory_block
 
+        is_admin_case = LegalAgents.is_administrative_tribunal(self.context)
+        law_ref_label = "les dispositions statutaires vérifiées (ex: L.a.a., L.J.A.)" if is_admin_case else "les articles du C.c.Q. / C.p.c. vérifiés"
+        if iter_id > 1 and "=== VERDICTS PRÉCÉDENTS" in self.context:
+            initial_user_prompt = (
+                f"Nous sommes au Round {iter_id} de l'audience contradictoire. "
+                f"Sans répéter mot à mot votre exposé introductif du Round 1, répondez chirurgicalement aux points de friction et de dissidence soulevés lors du délibéré précédent "
+                f"(notamment sur le lien de causalité de l'état préexistant, la ventilation poste par poste du quantum et {law_ref_label})."
+            )
+        else:
+            initial_user_prompt = (
+                f"Veuillez présenter votre plaidoirie principale et vos arguments déterminants contre la partie adverse en vous basant sur les faits du dossier et {law_ref_label}."
+            )
+
         debate_history_prosecutor = [
-            {"role": "user", "content": f"Veuillez présenter votre réquisitoire initial et vos arguments principaux contre la défense en vous basant sur les faits du dossier et les articles du C.c.Q. / C.p.c. vérifiés."}
+            {"role": "user", "content": initial_user_prompt}
         ]
         debate_history_defense = []
 
@@ -556,9 +581,9 @@ class LegalSimulationRunner:
         if self.judge_type == "collegiate":
             logger.info("Délibéré du Tribunal Collégial (3 Juges)...")
             judges_list = self.selected_judges_personalities if self.selected_judges_personalities else [
-                "Formaliste strict (applique la loi à la lettre sans pitié).",
-                "Sensible à l'équité (prend en compte les circonstances atténuantes et le contexte social).",
-                "Conservateur (favorise souvent l'accusation et l'ordre public)."
+                "Formaliste strict (applique la loi et les critères d'objectivité de la preuve à la lettre).",
+                "Sensible à l'équité (prend en compte le contexte fonctionnel, social et la vulnérabilité de la partie lésée).",
+                "Analytique et rigoureux sur le quantum (scrute l'état préexistant, la causalité poste par poste et écarte toute réclamation non prouvée)."
             ]
             collegiate_results = []
             for idx, j_pers in enumerate(judges_list):
@@ -570,18 +595,26 @@ class LegalSimulationRunner:
                 collegiate_results.append({
                     "personality": j_pers,
                     "verdict": verdict_j,
-                    "is_defense_win": is_win_j
+                    "is_defense_win": is_win_j,
+                    "quantum": _extract_single_verdict_quantum(verdict_j, max_claim_amount=max_claim)
                 })
             
             wins_count = sum(1 for r in collegiate_results if r["is_defense_win"])
             total_judges = len(collegiate_results)
             is_defense_win = wins_count >= (total_judges // 2 + 1)
             majority_votes = wins_count if is_defense_win else (total_judges - wins_count)
-            consensus_label = "Défense (Majorité)" if is_defense_win else (
-                "Poursuite (Majorité)" if self.litigation_type == "criminal" else "Demandeur (Majorité)"
-            )
+            col_q_vals = [r["quantum"] for r in collegiate_results]
+            sorted_col_q = sorted(col_q_vals)
+            maj_exec_q = sorted_col_q[len(sorted_col_q) // 2] if sorted_col_q else 0.0
+            if not is_defense_win and max_claim > 0 and 0 < maj_exec_q < max_claim * 0.5:
+                consensus_header = f"[DÉCISION COLLÉGIALE - CONSENSUS : Accueil Partiel ({majority_votes}/{total_judges}) — Dispositif Majoritaire Exécutoire : {maj_exec_q:,.2f} $]"
+            else:
+                consensus_label = "Défense (Majorité)" if is_defense_win else (
+                    "Poursuite (Majorité)" if self.litigation_type == "criminal" else "Demandeur (Majorité)"
+                )
+                consensus_header = f"[DÉCISION COLLÉGIALE - CONSENSUS : {consensus_label} ({majority_votes}/{total_judges})]"
             
-            combined_verdict = f"[DÉCISION COLLÉGIALE - CONSENSUS : {consensus_label} ({majority_votes}/{total_judges})]\n\n"
+            combined_verdict = f"{consensus_header}\n\n"
             for idx, r in enumerate(collegiate_results):
                 j_name = r["personality"].split('(')[0].strip()
                 combined_verdict += f"- Juge {idx+1} ({j_name}) : {r['verdict']}\n\n"
@@ -611,11 +644,15 @@ class LegalSimulationRunner:
         if on_action_callback:
             on_action_callback("CLERK_ANALYSIS", "Le Greffier", 4, clerk_analysis, result="Analysis completed")
         
+        col_qs_out = extract_collegiate_quantums(verdict, max_claim_amount=max_claim)
+        sorted_col_out = sorted(col_qs_out) if col_qs_out else []
         return {
             "iteration": iter_id,
             "judge_personality": current_personality,
             "is_defense_win": is_defense_win,
             "awarded_quantum": extract_verdict_quantum(verdict, max_claim_amount=max_claim),
+            "collegiate_quantums": col_qs_out,
+            "majority_executable_quantum": sorted_col_out[len(sorted_col_out) // 2] if sorted_col_out else None,
             "transcript": transcript,
             "clerk_analysis": clerk_analysis,
             "verdict": verdict

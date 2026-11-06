@@ -32,39 +32,34 @@ class LocalGraphExtractor:
         edge_types = [e["name"] for e in ontology.get("edge_types", [])]
         
         system_prompt = f"""
-You are an expert Graph DB Named Entity Recognition (NER) pipeline.
-Your task is to extract all entities and their relationships from the provided text according to the target Ontology.
+Tu es un pipeline expert d'extraction d'entités nommées (NER) et de graphes de connaissances juridiques québécois (GraphRAG).
+Ta mission est d'extraire toutes les entités pertinentes et leurs relations à partir du texte fourni, conformément à l'ontologie cible.
 
-TARGET ONTOLOGY (Permitted Node Types):
-{', '.join(entity_types) if entity_types else 'Any'}
+ONTOLOGIE CIBLE (Types de nœuds autorisés) :
+{', '.join(entity_types) if entity_types else 'Tout type pertinent'}
 
-TARGET EDGE TYPES (Permitted Relationship Types):
-{', '.join(edge_types) if edge_types else 'Any'}
+TYPES DE RELATIONS AUTORISÉS (Edge Types) :
+{', '.join(edge_types) if edge_types else 'Toute relation pertinente'}
 
-IMPORTANT ROLE-LABEL RULES:
-1. Always use the most specific entity label from the TARGET ONTOLOGY. 
-2. Do NOT use the generic 'Person' label if a more specific label applies. For example:
-   - If a person is a witness or testifying, you MUST label them as 'Witness'.
-   - If a person is the accused or defendant in a criminal context, you MUST label them as 'AccusedPerson'.
-   - If a person is the prosecutor or crown, you MUST label them as 'Prosecutor'.
-   - If a person is a judge presiding over a case, you MUST label them as 'Judge'.
-   - If a person is a police officer or investigator, you MUST label them as 'PoliceOfficer'.
-   - Only use 'Person' for individuals who do not fit any of these specific legal roles.
+RÈGLES IMPÉRATIVES DE QUALIFICATION DES RÔLES ET DE LANGUE :
+1. Utilise toujours le type d'entité le plus précis de l'ONTOLOGIE CIBLE.
+2. N'inclus PAS dans les nœuds d'acteurs les noms de causes jurisprudentielles citées uniquement à titre de précédents (ex: 'Productions Pram inc.', 'Lemay', 'Biron') — classe les arrêts sous le type 'Jurisprudence' uniquement s'il est autorisé.
+3. Rédige OBLIGATOIREMENT tous les champs 'summary' (résumé du rôle) et 'fact' (description de la relation) en FRANÇAIS juridique clair et précis. N'utilise jamais l'anglais dans les résumés.
 
-Return the data STRICTLY in the following JSON format without any markdown wrappers or text:
+Retourne les données STRICTEMENT au format JSON suivant, sans balises Markdown ni texte explicatif :
 {{
   "nodes": [
-     {{"uuid": "unique_string_1", "label": "Person", "name": "John Doe", "summary": "A developer."}}
+     {{"uuid": "unique_string_1", "label": "Person", "name": "Jean Tremblay", "summary": "Demandeur dans le litige civil, charpentier-menuisier de 48 ans."}}
   ],
   "edges": [
-     {{"uuid": "edge_id_1", "source": "unique_string_1", "target": "unique_string_2", "source_label": "Person", "target_label": "Person", "label": "WORKS_WITH", "fact": "John works with Jane."}}
+     {{"uuid": "edge_id_1", "source": "unique_string_1", "target": "unique_string_2", "source_label": "Person", "target_label": "Company", "label": "SUES", "fact": "Jean Tremblay réclame une indemnité à la défenderesse."}}
   ]
 }}
 
-IMPORTANT RULES:
-1. Try to reuse uuids if the same entity appears multiple times.
-2. Label MUST exactly match one of the permitted types if provided.
-3. Your output must be purely valid JSON.
+RÈGLES TECHNIQUES :
+1. Réutilise le même 'uuid' si la même entité apparaît plusieurs fois.
+2. Le champ 'label' DOIT correspondre exactement à l'un des types permis.
+3. Ta réponse doit être uniquement du JSON valide.
 """
 
         try:
@@ -72,7 +67,7 @@ IMPORTANT RULES:
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"TEXT TO PROCESS:\n{text}"}
+                    {"role": "user", "content": f"TEXTE DU DOSSIER À ANALYSER :\n{text}"}
                 ],
                 temperature=0.0
             )

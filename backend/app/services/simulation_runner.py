@@ -459,28 +459,39 @@ class SimulationRunner:
                     }
                 }
             else:
-                # Compute dynamic social entropy
-                if getattr(state, 'run_mode', 'courtroom') != 'courtroom':
+                # Calcul direct de l'entropie narrative de Shannon depuis les états chargés
+                import math
+                is_courtroom_mode = (
+                    getattr(state, 'run_mode', 'courtroom') == 'courtroom'
+                    or "0" in agents_records
+                    or any("procedure_vs_equite" in a_rec for a_rec in agents_records.values())
+                )
+                if not is_courtroom_mode:
                     t_sum = 0.0
                     for a_rec in agents_records.values():
                         t_sum += a_rec.get("truth_vs_social_survival", 0.5)
                     entropy = round(t_sum / max(1, len(agents_records)), 3)
                 else:
-                    # Courtroom cache : calculer la véritable entropie narrative de Shannon (Bug B fix)
                     try:
-                        litigation_type = "civil"
-                        config_path = os.path.join(cls.RUN_STATE_DIR, simulation_id, "simulation_config.json")
-                        if os.path.exists(config_path):
-                            with open(config_path, 'r', encoding='utf-8') as f:
-                                config_data = json.load(f)
-                                litigation_type = config_data.get("litigation_type", "civil")
-                        agent1_name = "Le Procureur" if litigation_type == "criminal" else "Avocat du Demandeur"
-                        state_judge = CognitiveMemoryService.get_agent_state(simulation_id, "0", "Le Juge")
-                        state_proc = CognitiveMemoryService.get_agent_state(simulation_id, "1", agent1_name)
-                        state_def = CognitiveMemoryService.get_agent_state(simulation_id, "2", "Avocat de la Défense")
-                        entropy = cls._calculate_narrative_entropy(state_judge, state_proc, state_def, objections_count, total_stimuli)
+                        j_rec = agents_records.get("0") or next(iter(agents_records.values()), {})
+                        p_rec = agents_records.get("1", {})
+                        d_rec = agents_records.get("2", {})
+                        p_c = float(j_rec.get("belief_coupable", 0.5))
+                        p_i = max(0.0, 1.0 - p_c)
+                        h_juge = 0.0
+                        for p_val in (p_c, p_i):
+                            if p_val > 0.001:
+                                h_juge -= p_val * math.log2(p_val)
+                        conflict_factor = abs(
+                            float(p_rec.get("offensive_vs_negociation", 0.5))
+                            * float(d_rec.get("offensive_vs_negociation", 0.5))
+                        ) * 0.1
+                        entropy = round(
+                            max(0.0, h_juge + objections_count * 0.15 + total_stimuli * 0.20 + conflict_factor),
+                            3,
+                        )
                     except Exception:
-                        entropy = 0.5
+                        entropy = 0.75
             
             record = {
                 "round": round_num,
@@ -2037,7 +2048,9 @@ class SimulationRunner:
                     
                 # Clear or initialize cognitive history and record baseline round 0
                 state.cognitive_history = []
+                cls._save_run_state(state)
                 cls._record_cognitive_state_history(simulation_id, round_num=0, objections_count=0, total_stimuli=0)
+                state = cls.get_run_state(simulation_id) or state
 
                 actions_file_path = os.path.join(cls.RUN_STATE_DIR, simulation_id, "actions.jsonl")
                 os.makedirs(os.path.dirname(actions_file_path), exist_ok=True)
@@ -2504,6 +2517,7 @@ class SimulationRunner:
                     
                     total_stimuli = len(state.injected_stimuli) if hasattr(state, 'injected_stimuli') and state.injected_stimuli else 0
                     cls._record_cognitive_state_history(simulation_id, round_idx, objections_count, total_stimuli)
+                    state = cls.get_run_state(simulation_id) or state
 
                     # Bug A + Architecture v2 : Arrêt Dynamique PIE & Rotation Multi-Chambres (Monte-Carlo x Dialectique)
                     curr_judge_pe = state_judge.tensions.get("procedure_vs_equite", 0.5)

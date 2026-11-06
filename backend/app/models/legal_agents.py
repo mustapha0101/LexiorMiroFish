@@ -24,8 +24,33 @@ class LegalAgents:
     )
     
     @staticmethod
+    def is_administrative_tribunal(context: str) -> bool:
+        """Détecte si le dossier relève d'un tribunal administratif québécois (TAQ, TAT, SAAQ, CNESST)."""
+        if not context:
+            return False
+        ctx_low = context.lower()
+        admin_markers = [
+            "tribunal administratif du québec", "taq", "section des affaires sociales",
+            "société de l'assurance automobile du québec", "saaq", "l.a.a.", "rlrq c. a-25",
+            "tribunal administratif du travail", "cnesst", "l.a.t.m.p.", "l.j.a.", "rlrq c. j-3"
+        ]
+        return any(m in ctx_low for m in admin_markers)
+
+    @staticmethod
     def get_defense_lawyer_prompt(context: str, litigation_type: str = "civil") -> str:
-        if litigation_type == "civil":
+        is_admin = LegalAgents.is_administrative_tribunal(context)
+        if litigation_type == "civil" and is_admin:
+            client_ref = "l'organisme public intimé (ex: la SAAQ ou la CNESST, selon les faits du dossier)"
+            failure_ref = (
+                "les failles médicales, statutaires et probatoires du recours : contester le lien de causalité entre l'accident et l'état dégénératif préexistant qui évolue pour son propre compte (art. 2 L.a.a. et fardeau de preuve art. 2803 C.c.Q.), "
+                "démontrer la consolidation de la lésion et la capacité d'exercer un emploi convenable mettant fin à l'IRR (art. 45 et 49 L.a.a.), "
+                "contester ou limiter l'évaluation des séquelles permanentes au barème réglementaire (art. 73 L.a.a. — ex: Classe 1 résiduelle au lieu de Classe 3), "
+                "et opposer une fin de non-recevoir stricte aux frais de soins privés non prescrits par un médecin ou non autorisés par règlement (art. 83.2 L.a.a.)"
+            )
+            counter_ref = "les arguments de l'Avocat de la Partie Requérante (Demandeur)"
+            rule4_ref = "la Loi sur l'assurance automobile (L.a.a., RLRQ c. A-25), la Loi sur la justice administrative (L.J.A.) et les pièces médicales versées au dossier"
+            dist_ref = "Ne confonds jamais ce recours administratif sans égard à la faute (no-fault, art. 83.57 L.a.a.) avec un procès criminel ou une action en responsabilité civile délictuelle (n'invoque pas les art. 1607, 1618 ou 1619 C.c.Q.)."
+        elif litigation_type == "civil":
             client_ref = "la partie défenderesse (selon les faits du dossier)"
             failure_ref = (
                 "les failles procédurales et substantielles de la demande : vérifier d'abord la prescription extinctive (art. 2925 C.c.Q.) et la proportionnalité/recevabilité (art. 18 et 168 C.p.c.), "
@@ -61,7 +86,18 @@ Règles absolues d'immersion :
 
     @staticmethod
     def get_prosecutor_prompt(context: str, litigation_type: str = "civil") -> str:
-        if litigation_type == "civil":
+        is_admin = LegalAgents.is_administrative_tribunal(context)
+        if litigation_type == "civil" and is_admin:
+            role_title = "l'Avocat de la Partie Requérante / du Demandeur (représentant l'administré ou la victime devant le Tribunal administratif)"
+            mission_ref = (
+                "démontrer par prépondérance de preuve (art. 2804 C.c.Q.) le lien de causalité entre l'accident et la décompensation fonctionnelle d'un état préexistant auparavant asymptomatique (art. 2 L.a.a., principe du crâne fragile / Productions Pram inc. c. Lemay), "
+                "contester la fin de l'indemnité de remplacement du revenu (art. 14 et 49 L.a.a.), réclamer la reconnaissance des séquelles permanentes selon le Règlement sur les atteintes permanentes (art. 73 L.a.a.) et le remboursement des frais admissibles (art. 83.2 L.a.a.), "
+                "avec les intérêts statutaires prévus à l'article 83.32 L.a.a. (sans jamais invoquer les articles 1607, 1611, 1618 ou 1619 C.c.Q. ni l'article 18 C.p.c., qui sont étrangers au régime public no-fault de la L.a.a.)"
+            )
+            counter_ref = "l'Avocat de la Défense (Procureur de l'Intimée)"
+            rule4_ref = "la Loi sur l'assurance automobile (L.a.a., RLRQ c. A-25), la Loi sur la justice administrative (L.J.A.) et les pièces médicales versées au dossier"
+            dist_ref = "Ne confonds pas ce recours statutaire devant le TAQ avec une poursuite civile en responsabilité délictuelle (n'invoque pas les art. 1607, 1618 ou 1619 C.c.Q. ni l'art. 18 C.p.c.)."
+        elif litigation_type == "civil":
             role_title = "l'Avocat du Demandeur (représentant la partie demanderesse identifiée au dossier)"
             mission_ref = (
                 "démontrer la responsabilité civile ou contractuelle de la partie défenderesse selon la prépondérance de preuve (art. 2804 C.c.Q.), "
@@ -98,7 +134,17 @@ Règles absolues d'immersion :
 
     @staticmethod
     def get_judge_prompt(context: str, personality: str, litigation_type: str = "civil") -> str:
-        if litigation_type == "civil":
+        is_admin = LegalAgents.is_administrative_tribunal(context)
+        if litigation_type == "civil" and is_admin:
+            parties_ref = "l'Avocat de la Défense (Intimée) et de l'Avocat de la Partie Requérante (Demandeur)"
+            verdict_ref = (
+                "structuré selon la rigueur d'une décision du Tribunal administratif du Québec (TAQ - Section des affaires sociales) sous la Loi sur la justice administrative (L.J.A.) et la Loi sur l'assurance automobile (L.a.a., RLRQ c. A-25) : "
+                "(1) Cadre légal statutaire (régime public d'indemnisation sans égard à la faute, art. 2 et 83.57 L.a.a. — INTERDICTION d'invoquer la responsabilité civile délictuelle des art. 1607/1611 C.c.Q., les intérêts civils des art. 1618/1619 C.c.Q., ou l'art. 18 C.p.c. pour contourner un règlement de la SAAQ), "
+                "(2) Analyse médico-légale du lien de causalité (art. 2 L.a.a. et prépondérance de preuve art. 2804 C.c.Q. : distinction entre l'évolution naturelle d'une discopathie dégénérative préexistante et sa décompensation fonctionnelle post-traumatique — n'utilise JAMAIS les termes pénaux 'COUPABLE' ou 'culpabilité'), "
+                "(3) Liquidation statutaire poste par poste dans le strict respect du plafond réclamé : (a) Indemnité de remplacement du revenu (IRR) sous les art. 14 et 49 L.a.a. (capacité d'exercer un emploi convenable), (b) Indemnité pour séquelles permanentes sous l'art. 73 L.a.a. (arbitrage entre absence de séquelle, Classe 1 de 3 200,00 $ pour douleurs déclenchées, ou Classe 3 de 14 300,00 $), et (c) Frais de soins et d'expertise sous l'art. 83.2 L.a.a. (les soins privés non prescrits par un médecin sont non remboursables), "
+                "et (4) Dispositif final chiffré se terminant obligatoirement par la ligne explicite 'TOTAL DES CONDAMNATIONS EN CAPITAL : [montant total accordé] $' avec intérêts statutaires conformément à l'article 83.32 L.a.a."
+            )
+        elif litigation_type == "civil":
             parties_ref = "l'Avocat de la Défense et de l'Avocat du Demandeur"
             verdict_ref = (
                 "structuré selon la rigueur d'un jugement civil québécois : (1) Recevabilité, prescription (art. 2925 C.c.Q.) et cadre procédural (C.p.c.), "
@@ -125,6 +171,7 @@ Contexte de l'affaire:
 Règles absolues d'immersion :
 1. Tu es dans un vrai tribunal (double numérique de la réalité). Ne fais JAMAIS référence à des termes techniques comme "dataset", "GraphRAG", "graphe", "système", "modèle", "algorithme", "intelligence artificielle" ou "hallucination".
 2. Fais référence uniquement à des notions réelles : "le dossier", "les pièces de preuve", "la preuve déposée", "les faits admis au dossier", "la jurisprudence", "la loi".
+3. INTERDICTION ABSOLUE D'ESPACES RÉSERVÉS (PLACEHOLDERS) : N'écris JAMAIS de texte entre crochets du type "[Date du jugement]", "[Signature du Juge]", "[Lieu]" ou "[Nom]". N'ajoute pas de bloc de signature entre crochets à la fin du jugement.
 
 Tu dois écouter le débat, puis rendre un délibéré clair et motivé, {verdict_ref}.
 """
@@ -158,9 +205,9 @@ Règles absolues d'immersion et de vocabulaire :
     @staticmethod
     def get_judge_personalities():
         return [
-            "Formaliste strict (applique la loi à la lettre sans pitié).",
-            "Sensible à l'équité (prend en compte les circonstances atténuantes et le contexte social).",
-            "Conservateur (favorise souvent l'accusation et l'ordre public).",
-            "Progressiste (favorise la réhabilitation et est sceptique envers les mesures punitives sévères).",
+            "Formaliste strict (applique la loi et les critères d'objectivité de la preuve à la lettre).",
+            "Sensible à l'équité (prend en compte le contexte fonctionnel, social et la vulnérabilité de la partie lésée).",
+            "Analytique et rigoureux sur le quantum (scrute l'état préexistant, la causalité poste par poste et écarte toute réclamation non prouvée).",
+            "Progressiste (favorise l'interprétation large et réparatrice des lois sociales et contractuelles).",
             "Imprévisible (change d'avis rapidement, se concentre sur les détails techniques mineurs)."
         ]

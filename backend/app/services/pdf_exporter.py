@@ -182,7 +182,9 @@ class SimulationPDFExporter:
             # Remplacer les ligatures hors ISO-8859-1 (qui deviennent '·' en police Helvetica de base)
             s = s.replace('œ', 'oe').replace('Œ', 'OE').replace('\u2019', "'").replace('\u2018', "'").replace('\u2013', '-').replace('\u2014', '-')
             # 1. Supprimer les placeholders non résolus
-            s = re.sub(r'\[À insérer[^\]]*\]', '', s, flags=re.IGNORECASE)
+            s = re.sub(r'\[(?:À insérer|Date|Signature|Lieu|Nom)[^\]]*\]', '', s, flags=re.IGNORECASE)
+            s = re.sub(r'Prononcé\s+à\s+[^\n.]*,\s+ce\s*\.?', '', s, flags=re.IGNORECASE)
+            s = re.sub(r'\bRLRQ\s+c\.\s*A-(?!\d)', 'RLRQ c. A-25', s)
             # 2. Nettoyer les séquences LaTeX / Markdown autour du symbole $
             s = re.sub(r'\\+\$', '$', s)
             s = re.sub(r'\$\s*\\mathfrak\{[^}]*\}\s*\$', '$', s)
@@ -327,10 +329,25 @@ class SimulationPDFExporter:
                 # Dessiner le fond du tableau cognitif
                 page.draw_rect(fitz.Rect(margin_left, y, margin_right, y + card_height), color=(0.8, 0.8, 0.8), fill=(0.95, 0.96, 0.98), width=0.5)
                 
+                # Calculer l'entropie réelle de Shannon si la valeur sauvegardée est le fallback statique 0.50 ou 0.0
+                ent_val = float(rec.get('entropy', 0.0) or 0.0)
+                if (ent_val == 0.0 or abs(ent_val - 0.5) < 1e-4) and agents_data:
+                    import math
+                    j_rec = agents_data.get("0") or next((v for v in agents_data.values() if "juge" in str(v.get("name", "")).lower()), {})
+                    p_rec = agents_data.get("1", {})
+                    d_rec = agents_data.get("2", {})
+                    if j_rec and "belief_coupable" in j_rec:
+                        p_c = float(j_rec.get("belief_coupable", 0.5))
+                        p_i = max(0.0, 1.0 - p_c)
+                        h_j = -sum(pv * math.log2(pv) for pv in (p_c, p_i) if pv > 0.001)
+                        c_fac = abs(float(p_rec.get("offensive_vs_negociation", 0.5)) * float(d_rec.get("offensive_vs_negociation", 0.5))) * 0.1
+                        ent_val = round(max(0.0, h_j + c_fac), 2)
+
                 # Titre de la carte
-                page.insert_text((margin_left + 15, y + 12), f"TABLEAU DE BORD COGNITIF PIE (Entropie système : {rec.get('entropy', 0.0):.2f})", fontsize=7.5, color=(0.4, 0.4, 0.4), fontname="helvetica-bold")
+                page.insert_text((margin_left + 15, y + 12), f"TABLEAU DE BORD COGNITIF PIE (Entropie système : {ent_val:.2f})", fontsize=7.5, color=(0.4, 0.4, 0.4), fontname="helvetica-bold")
                 
                 ya = y + 25
+                belief_label = "Croyance Culpabilité" if litigation_type == "criminal" else "Croyance Bien-fondé"
                 for agent_key, a_data in agents_data.items():
                     a_name = a_data.get("name", f"Agent {agent_key}")
                     a_pers = a_data.get("personality", "N/A")
@@ -349,7 +366,7 @@ class SimulationPDFExporter:
                         
                         t_str = f"Procédure/Équité: {t_pe:.2f}  |  Offensif/Négociation: {t_on:.2f}  |  Prudence/Rapidité: {t_pr:.2f}"
                         if t_bc is not None:
-                            t_str += f"  |  Croyance Culpabilité: {t_bc*100:.0f}%"
+                            t_str += f"  |  {belief_label}: {t_bc*100:.0f}%"
                             
                         page.insert_text((margin_left + 25, ya + 20), t_str, fontsize=7.5, color=(0.3, 0.3, 0.3), fontname="helvetica")
                         

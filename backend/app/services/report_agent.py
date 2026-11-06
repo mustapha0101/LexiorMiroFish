@@ -1016,7 +1016,11 @@ class ReportAgent:
                                 extract_collegiate_quantums,
                                 extract_max_claim_amount,
                             )
+                            from ..models.legal_agents import LegalAgents
                             res_data = normalize_legal_results_verdicts(json.load(f))
+                            is_admin_taq = LegalAgents.is_administrative_tribunal(
+                                (self.simulation_requirement or "") + " " + (res_data.get("context") or "")
+                            )
                             win_rate = res_data.get("win_rate", 50.0)
                             iterations = res_data.get("iterations", 50)
                             defense_wins = res_data.get("defense_wins", 25)
@@ -1054,9 +1058,13 @@ class ReportAgent:
                                 elif col_qs and len(col_qs) >= 2:
                                     col_str = " | ".join(f"Juge {ji+1}: {jq:,.2f} $" for ji, jq in enumerate(col_qs))
                                     min_pos_col = min([jq for jq in col_qs if jq > 0], default=0.0)
+                                    sorted_c = sorted(col_qs)
+                                    maj_col = sorted_c[len(sorted_c) // 2]
                                     outcome_label = (
                                         f"Décision Collégiale Partagée ({col_str}) — "
-                                        f"Moyenne Collégiale E[Q] = {q_val:,.2f} $ | Puits de Potentiel (Juge Conservateur/Analytique) = {min_pos_col:,.2f} $"
+                                        f"Dispositif Majoritaire Exécutoire (2/3) = {maj_col:,.2f} $ | "
+                                        f"Espérance Actuarielle E[Q] = {q_val:,.2f} $ | "
+                                        f"Puits de Potentiel = {min_pos_col:,.2f} $"
                                     )
                                     partial_defense_success_rounds += 1
                                 elif max_claim > 0 and q_val < max_claim * 0.96:
@@ -1081,21 +1089,26 @@ class ReportAgent:
                             
                             # Si estimated_cost dans JSON est 0.0 (coût LLM nul), calculer le Bilan Actuariel v2 complet !
                             if (not estimated_cost or estimated_cost < 10.0) and quantums:
+                                maj_exec_q = None
                                 if all_collegiate_quantums:
                                     max_q = max(all_collegiate_quantums)
                                     pos_col = [jq for jq in all_collegiate_quantums if jq > 0]
                                     min_q = min(pos_col) if pos_col else 0.0
                                     avg_q = round(sum(all_collegiate_quantums) / len(all_collegiate_quantums), 2)
+                                    first_col = (details[0].get("collegiate_quantums") if details else None) or all_collegiate_quantums[:3]
+                                    sorted_first = sorted(first_col)
+                                    maj_exec_q = sorted_first[len(sorted_first) // 2] if sorted_first else min_q
                                 else:
                                     max_q = max(q for _, q in quantums)
                                     min_q = min(q for _, q in quantums)
                                     avg_q = round(sum(q for _, q in quantums) / len(quantums), 2)
                                 ref_ceiling = max_claim if max_claim >= max_q else max_q
-                                # Majoration légale québécoise (Intérêts au taux légal 5% + Indemnité additionnelle art. 1619 C.c.Q. ~3.5% = +8.5%)
-                                legal_interest_markup = round(avg_q * 0.085, 2)
+                                # Majoration légale québécoise (Art. 83.32 L.a.a. au TAQ ou Art. 1618-1619 C.c.Q. en civil)
+                                interest_rate = 0.065 if is_admin_taq else 0.085
+                                legal_interest_markup = round(avg_q * interest_rate, 2)
                                 total_actuarial_exposure = round(avg_q + legal_interest_markup, 2)
-                                cra_settlement_floor = round(min_q * 0.95, 2)
                                 cra_settlement_target = round(avg_q * 0.92, 2)
+                                cra_settlement_floor = round(min(min_q, cra_settlement_target * 0.85), 2) if min_q >= cra_settlement_target else round(min_q, 2)
                                 estimated_cost = ref_ceiling
                                 traj_str = " -> ".join(f"R{r}: {q:,.2f} $" for r, q in quantums[:8])
                                 drop_amt = max(0.0, ref_ceiling - min_q)
@@ -1103,22 +1116,33 @@ class ReportAgent:
                                 col_breakdown_line = ""
                                 if all_collegiate_quantums and details:
                                     first_col = details[0].get("collegiate_quantums") or all_collegiate_quantums[:3]
+                                    maj_saved = max(0.0, ref_ceiling - (maj_exec_q or 0.0))
+                                    maj_saved_pct = (maj_saved / ref_ceiling) * 100.0 if ref_ceiling > 0 else 0.0
                                     col_breakdown_line = (
                                         f"- Ventilation Collégiale par Archétype de Juge : "
                                         + " | ".join(f"Juge {ji+1}: {jq:,.2f} $" for ji, jq in enumerate(first_col))
-                                        + "\n"
+                                        + f"\n- Dispositif Majoritaire Exécutoire (Règle de la majorité 2/3, art. 467 C.p.c. / L.J.A.) : {maj_exec_q:,.2f} $ "
+                                        + f"(2 juges sur 3 rejettent {maj_saved:,.2f} $ des réclamations, soit {maj_saved_pct:.1f}% d'économie immédiate pour la Défense !)\n"
                                     )
+                                if is_admin_taq:
+                                    puits_law_label = "art. 2, 14, 49, 73 et 83.2 L.a.a. — État dégénératif préexistant et fin d'IRR"
+                                    interest_law_label = "Intérêts statutaires prévus à l'art. 83.32 L.a.a. estimés à +6,5 %"
+                                    settlement_forum_label = "Séance de conciliation devant le TAQ (art. 119 à 124 L.J.A.)"
+                                else:
+                                    puits_law_label = "art. 1607/1611/2803 C.c.Q. et art. 51 C.p.c."
+                                    interest_law_label = "Intérêts légaux art. 1618 C.c.Q. + Indemnité additionnelle art. 1619 C.c.Q. estimés à +8,5 %"
+                                    settlement_forum_label = "CRA (Conférence de règlement à l'amiable, art. 161 C.p.c.)"
                                 actuarial_header = (
-                                    "=== BILAN ACTUARIEL & FINANCIER VÉRIFIÉ (MOTEUR PIE v2 — RESPECT DE L'ART. 10 C.P.C. ULTRA PETITA) ===\n"
-                                    f"- Plafond de la Demande Principale Réclamée (Art. 10 C.p.c.) : {ref_ceiling:,.2f} $\n"
+                                    "=== BILAN ACTUARIEL & FINANCIER VÉRIFIÉ (MOTEUR PIE v2 — RESPECT DU PLAFOND ULTRA PETITA) ===\n"
+                                    f"- Plafond de la Demande Principale Réclamée : {ref_ceiling:,.2f} $\n"
                                     f"{col_breakdown_line}"
                                     f"- Trajectoire de l'Espérance Collégiale par Round : {traj_str}\n"
                                     f"- Quantum Maximal Accordé au Dispositif : {max_q:,.2f} $\n"
-                                    f"- Puits de Potentiel (Quantum Minimal après réduction art. 1607/1611/2803 C.c.Q. et art. 51 C.p.c.) : {min_q:,.2f} $ (Économie Défense : -{drop_amt:,.2f} $, soit -{drop_pct:.1f}% d'atténuation du risque)\n"
-                                    f"- Espérance Mathématique en Capital E[Q] : {avg_q:,.2f} $\n"
-                                    f"- Majoration Légale Québécoise (Intérêts légaux art. 1618 C.c.Q. + Indemnité additionnelle art. 1619 C.c.Q. estimés à +8,5 %) : +{legal_interest_markup:,.2f} $\n"
-                                    f"- Exposition Actuarielle Totale Estimée (Capital + Art. 1619 C.c.Q.) : {total_actuarial_exposure:,.2f} $\n"
-                                    f"- Cible de Règlement Optimal en CRA (Conférence de règlement à l'amiable, art. 161 C.p.c.) : entre {cra_settlement_floor:,.2f} $ (Plancher) et {cra_settlement_target:,.2f} $ (Cible d'arbitrage).\n\n"
+                                    f"- Puits de Potentiel (Quantum Minimal après réduction sous {puits_law_label}) : {min_q:,.2f} $ (Économie Défense : -{drop_amt:,.2f} $, soit -{drop_pct:.1f}% d'atténuation du risque)\n"
+                                    f"- Espérance Mathématique Actuarielle en Capital E[Q] : {avg_q:,.2f} $\n"
+                                    f"- Majoration Légale Québécoise ({interest_law_label}) : +{legal_interest_markup:,.2f} $\n"
+                                    f"- Exposition Actuarielle Totale Estimée (Capital + Intérêts) : {total_actuarial_exposure:,.2f} $\n"
+                                    f"- Fourchette de Règlement Optimal en {settlement_forum_label} : entre {cra_settlement_floor:,.2f} $ (Plancher exécutoire) et {cra_settlement_target:,.2f} $ (Cible maximale d'arbitrage).\n\n"
                                 )
                                 sample_verdicts = actuarial_header + sample_verdicts
                             

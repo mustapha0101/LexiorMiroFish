@@ -1241,11 +1241,43 @@ Retourne uniquement un JSON avec cette structure :
                             mapped_names.add(accused_name)
 
                         extra_nodes = []
-                        non_actor_labels = {"fact", "jurisprudence", "evidence", "loi", "law", "concept", "court", "municipality", "document", "grainerealite"}
+                        non_actor_labels = {
+                            "fact", "jurisprudence", "evidence", "loi", "law", "concept",
+                            "court", "judicialbody", "municipality", "document", "grainerealite"
+                        }
+                        role_labels_fr = {
+                            "governmentagency": "Organisme public",
+                            "judicialbody": "Tribunal administratif",
+                            "medicalexpert": "Expert médical",
+                            "claimant": "Partie requérante",
+                            "organization": "Organisation",
+                            "company": "Entreprise",
+                            "lawenforcement": "Corps policier",
+                            "policeofficer": "Agent de la paix",
+                            "person": "Témoin / Partie",
+                            "witness": "Témoin",
+                            "lawyer": "Avocat",
+                            "lawfirm": "Cabinet d'avocats",
+                            "auditingfirm": "Firme d'expertise",
+                            "accusedperson": "Prévenu",
+                            "prosecutor": "Procureur",
+                            "judge": "Juge"
+                        }
+                        mapped_names_lower = {m.lower() for m in mapped_names if m}
                         for n in graph_nodes:
                             if n["uuid"] in mapped_uuids or n["name"] in mapped_names:
                                 continue
+                            n_name_low = (n["name"] or "").lower().strip()
+                            n_sum_low = (n.get("summary") or "").lower()
                             if n["label"].lower() in non_actor_labels:
+                                continue
+                            # Écarter les tribunaux ou les entités citées uniquement comme jurisprudence / précédent
+                            if any(k in n_name_low for k in ["tribunal administratif", "cour du québec", "cour supérieure", "cour d'appel"]):
+                                continue
+                            if any(k in n_sum_low for k in ["legal precedent", "jurisprudence", "précédent jurisprudentiel", "arrêt cité"]):
+                                continue
+                            # Écarter les doublons avec acronyme des parties principales (ex: SAAQ vs Société de l'assurance automobile du Québec)
+                            if any(n_name_low in m_low or m_low in n_name_low for m_low in mapped_names_lower if len(m_low) >= 4):
                                 continue
                             extra_nodes.append(n)
 
@@ -1255,7 +1287,7 @@ Retourne uniquement un JSON avec cette structure :
                                 extra_nodes_for_prompt = [
                                     {
                                         "name": n["name"],
-                                        "type": n["label"],
+                                        "type": role_labels_fr.get(n["label"].lower(), n["label"]),
                                         "summary": n["summary"][:200] + "..." if len(n["summary"]) > 200 else n["summary"]
                                     }
                                     for n in extra_nodes
@@ -1263,7 +1295,7 @@ Retourne uniquement un JSON avec cette structure :
                                 
                                 extra_prompt = f"""Tu es un assistant juridique expert en simulation de procès devant les tribunaux québécois.
 Génère un profil d'agent de simulation sous format JSON pour chacun des acteurs secondaires suivants issus du graphe de connaissances de l'affaire.
-Chaque acteur doit être préparé pour participer au procès en cours.
+Chaque acteur doit être préparé pour participer au procès en cours (rédige tout exclusivement en français).
 
 Description de l'affaire :
 {simulation_requirement}
@@ -1276,7 +1308,7 @@ Génère UNIQUEMENT un tableau JSON d'objets (sans texte explicatif ni balises d
   {{
     "name": "Nom de l'acteur (doit être exactement le nom fourni)",
     "username": "Nom d'utilisateur court sans espace ni accent (ex: temoin_ledoux)",
-    "profession": "Sa profession ou son rôle dans l'affaire en un ou deux mots (ex: Témoin, Policier, Expert, etc.)",
+    "profession": "Sa profession ou son rôle dans l'affaire en français (ex: Témoin, Expert médical, Organisme public, etc.)",
     "bio": "Courte biographie de 1-2 phrases en français décrivant qui il est et son lien avec l'affaire.",
     "persona": "Instructions de comportement détaillées pour cet agent dans le procès en français, décrivant sa personnalité, sa connaissance des faits (basée sur son résumé) et sa position dans l'audience.",
     "age": un entier réaliste entre 25 et 65,
@@ -1290,11 +1322,11 @@ Génère UNIQUEMENT un tableau JSON d'objets (sans texte explicatif ni balises d
                                 response = client.chat.completions.create(
                                     model=model_name,
                                     messages=[
-                                        {"role": "system", "content": "Tu es un assistant juridique qui génère des profils d'acteurs de procès en format JSON."},
+                                        {"role": "system", "content": "Tu es un assistant juridique qui génère des profils d'acteurs de procès en format JSON 100 % en français."},
                                         {"role": "user", "content": extra_prompt}
                                     ],
                                     temperature=0.2,
-                                    max_tokens=2000
+                                    max_tokens=4000
                                 )
                                 raw_extra_res = response.choices[0].message.content.strip()
                                 if raw_extra_res.startswith("```json"):
@@ -1309,44 +1341,54 @@ Génère UNIQUEMENT un tableau JSON d'objets (sans texte explicatif ni balises d
                                     for gen in generated_list:
                                         node = next((n for n in extra_nodes if n["name"] == gen.get("name")), None)
                                         if node:
+                                            lbl_fr = role_labels_fr.get(node["label"].lower(), node["label"])
                                             extra_profiles.append({
                                                 "username": gen.get("username", "user_" + node["name"].lower().replace(" ", "_")),
                                                 "name": gen.get("name", node["name"]),
-                                                "bio": gen.get("bio", f"Acteur secondaire dans le procès. Identité: {node['name']}."),
-                                                "persona": gen.get("persona", f"Acteur impliqué en tant que {node['label']}. Résumé: {node['summary']}."),
+                                                "bio": gen.get("bio", f"Acteur secondaire dans le procès. Identité : {node['name']}."),
+                                                "persona": gen.get("persona", f"Intervient au dossier à titre de {lbl_fr}. Éléments factuels : {node['summary']}."),
                                                 "karma": 1000,
                                                 "created_at": datetime.now().strftime("%Y-%m-%d"),
                                                 "age": gen.get("age", 40),
                                                 "gender": gen.get("gender", "male"),
                                                 "mbti": gen.get("mbti", "ISTJ"),
                                                 "country": gen.get("country", "Canada"),
-                                                "profession": gen.get("profession", node["label"]),
-                                                "interested_topics": gen.get("interested_topics", [node["label"], "Procès"])
+                                                "profession": role_labels_fr.get(str(gen.get("profession", "")).lower(), gen.get("profession", lbl_fr)),
+                                                "interested_topics": gen.get("interested_topics", [lbl_fr, "Procès"])
                                             })
                             except Exception as e:
                                 logger.warning(f"Erreur lors de la génération LLM des profils supplémentaires: {e}. Utilisation du fallback.")
                                 
-                        # Fallback pour tous les nœuds non générés
+                        # Fallback francisé pour tous les nœuds non générés
                         for node in extra_nodes:
                             if not any(ep["name"] == node["name"] for ep in extra_profiles):
                                 label = node["label"]
+                                label_fr = role_labels_fr.get(label.lower(), label)
                                 name = node["name"]
-                                summary = node["summary"]
+                                summary = node["summary"] or ""
+                                # Traduction rapide des résumés anglais résiduels courants
+                                summary_fr = (
+                                    summary.replace("Physiatrist providing a counter-expertise report for", "Médecin physiatre ayant produit un rapport de contre-expertise médicale pour")
+                                    .replace("Orthopedist and evaluating physician for the", "Chirurgien orthopédiste et médecin évaluateur mandaté par la")
+                                    .replace("Law enforcement agency that produced an accident report", "Service de police ayant rédigé le rapport d'accident")
+                                    .replace("whose records were cited", "dont le relevé d'antécédents professionnels est versé en preuve")
+                                    .replace("Government agency providing automobile insurance, acting as the defendant (Partie Intimée) in this case.", "Organisme public d'assurance automobile agissant à titre de partie intimée au dossier.")
+                                )
                                 username = label.lower() + "_" + name.lower().replace(" ", "_").replace("'", "").replace('"', '')
                                 username = ''.join(c for c in username if c.isalnum() or c == '_')[:25]
                                 extra_profiles.append({
                                     "username": username,
                                     "name": name,
-                                    "bio": f"Acteur impliqué dans le dossier sous le type {label}. Nom : {name}.",
-                                    "persona": f"Participe au procès en tant que {label}. S'appuie sur les faits suivants : {summary if summary else 'Aucun détail supplémentaire disponible.'}",
+                                    "bio": f"Intervenant au dossier ({label_fr}). Nom : {name}.",
+                                    "persona": f"Intervient au procès à titre de {label_fr}. S'appuie sur les faits suivants : {summary_fr if summary_fr else 'Pièces versées au dossier.'}",
                                     "karma": 1000,
                                     "created_at": datetime.now().strftime("%Y-%m-%d"),
                                     "age": 40,
                                     "gender": "male",
                                     "mbti": "ISTJ",
                                     "country": "Canada",
-                                    "profession": label,
-                                    "interested_topics": [label, "Procès"]
+                                    "profession": label_fr,
+                                    "interested_topics": [label_fr, "Procès"]
                                 })
                         
                         # Assembler les user_id et ajouter à reddit_profiles
