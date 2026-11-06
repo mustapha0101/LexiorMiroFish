@@ -214,11 +214,19 @@ class JurisprudenceGrounding:
         cpc_nums = []
         special_statutes = []  # tuples (code, numero)
 
-        # 1. Extraire tous les articles explicitement mentionnés dans le dossier (en excluant ceux explicitement rattachés à CPC/LPC/LNT/CSR/LSAQ)
-        non_ccq_explicit = set(re.findall(
-            r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:du\s+|de\s+la\s+)?(?:C\.p\.c\.|CPC|L\.p\.c\.|LPC|L\.n\.t\.|LNT|C\.s\.r\.|CSR|L\.s\.a\.Q\.|LSAQ|L\.a\.t\.m\.p\.|LATMP)',
+        # 1. Extraire tous les articles explicitement mentionnés dans le dossier (en excluant ceux explicitement rattachés à LAA/CPC/LPC/LNT/CSR/LSAQ)
+        non_ccq_statute_tag = r'(?:C\.p\.c\.|CPC|L\.p\.c\.|LPC|L\.n\.t\.|LNT|C\.s\.r\.|CSR|L\.s\.a\.Q\.|LSAQ|L\.a\.t\.m\.p\.|LATMP|L\.a\.a\.|LAA|Loi\s+sur\s+l\'assurance\s+automobile)'
+        non_ccq_explicit = set()
+        for span_match in re.finditer(
+            r'(?:articles?|art\.?)\s*([\d\.,\s]+?(?:et\s+\d+(?:\.\d+)?)?)\s*(?:du\s+|de\s+la\s+)?' + non_ccq_statute_tag,
             context or "", re.IGNORECASE
-        ))
+        ):
+            for num_tok in re.findall(r'\d+(?:\.\d+)?', span_match.group(1)):
+                non_ccq_explicit.add(num_tok)
+        # Si c'est un dossier SAAQ / L.a.a., exclure d'office les numéros typiques de la L.a.a. (1, 2, 14, 45, 49, 73, 83.34, 83.57) du C.c.Q.
+        if any(k in ctx_lower for k in ["saaq", "l.a.a", "assurance automobile"]):
+            non_ccq_explicit.update(["1", "2", "14", "15", "29", "45", "49", "73", "83.34", "83.57"])
+
         for m in re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)', context or "", re.IGNORECASE):
             if m not in ccq_nums and m not in non_ccq_explicit:
                 ccq_nums.append(m)
@@ -241,28 +249,29 @@ class JurisprudenceGrounding:
                 if n not in ccq_nums:
                     ccq_nums.append(n)
 
-        # 2B. Lois statutaires spécialisées (LPC, LNT, LATMP, LSAQ, CSR, LOI25)
+        # 2B. Lois statutaires spécialisées (LAA/SAAQ en priorité, puis LPC, LNT, LATMP, LSAQ, CSR, LOI25)
+        is_saaq_case = any(k in ctx_lower for k in ["saaq", "assurance automobile", "l.a.a", "laa", "remplacement du revenu", "irr", "emploi convenable", "83.57", "83.34"])
+        if is_saaq_case:
+            for num in ["1", "2", "14", "45", "49", "73", "83.34", "83.57"]:
+                special_statutes.append(("LAA", num))
         if any(k in ctx_lower for k in ["consommateur", "commerçant", "l.p.c", "lpc", "représentation trompeuse", "272"]):
             for num in ["272", "253", "219", "228", "53", "37", "38"]:
                 special_statutes.append(("LPC", num))
-        if any(k in ctx_lower for k in ["salarié", "congédiement", "harcèlement", "l.n.t", "lnt", "employeur", "cnesst"]):
+        if not is_saaq_case and any(k in ctx_lower for k in ["salarié", "congédiement", "harcèlement", "l.n.t", "lnt", "cnesst"]):
             for num in ["81.18", "82", "122", "124"]:
                 special_statutes.append(("LNT", num))
-        if any(k in ctx_lower for k in ["lésion professionnelle", "accident du travail", "latmp", "l.a.t.m.p"]):
+        if not is_saaq_case and any(k in ctx_lower for k in ["lésion professionnelle", "accident du travail", "latmp", "l.a.t.m.p"]):
             for num in ["2", "28", "438"]:
                 special_statutes.append(("LATMP", num))
         if any(k in ctx_lower for k in ["actionnaire", "administrateur", "oppression", "l.s.a.q", "lsaq", "société par actions"]):
             for num in ["119", "450"]:
                 special_statutes.append(("LSAQ", num))
-        if any(k in ctx_lower for k in ["vitesse", "cinémomètre", "328", "sécurité routière", "c.s.r"]):
+        if not is_saaq_case and any(k in ctx_lower for k in ["vitesse", "cinémomètre", "328", "sécurité routière", "c.s.r"]):
             for num in ["328", "359"]:
                 special_statutes.append(("CSR", num))
         if any(k in ctx_lower for k in ["renseignement personnel", "confidentialité", "loi 25", "vie privée"]):
             for num in ["3.5", "17", "93.1"]:
                 special_statutes.append(("LOI25", num))
-        if any(k in ctx_lower for k in ["saaq", "assurance automobile", "l.a.a", "laa", "taq", "remplacement du revenu", "irr", "emploi convenable", "séquelle", "83.57"]):
-            for num in ["1", "2", "14", "45", "49", "73", "83.34", "83.57"]:
-                special_statutes.append(("LAA", num))
 
         # Socle transversal : Responsabilité, Causalité, Quantum, Intérêts légaux, Preuve et Prescription
         for core_ccq in ["1457", "1607", "1611", "1618", "1619", "2803", "2804", "2925"]:
@@ -292,7 +301,7 @@ class JurisprudenceGrounding:
                 if len(snippet) > 260:
                     snippet = snippet[:260] + "..."
                 lines.append(f"- [Art. {num} C.p.c.] : {snippet}")
-        for code_lbl, num in special_statutes[:6]:
+        for code_lbl, num in special_statutes[:8]:
             row = self.get_code_article_local(code_lbl, num)
             if row:
                 snippet = row["texte"].replace("\n", " ").strip()
@@ -382,20 +391,29 @@ class JurisprudenceGrounding:
         has_ccq_mention = any(term in arg_lower for term in ["ccq", "c.c.q.", "c.c.q", "code civil", "québec"])
         is_ccq = has_ccq_mention or (litigation_type == "civil" and not is_cpc and any(t in arg_lower for t in ["article", "art."]))
 
-        # Détecter les articles explicitement rattachés au C.p.c.
+        # Détecter les articles explicitement rattachés au C.p.c., L.a.a., L.p.c., L.n.t., C.s.r., L.s.a.Q.
         cpc_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:du\s+)?(?:C\.p\.c\.|CPC|Code de procédure civile)', agent_argument, re.IGNORECASE)
+        laa_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:L\.a\.a\.|LAA|Loi sur l\'assurance automobile)', agent_argument, re.IGNORECASE)
+        lpc_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:L\.p\.c\.|LPC|Loi sur la protection du consommateur)', agent_argument, re.IGNORECASE)
+        lnt_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:L\.n\.t\.|LNT|Loi sur les normes du travail)', agent_argument, re.IGNORECASE)
 
         art_matches = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)', agent_argument, re.IGNORECASE)
-        enum_matches = re.findall(r'(?:articles?|art\.?)\s*((?:\d+\s*(?:,\s*|\s+et\s+|\s+ou\s+))+\d+)', agent_argument, re.IGNORECASE)
+        enum_matches = re.findall(r'(?:articles?|art\.?)\s*((?:\d+(?:\.\d+)?\s*(?:,\s*|\s+et\s+|\s+ou\s+))+\d+(?:\.\d+)?)', agent_argument, re.IGNORECASE)
         for em in enum_matches:
-            for num_str in re.findall(r'\d+', em):
+            for num_str in re.findall(r'\d+(?:\.\d+)?', em):
                 if num_str not in art_matches:
                     art_matches.append(num_str)
 
         ccq_art_nums = []
         cpc_art_nums = [str(n) for n in cpc_explicit]
+        laa_art_nums = [str(n) for n in laa_explicit]
+        if any(t in arg_lower for t in ["l.a.a", "laa", "saaq", "assurance automobile"]):
+            for cand in ["1", "2", "14", "45", "49", "73", "83.34", "83.57"]:
+                if cand in art_matches and cand not in laa_art_nums:
+                    laa_art_nums.append(cand)
+        non_ccq_set = set(cpc_art_nums + laa_art_nums + [str(n) for n in lpc_explicit] + [str(n) for n in lnt_explicit])
         for a_str in art_matches:
-            if a_str in cpc_art_nums:
+            if a_str in non_ccq_set:
                 continue
             if is_cpc and not any(t in arg_lower for t in ["c.c.q", "ccq", "code civil"]):
                 cpc_art_nums.append(a_str)
@@ -406,6 +424,27 @@ class JurisprudenceGrounding:
                         ccq_art_nums.append(n)
                 except ValueError:
                     pass
+
+        # 1AA. Vérification déterministe L.a.a. (SAAQ) / L.p.c. / L.n.t. via SQLite ccq_cpc.db
+        for stat_code, stat_name, stat_cite, stat_nums in [
+            ("LAA", "Loi sur l'assurance automobile", "L.a.a.", laa_art_nums),
+            ("LPC", "Loi sur la protection du consommateur", "L.p.c.", [str(n) for n in lpc_explicit]),
+            ("LNT", "Loi sur les normes du travail", "L.n.t.", [str(n) for n in lnt_explicit]),
+        ]:
+            for art_num_str in stat_nums[:5]:
+                local_stat = self.get_code_article_local(stat_code, str(art_num_str))
+                if local_stat:
+                    is_hallucination = False
+                    url = local_stat["url"]
+                    clean_snippet = local_stat["texte"].strip()
+                    if len(clean_snippet) > 260:
+                        clean_snippet = clean_snippet[:260] + "..."
+                    found_references.append({
+                        "law_name": f"{stat_name} - Article {art_num_str}",
+                        "citation": f"art. {art_num_str} {stat_cite}",
+                        "url": url,
+                        "summary": f"{clean_snippet}\nLien source pour validation : {url}"
+                    })
 
         # 1A. Vérification déterministe C.c.Q. (SQLite embarqué ccq_cpc.db en < 1ms, puis fallback MCP SSE)
         if is_ccq and ccq_art_nums:

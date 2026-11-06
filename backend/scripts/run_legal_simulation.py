@@ -48,16 +48,26 @@ def evaluate_verdict_is_defense_win(verdict_text: str, litigation_type: str = "c
     dispositif_match = _re_mod.search(r'(?:PAR\s+CES\s+MOTIFS|DISPOSITIF\s+FINAL|4\.\s*DISPOSITIF|\bDISPOSITIF\b)', verdict_upper)
     target_zone = verdict_upper[dispositif_match.start():] if dispositif_match else verdict_upper
 
-    # Retirer toute phrase ou clause portant sur la demande reconventionnelle
+    # Retirer toute phrase ou clause portant sur la demande reconventionnelle ou sur les seuls dépens/frais de justice
     cleaned_main = _re_mod.sub(r'[^.!?\n]*DEMANDE\s+RECONVENTIONNELLE[^.!?\n]*', '', target_zone)
+    cleaned_main = _re_mod.sub(r'[^.!?\n]*\bCONDAMNE\b[^.!?\n]*\bAUX\s+(?:DÉPENS|DEPENS|FRAIS\s+DE\s+JUSTICE)\b[^.!?\n]*', '', cleaned_main)
 
-    # Détecter l'accueil de la demande principale ou la condamnation des défendeurs
-    has_main_welcome = bool(_re_mod.search(r'\bACCUEILLE\b[^.!?\n]*(?:DEMANDE|ACTION|RECOURS|REQUÊTE)', cleaned_main))
-    has_main_reject = bool(_re_mod.search(r'\b(?:REJETTE|DÉBOUTE|DEBOUTE)\b[^.!?\n]*(?:DEMANDE\s+PRINCIPALE|DEMANDE\s+DES\s+DEMANDEURS|ACTION\s+PRINCIPALE|RECOURS\s+DES\s+DEMANDEURS)', cleaned_main))
-    if has_main_reject and not has_main_welcome:
+    # Si le dispositif mentionne explicitement un total des condamnations en capital de 0,00 $ ou accueille l'irrecevabilité de la défense -> Victoire Défense
+    if _re_mod.search(r'TOTAL(?:E)?\s+DES\s+CONDAMNATIONS[^$\n]{0,40}?\b0(?:[.,]00)?\s*\$', cleaned_main):
+        return True
+    if _re_mod.search(r'\bACCUEILLE\b[^.!?\n]*\bMOYEN\s+D[\'’]IRRECEVABILIT', cleaned_main) or _re_mod.search(r'\bD[ÉE]CLARE\b[^.!?\n]*\bIRRECEVABLE\b', cleaned_main):
         return True
 
+    # Détecter l'accueil de la demande principale ou la condamnation pécuniaire des défendeurs
+    cleaned_no_irrec = _re_mod.sub(r'[^.!?\n]*\bMOYEN\s+D[\'’]IRRECEVABILIT[^.!?\n]*', '', cleaned_main)
+    has_main_welcome = bool(_re_mod.search(r'\bACCUEILLE\b[^.!?\n]*(?:DEMANDE|ACTION|RECOURS|REQUÊTE)', cleaned_no_irrec))
     has_condemnation = bool(_re_mod.search(r'\bCONDAMNE(?:R|NT|S)?\b', cleaned_main))
+    has_main_reject = bool(_re_mod.search(
+        r'\b(?:REJETTE|DÉBOUTE|DEBOUTE)\b[^.!?\n]*(?:INTÉGRALEMENT\s+LA\s+DEMANDE|DEMANDE\s+PRINCIPALE|DEMANDE\s+DES\s+DEMANDEURS|ACTION\s+EN\s+RESPONSABILIT|ACTION\s+PRINCIPALE|RECOURS\s+DE\s+MONSIEUR|RECOURS\s+DE\s+MADAME|LES\s+R[ÉE]CLAMATIONS\s+DE)',
+        cleaned_main
+    ))
+    if has_main_reject and not has_main_welcome and not has_condemnation:
+        return True
     has_responsible = ("RESPONSABLE" in cleaned_main and not _re_mod.search(r'\bNON[- ]+RESPONSABLE\b', cleaned_main))
     has_guilty = ("COUPABLE" in cleaned_main and not _re_mod.search(r'\bNON[- ]+COUPABLE\b', cleaned_main))
 
@@ -92,7 +102,7 @@ def extract_max_claim_amount(context_text: str) -> float:
 
     # Retirer les mentions de demande reconventionnelle ou de prix de vente du Kit/contrat pour isoler la demande principale
     patterns = [
-        r'(?:demande\s+principale(?:\s+totale)?\s+de|réclame(?:nt)?\s+au\s+total|montant\s+total\s+de\s+la\s+demande\s+principale|condamner[^\n$]{0,90}?payer\s+la\s+somme\s+totale\s+de|total\s+réclamé\s*[:de]*)\s*(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2}))\s*\$',
+        r'(?:demande\s+principale(?:\s+totale)?\s+de|demande\s+totale\s*[:de]*|réclame(?:nt)?\s+au\s+total|réclamant\s+un\s+total\s+de|montant\s+total\s+de\s+la\s+demande\s+principale|condamner[^\n$]{0,90}?payer\s+la\s+somme\s+totale\s+de|total\s+réclamé\s*[:de]*)\s*(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2}))\s*\$',
         r'(?:somme\s+totale\s+réclamée\s+de|réclamation\s+principale\s+de)\s*(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2}))\s*\$',
     ]
     for pat in patterns:
@@ -597,13 +607,39 @@ class LegalSimulationRunner:
         logger.info(f"Démarrage des {self.iterations} simulations de Monte-Carlo juridiques...")
         results = []
         defense_wins = 0
-        
+        base_context = self.context
+        chamber_archetypes = [
+            "Formaliste strict (exige la preuve médicale et écrite rigoureuse sous l'art. 2803 C.c.Q. et applique la loi à la lettre).",
+            "Imprévisible et analytique du quantum (scrute le lien de causalité art. 1607-1611 C.c.Q., l'état préexistant et la ventilation des chefs de dommages).",
+            "Sensible à l'équité contractuelle et sociale (protège la partie vulnérable mais écarte les demandes accessoires ou abusives non prouvées)."
+        ]
+
         for i in range(1, self.iterations + 1):
+            # Si juge unique non fixé, faire tourner l'archétype ou maintenir la dialectique inter-rounds
+            if self.judge_type != "collegiate" and not self.selected_judge_personality:
+                self.judge_personality = chamber_archetypes[(i - 1) % len(chamber_archetypes)]
+
+            if results:
+                prev_summary = "\n\n=== VERDICTS PRÉCÉDENTS ET HISTORIQUE DU PROCÈS ===\n"
+                for r_res in results:
+                    prev_summary += (
+                        f"[ROUND {r_res['iteration']} | {r_res.get('judge_personality', '')}] "
+                        f"Quantum accordé : {r_res.get('awarded_quantum', 0.0):,.2f} $ | "
+                        f"Analyse Greffier : {r_res.get('clerk_analysis', '')[:320]}...\n"
+                    )
+                prev_summary += (
+                    "\nDirectives dialectiques (Moteur PIE) :\n"
+                    "1. L'Avocat de la Défense doit cibler chirurgicalement les chefs de réclamation fragiles (ex: état dégénératif préexistant, capacité d'exercer un emploi convenable art. 45/49 L.a.a., classe de séquelles art. 73 L.a.a., frais non prescrits ou art. 51 C.p.c.) pour réduire le quantum accordé au round précédent.\n"
+                    "2. Le Juge réévalue le quantum financier si la Défense démontre une faille sur le lien de causalité (art. 1607, 1611 C.c.Q.) ou le fardeau de preuve (art. 2803 C.c.Q.).\n"
+                )
+                self.context = base_context + prev_summary
+
             res = self.run_single_simulation(i)
             results.append(res)
             if res["is_defense_win"]:
                 defense_wins += 1
-                
+
+        self.context = base_context
         win_rate = (defense_wins / self.iterations) * 100
         logger.info(f"FIN DE LA SIMULATION : La défense a gagné {defense_wins} fois sur {self.iterations} ({win_rate}% de succès).")
         
