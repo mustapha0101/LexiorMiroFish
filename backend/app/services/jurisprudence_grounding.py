@@ -185,6 +185,18 @@ class JurisprudenceGrounding:
                     match = True
                 elif cat == "saaq_irr_sequelles_taq" and any(k in ctx_lower for k in ["saaq", "assurance automobile", "l.a.a", "laa", "taq", "irr", "emploi convenable", "séquelle", "83.57"]):
                     match = True
+                elif cat == "cnesst_latmp_lesion_professionnelle" and any(k in ctx_lower for k in ["lésion professionnelle", "accident du travail", "latmp", "l.a.t.m.p", "cnesst", "329", "326", "tat"]):
+                    match = True
+                elif cat == "harcelement_psychologique_lnt" and any(k in ctx_lower for k in ["harcèlement", "81.18", "81.19", "123.15", "conduite vexatoire"]):
+                    match = True
+                elif cat == "bail_logement_tal" and any(k in ctx_lower for k in ["bail", "locataire", "locateur", "logement", "loyer", "tal", "tribunal administratif du logement", "1854", "1863"]):
+                    match = True
+                elif cat == "fiscalite_cotisation_revenu_quebec" and any(k in ctx_lower for k in ["cotisation", "revenu québec", "tvq", "l.a.f", "laf", "l.t.v.q", "ltvq", "pénalité", "59.3", "1049"]):
+                    match = True
+                elif cat == "oppression_actionnaires_lsaq" and any(k in ctx_lower for k in ["actionnaire", "oppression", "450", "l.s.a.q", "lsaq", "société par actions", "administrateur"]):
+                    match = True
+                elif cat == "atteinte_reputation_vie_privee_charte_loi25" and any(k in ctx_lower for k in ["diffamation", "réputation", "vie privée", "loi 25", "renseignement personnel", "incident de confidentialité", "charte"]):
+                    match = True
                 if match:
                     results.append({
                         "category": r[0],
@@ -249,29 +261,47 @@ class JurisprudenceGrounding:
                 if n not in ccq_nums:
                     ccq_nums.append(n)
 
-        # 2B. Lois statutaires spécialisées (LAA/SAAQ en priorité, puis LPC, LNT, LATMP, LSAQ, CSR, LOI25)
+        # 2B. Lois statutaires spécialisées (LAA/LJA/SAAQ, LATMP/CNESST, LNT/TAT, LPC, LAF/LTVQ/LI, LSAQ, CHARTE/LOI25, LTAL, CSR, CCR)
         is_saaq_case = any(k in ctx_lower for k in ["saaq", "assurance automobile", "l.a.a", "laa", "remplacement du revenu", "irr", "emploi convenable", "83.57", "83.34"])
         if is_saaq_case:
-            for num in ["1", "2", "14", "45", "49", "73", "83.34", "83.57"]:
+            for num in ["1", "2", "5", "14", "45", "49", "73", "83.2", "83.32", "83.34", "83.57"]:
                 special_statutes.append(("LAA", num))
-        if any(k in ctx_lower for k in ["consommateur", "commerçant", "l.p.c", "lpc", "représentation trompeuse", "272"]):
-            for num in ["272", "253", "219", "228", "53", "37", "38"]:
+            for num in ["15", "119", "120", "142"]:
+                special_statutes.append(("LJA", num))
+        if any(k in ctx_lower for k in ["consommateur", "commerçant", "l.p.c", "lpc", "représentation trompeuse", "272", "garantie légale"]):
+            for num in ["8", "37", "38", "53", "219", "228", "253", "272"]:
                 special_statutes.append(("LPC", num))
-        if not is_saaq_case and any(k in ctx_lower for k in ["salarié", "congédiement", "harcèlement", "l.n.t", "lnt", "cnesst"]):
-            for num in ["81.18", "82", "122", "124"]:
+        if not is_saaq_case and any(k in ctx_lower for k in ["salarié", "congédiement", "harcèlement", "l.n.t", "lnt", "normes du travail", "81.18", "124"]):
+            for num in ["81.18", "81.19", "82", "122", "123.15", "124", "128"]:
                 special_statutes.append(("LNT", num))
-        if not is_saaq_case and any(k in ctx_lower for k in ["lésion professionnelle", "accident du travail", "latmp", "l.a.t.m.p"]):
-            for num in ["2", "28", "438"]:
+        if not is_saaq_case and any(k in ctx_lower for k in ["lésion professionnelle", "accident du travail", "latmp", "l.a.t.m.p", "cnesst", "329", "326", "bem"]):
+            for num in ["2", "7", "27", "28", "44", "49", "83", "212", "224.1", "326", "329", "438"]:
                 special_statutes.append(("LATMP", num))
-        if any(k in ctx_lower for k in ["actionnaire", "administrateur", "oppression", "l.s.a.q", "lsaq", "société par actions"]):
-            for num in ["119", "450"]:
+        if any(k in ctx_lower for k in ["cotisation", "revenu québec", "tvq", "l.a.f", "laf", "l.t.v.q", "ltvq", "impôt", "rti"]):
+            for num in ["14", "21", "24.0.1", "28", "59", "59.2", "59.3", "93.1.1"]:
+                special_statutes.append(("LAF", num))
+            for num in ["16", "206.1", "323.1"]:
+                special_statutes.append(("LTVQ", num))
+            for num in ["1010", "1049"]:
+                special_statutes.append(("LI", num))
+        if any(k in ctx_lower for k in ["actionnaire", "administrateur", "oppression", "l.s.a.q", "lsaq", "société par actions", "450"]):
+            for num in ["112", "119", "154", "214", "450", "451"]:
                 special_statutes.append(("LSAQ", num))
+        if any(k in ctx_lower for k in ["bail", "locataire", "locateur", "logement", "tal", "tribunal administratif du logement"]):
+            for num in ["28", "56", "63", "91"]:
+                special_statutes.append(("LTAL", num))
         if not is_saaq_case and any(k in ctx_lower for k in ["vitesse", "cinémomètre", "328", "sécurité routière", "c.s.r"]):
             for num in ["328", "359"]:
                 special_statutes.append(("CSR", num))
-        if any(k in ctx_lower for k in ["renseignement personnel", "confidentialité", "loi 25", "vie privée"]):
-            for num in ["3.5", "17", "93.1"]:
+        if any(k in ctx_lower for k in ["renseignement personnel", "confidentialité", "loi 25", "vie privée", "cai"]):
+            for num in ["3.1", "3.5", "10", "14", "17", "93.1"]:
                 special_statutes.append(("LOI25", num))
+        if any(k in ctx_lower for k in ["charte", "dignité", "réputation", "diffamation", "discrimination", "atteinte illicite"]):
+            for num in ["1", "4", "5", "10", "46", "49"]:
+                special_statutes.append(("CHARTE", num))
+        if litigation_type == "criminal" or any(k in ctx_lower for k in ["code criminel", "c.cr.", "voies de fait", "menaces", "vol", "fraude", "harcèlement criminel", "dpcp"]):
+            for num in ["21", "34", "264", "264.1", "265", "266", "267", "322", "334", "348", "380", "718", "718.1"]:
+                special_statutes.append(("CCR", num))
 
         # Socle transversal : Responsabilité, Causalité, Quantum, Intérêts légaux, Preuve et Prescription
         for core_ccq in ["1457", "1607", "1611", "1618", "1619", "2803", "2804", "2925"]:
@@ -301,7 +331,7 @@ class JurisprudenceGrounding:
                 if len(snippet) > 260:
                     snippet = snippet[:260] + "..."
                 lines.append(f"- [Art. {num} C.p.c.] : {snippet}")
-        for code_lbl, num in special_statutes[:8]:
+        for code_lbl, num in special_statutes[:16]:
             row = self.get_code_article_local(code_lbl, num)
             if row:
                 snippet = row["texte"].replace("\n", " ").strip()
@@ -313,7 +343,7 @@ class JurisprudenceGrounding:
         q_benchmarks = self.get_quantum_benchmarks_local(context)
         if q_benchmarks:
             lines.append("\n=== BARÈMES ACTUARIELS EMPIRIQUES DE QUANTUM (QCCQ / QCCS) ===")
-            for qb in q_benchmarks[:2]:
+            for qb in q_benchmarks[:3]:
                 lines.append(
                     f"- [{qb['label']}] : Fourchette historique de {qb['min_pct_claim']:.0f}% à {qb['max_pct_claim']:.0f}% "
                     f"(médiane {qb['median_pct_claim']:.0f}%), troubles médians {qb['troubles_inconvenients_median']:.0f} $, "
@@ -391,11 +421,22 @@ class JurisprudenceGrounding:
         has_ccq_mention = any(term in arg_lower for term in ["ccq", "c.c.q.", "c.c.q", "code civil", "québec"])
         is_ccq = has_ccq_mention or (litigation_type == "civil" and not is_cpc and any(t in arg_lower for t in ["article", "art."]))
 
-        # Détecter les articles explicitement rattachés au C.p.c., L.a.a., L.p.c., L.n.t., C.s.r., L.s.a.Q.
+        # Détecter les articles explicitement rattachés au C.p.c. et aux lois spéciales québécoises / canadiennes
         cpc_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:du\s+)?(?:C\.p\.c\.|CPC|Code de procédure civile)', agent_argument, re.IGNORECASE)
         laa_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:L\.a\.a\.|LAA|Loi sur l\'assurance automobile)', agent_argument, re.IGNORECASE)
+        lja_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:L\.j\.a\.|LJA|Loi sur la justice administrative)', agent_argument, re.IGNORECASE)
+        latmp_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:L\.a\.t\.m\.p\.|LATMP|Loi sur les accidents du travail)', agent_argument, re.IGNORECASE)
         lpc_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:L\.p\.c\.|LPC|Loi sur la protection du consommateur)', agent_argument, re.IGNORECASE)
         lnt_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:L\.n\.t\.|LNT|Loi sur les normes du travail)', agent_argument, re.IGNORECASE)
+        laf_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:L\.a\.f\.|LAF|Loi sur l\'administration fiscale)', agent_argument, re.IGNORECASE)
+        ltvq_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:L\.t\.v\.q\.|LTVQ|Loi sur la taxe de vente du Québec)', agent_argument, re.IGNORECASE)
+        li_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:L\.i\.|LI|Loi sur les impôts)', agent_argument, re.IGNORECASE)
+        lsaq_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:L\.s\.a\.Q\.|LSAQ|Loi sur les sociétés par actions)', agent_argument, re.IGNORECASE)
+        charte_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:Charte|Charte des droits et libertés)', agent_argument, re.IGNORECASE)
+        loi25_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:Loi\s*25|L\.p\.r\.p\.s\.p\.|Loi sur la protection des renseignements personnels)', agent_argument, re.IGNORECASE)
+        ltal_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:de\s+la\s+|du\s+)?(?:L\.t\.a\.l\.|LTAL|Loi sur le Tribunal administratif du logement)', agent_argument, re.IGNORECASE)
+        csr_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:du\s+|de\s+la\s+)?(?:C\.s\.r\.|CSR|Code de la sécurité routière)', agent_argument, re.IGNORECASE)
+        ccr_explicit = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:du\s+)?(?:C\.cr\.|Code criminel)', agent_argument, re.IGNORECASE)
 
         art_matches = re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)', agent_argument, re.IGNORECASE)
         enum_matches = re.findall(r'(?:articles?|art\.?)\s*((?:\d+(?:\.\d+)?\s*(?:,\s*|\s+et\s+|\s+ou\s+))+\d+(?:\.\d+)?)', agent_argument, re.IGNORECASE)
@@ -407,11 +448,26 @@ class JurisprudenceGrounding:
         ccq_art_nums = []
         cpc_art_nums = [str(n) for n in cpc_explicit]
         laa_art_nums = [str(n) for n in laa_explicit]
+        latmp_art_nums = [str(n) for n in latmp_explicit]
         if any(t in arg_lower for t in ["l.a.a", "laa", "saaq", "assurance automobile"]):
-            for cand in ["1", "2", "14", "45", "49", "73", "83.34", "83.57"]:
+            for cand in ["1", "2", "5", "6", "14", "15", "19", "24", "29", "36", "45", "46", "47", "48", "49", "50", "57", "73", "74", "79", "83.1", "83.2", "83.22", "83.24", "83.30", "83.32", "83.34", "83.41", "83.49", "83.57"]:
                 if cand in art_matches and cand not in laa_art_nums:
                     laa_art_nums.append(cand)
-        non_ccq_set = set(cpc_art_nums + laa_art_nums + [str(n) for n in lpc_explicit] + [str(n) for n in lnt_explicit])
+        if any(t in arg_lower for t in ["l.a.t.m.p", "latmp", "cnesst", "lésion professionnelle", "accident du travail"]):
+            for cand in ["2", "7", "27", "28", "29", "30", "31", "44", "49", "53", "57", "83", "145", "179", "212", "224.1", "239", "326", "329", "358", "359", "438"]:
+                if cand in art_matches and cand not in latmp_art_nums:
+                    latmp_art_nums.append(cand)
+
+        all_special_lists = (
+            cpc_art_nums + laa_art_nums + latmp_art_nums
+            + [str(n) for n in lja_explicit] + [str(n) for n in lpc_explicit]
+            + [str(n) for n in lnt_explicit] + [str(n) for n in laf_explicit]
+            + [str(n) for n in ltvq_explicit] + [str(n) for n in li_explicit]
+            + [str(n) for n in lsaq_explicit] + [str(n) for n in charte_explicit]
+            + [str(n) for n in loi25_explicit] + [str(n) for n in ltal_explicit]
+            + [str(n) for n in csr_explicit] + [str(n) for n in ccr_explicit]
+        )
+        non_ccq_set = set(all_special_lists)
         for a_str in art_matches:
             if a_str in non_ccq_set:
                 continue
@@ -425,11 +481,22 @@ class JurisprudenceGrounding:
                 except ValueError:
                     pass
 
-        # 1AA. Vérification déterministe L.a.a. (SAAQ) / L.p.c. / L.n.t. via SQLite ccq_cpc.db
+        # 1AA. Vérification déterministe de toutes les lois spéciales québécoises et canadiennes via SQLite ccq_cpc.db
         for stat_code, stat_name, stat_cite, stat_nums in [
             ("LAA", "Loi sur l'assurance automobile", "L.a.a.", laa_art_nums),
+            ("LJA", "Loi sur la justice administrative", "L.J.A.", [str(n) for n in lja_explicit]),
+            ("LATMP", "Loi sur les accidents du travail et les maladies professionnelles", "L.A.T.M.P.", latmp_art_nums),
             ("LPC", "Loi sur la protection du consommateur", "L.p.c.", [str(n) for n in lpc_explicit]),
             ("LNT", "Loi sur les normes du travail", "L.n.t.", [str(n) for n in lnt_explicit]),
+            ("LAF", "Loi sur l'administration fiscale", "L.A.F.", [str(n) for n in laf_explicit]),
+            ("LTVQ", "Loi sur la taxe de vente du Québec", "L.T.V.Q.", [str(n) for n in ltvq_explicit]),
+            ("LI", "Loi sur les impôts", "L.I.", [str(n) for n in li_explicit]),
+            ("LSAQ", "Loi sur les sociétés par actions", "L.S.A.Q.", [str(n) for n in lsaq_explicit]),
+            ("CHARTE", "Charte des droits et libertés de la personne", "Charte", [str(n) for n in charte_explicit]),
+            ("LOI25", "Loi sur la protection des renseignements personnels dans le secteur privé", "Loi 25", [str(n) for n in loi25_explicit]),
+            ("LTAL", "Loi sur le Tribunal administratif du logement", "L.T.A.L.", [str(n) for n in ltal_explicit]),
+            ("CSR", "Code de la sécurité routière", "C.s.r.", [str(n) for n in csr_explicit]),
+            ("CCR", "Code criminel", "C.cr.", [str(n) for n in ccr_explicit]),
         ]:
             for art_num_str in stat_nums[:5]:
                 local_stat = self.get_code_article_local(stat_code, str(art_num_str))

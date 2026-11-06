@@ -382,6 +382,37 @@ class TestLexiorSimulatorV2(unittest.TestCase):
         self.assertAlmostEqual(norm_saaq["details"][0]["majority_executable_quantum"], 3200.0, places=2)
         self.assertIn("Dispositif Majoritaire Exécutoire : 3,200.00 $", norm_saaq["details"][0]["verdict"])
 
+    def test_12_expanded_quebec_statutes_coverage(self):
+        """Vérifie la couverture SQLite déterministe étendue (LAA, LJA, LATMP, LNT, LPC, LAF, LTVQ, LI, LSAQ, CHARTE, LOI25, LTAL, CCR) et les 11 barèmes actuariels."""
+        from app.services.jurisprudence_grounding import JurisprudenceGrounding
+        jg = JurisprudenceGrounding()
+
+        for code, num, expected_kw in [
+            ("LAA", "83.32", "intérêts"),
+            ("LJA", "119", "conciliation"),
+            ("LATMP", "329", "handicapé"),
+            ("LNT", "123.15", "harcèlement psychologique"),
+            ("LPC", "272", "punitifs"),
+            ("LAF", "59.3", "négligence flagrante"),
+            ("LTVQ", "206.1", "remboursement de la taxe sur les intrants"),
+            ("LI", "1049", "pénalité"),
+            ("LSAQ", "450", "abusif ou injuste"),
+            ("CHARTE", "49", "atteinte illicite"),
+            ("LOI25", "93.1", "1 000 $"),
+            ("LTAL", "28", "Tribunal administratif du logement"),
+            ("CCR", "264.1", "menace"),
+        ]:
+            art = jg.get_code_article_local(code, num)
+            self.assertIsNotNone(art, f"Article manquant: {code} {num}")
+            self.assertIn(expected_kw.lower(), art["texte"].lower())
+
+        all_benchmarks = jg.get_quantum_benchmarks_local("")
+        self.assertGreaterEqual(len(all_benchmarks), 11)
+        block_cnesst = jg.build_statutory_grounding_block("Contestation devant le TAT d'une lésion professionnelle CNESST et demande de partage des coûts art. 329 LATMP.")
+        self.assertIn("Art. 329 LATMP", block_cnesst)
+        self.assertIn("Litige CNESST devant le TAT", block_cnesst)
+
+
 
 if __name__ == "__main__":
     unittest.main()
