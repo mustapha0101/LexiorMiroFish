@@ -508,6 +508,7 @@ class ReportPDFExporter:
         
         is_france_caron = "caron" in req_lower or "allaire" in req_lower or "toiture" in req_lower
         is_tvq_case = "9154-6093" in req_lower or "tvq" in req_lower or "taxe" in req_lower or "hébergement" in req_lower or "cotisation" in req_lower
+        is_saaq_taq = any(k in req_lower for k in ["saaq", "taq", "tribunal administratif du québec", "l.a.a.", "assurance automobile"])
         is_criminal_case = is_civil and ("criminel" in req_lower or "accusé" in req_lower or "accusation" in req_lower or "poursuite" in req_lower)
 
         # 3. Écrire les étiquettes de fond des quadrants
@@ -557,6 +558,8 @@ class ReportPDFExporter:
                 max_cost = 3000.0
             elif is_tvq_case:
                 max_cost = 15000.0
+            elif is_saaq_taq and max_cost > 100000.0:
+                max_cost = 85000.0
 
         def format_y_value(val):
             if val == 0:
@@ -672,6 +675,13 @@ class ReportPDFExporter:
                     ("TVQ Unite 54", min(95.0, max(5.0, loss_prob - 20.0)), (5400.0 / rounded_max) * 100.0, 14, (0.39, 0.45, 0.55)),
                     ("Taxe sur l'Hebergement", min(95.0, max(5.0, loss_prob + 15.0)), (4100.0 / rounded_max) * 100.0, 13, (0.23, 0.51, 0.96)),
                     ("Penalite art. 59 LAF", min(95.0, max(5.0, loss_prob - 35.0)), (250.0 / rounded_max) * 100.0, 12, (0.06, 0.73, 0.51))
+                ]
+            elif is_saaq_taq:
+                items = [
+                    ("Arrerages IRR (art. 14 LAA)", min(95.0, max(10.0, loss_prob - 25.0)), min(92.0, (65800.0 / rounded_max) * 100.0), 20, (0.92, 0.70, 0.03)),
+                    ("Sequelles perm. (art. 73 LAA)", min(95.0, max(15.0, loss_prob + 5.0)), min(85.0, max(14.0, (14300.0 / rounded_max) * 100.0)), 16, (0.93, 0.28, 0.60)),
+                    ("Expertise & Chiro (art. 83.2)", min(95.0, max(5.0, loss_prob - 35.0)), min(80.0, max(8.0, (4500.0 / rounded_max) * 100.0)), 13, (0.39, 0.45, 0.55)),
+                    ("Interets legaux (art. 83.32)", min(95.0, max(15.0, loss_prob)), min(75.0, max(10.0, (3200.0 / rounded_max) * 100.0)), 12, (0.23, 0.51, 0.96))
                 ]
             else:
                 items = [
