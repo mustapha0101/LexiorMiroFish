@@ -343,6 +343,45 @@ class TestLexiorSimulatorV2(unittest.TestCase):
         self.assertIn("Demandeur (Majorité) (3/3)", norm["details"][0]["verdict"])
         self.assertNotIn("culpabilité", norm["details"][0]["clerk_analysis"].lower())
 
+    def test_11_pelletier_c_saaq_collegial_and_taq_regime(self):
+        """Vérifie le régime administratif TAQ/SAAQ (L.a.a.) et le calcul collégial partagé [0 $, 84 600 $, 3 200 $]."""
+        from scripts.run_legal_simulation import (
+            extract_collegiate_quantums,
+            extract_verdict_quantum,
+            normalize_legal_results_verdicts,
+        )
+
+        ctx_saaq = (
+            "Recours devant le Tribunal administratif du Québec (TAQ - Section des affaires sociales) "
+            "de Marc-André Pelletier c. Société de l'assurance automobile du Québec (SAAQ) sous la L.a.a. "
+            "Demande totale de 84 600,00 $."
+        )
+        self.assertTrue(LegalAgents.is_administrative_tribunal(ctx_saaq))
+        j_prompt = LegalAgents.get_judge_prompt(ctx_saaq, "Analytique", "civil")
+        self.assertIn("83.32 L.a.a.", j_prompt)
+        self.assertIn("INTERDICTION d'invoquer la responsabilité civile délictuelle des art. 1607/1611 C.c.Q.", j_prompt)
+
+        saaq_collegiate = (
+            "[DÉCISION COLLÉGIALE - CONSENSUS : Demandeur (Majorité) (2/3)]\n\n"
+            "- Juge 1 (Formaliste strict) : PAR CES MOTIFS :\n"
+            "REJETTE le recours du Demandeur ; TOTAL DES CONDAMNATIONS EN CAPITAL : 0,00 $\n\n"
+            "- Juge 2 (Sensible à l'équité) : PAR CES MOTIFS :\n"
+            "ACCUEILLE le recours ; TOTAL DES CONDAMNATIONS EN CAPITAL : 84 600,00 $\n\n"
+            "- Juge 3 (Analytique) : PAR CES MOTIFS :\n"
+            "ACCUEILLE en partie pour séquelles Classe 1 ; REJETTE la demande d'IRR de 65 800,00 $ et de frais de 4 500,00 $ ; "
+            "TOTAL DES CONDAMNATIONS EN CAPITAL : 3 200,00 $\n"
+        )
+        col_qs = extract_collegiate_quantums(saaq_collegiate, max_claim_amount=84600.0)
+        self.assertEqual(col_qs, [0.0, 84600.0, 3200.0])
+        self.assertAlmostEqual(extract_verdict_quantum(saaq_collegiate, max_claim_amount=84600.0), 29266.67, places=2)
+        norm_saaq = normalize_legal_results_verdicts({
+            "context": ctx_saaq,
+            "litigation_type": "civil",
+            "details": [{"iteration": 1, "verdict": saaq_collegiate}]
+        })
+        self.assertAlmostEqual(norm_saaq["details"][0]["majority_executable_quantum"], 3200.0, places=2)
+        self.assertIn("Dispositif Majoritaire Exécutoire : 3,200.00 $", norm_saaq["details"][0]["verdict"])
+
 
 if __name__ == "__main__":
     unittest.main()

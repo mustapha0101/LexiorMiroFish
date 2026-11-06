@@ -122,8 +122,8 @@ def _single_judge_quantum(verdict_str: str, max_claim_amount: float = 0.0) -> fl
     dispositif_match = _re_mod.search(r'(?:PAR\s+CES\s+MOTIFS|DISPOSITIF\s+FINAL|4\.\s*DISPOSITIF|\bDISPOSITIF\b)', upper)
     zone = verdict_str[dispositif_match.start():] if dispositif_match else verdict_str
 
-    # Nettoyer les phrases qui mentionnent un rejet (ex: rejette la demande reconventionnelle de 51 646,53 $ ou rejette 25 811 $)
-    zone_clean = _re_mod.sub(r'[^.!?\n]*\b(?:REJETTE|DÉBOUTE|DEBOUTE|REFUSE|NON\s+FONDÉE?)\b[^.!?\n]*', '', zone, flags=_re_mod.IGNORECASE)
+    # Nettoyer les phrases/clauses qui mentionnent un rejet (ex: rejette la demande reconventionnelle de 51 646,53 $ ou rejette 25 811 $)
+    zone_clean = _re_mod.sub(r'[^.!?\n;]*\b(?:REJETTE|DÉBOUTE|DEBOUTE|REFUSE|NON\s+FONDÉE?)\b[^.!?\n;]*', '', zone, flags=_re_mod.IGNORECASE)
 
     def _parse_money(s: str) -> float:
         cleaned = s.replace(' ', '').replace('\u00a0', '').replace(',', '.')
@@ -152,18 +152,20 @@ def _single_judge_quantum(verdict_str: str, max_claim_amount: float = 0.0) -> fl
             res_q = max(t_vals)
             return round(min(res_q, max_claim_amount), 2) if max_claim_amount > 0 else round(res_q, 2)
 
-    # 2. Chercher toutes les clauses de condamnation chiffrées (CONDAMNE ... à payer ... X $)
-    condemn_clauses = _re_mod.findall(
-        r'\b(?:CONDAMNE(?:R|NT)?|ACCORDE(?:R)?|ORDONNE[^.!?\n]{0,60}?PAYER)\b[^.!?\n]{0,220}?(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2}))\s*\$',
+    # 2. Chercher toutes les clauses de condamnation chiffrées (CONDAMNE ... à payer ... X $ [et Y $])
+    condemn_segments = _re_mod.findall(
+        r'\b(?:CONDAMNE(?:R|NT)?|ACCORDE(?:R)?|ORDONNE[^.!?\n;]{0,60}?PAYER)\b[^.!?\n;]{0,240}',
         zone_clean,
         flags=_re_mod.IGNORECASE,
     )
-    if condemn_clauses:
+    if condemn_segments:
         c_vals = []
-        for m in condemn_clauses:
-            v = _parse_money(m)
-            if _is_valid_claim_val(v) and v not in c_vals:
-                c_vals.append(v)
+        for seg in condemn_segments:
+            seg_amounts = _re_mod.findall(r'(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2}))\s*\$', seg)
+            for m in seg_amounts:
+                v = _parse_money(m)
+                if _is_valid_claim_val(v) and v not in c_vals:
+                    c_vals.append(v)
         if c_vals:
             # Si un montant dans la liste est déjà la somme des autres, retourner le max; sinon additionner les chefs distincts
             if len(c_vals) > 1:
@@ -208,15 +210,19 @@ def extract_verdict_quantum(verdict_text: str, max_claim_amount: float = 0.0) ->
     """
     Extrait le quantum financier total accordé par le Tribunal (unique ou collégial),
     borné par le plafond de la demande principale (règle de l'ultra petita, art. 10 C.p.c.).
-    Pour un tribunal collégial de 3 juges, retourne l'espérance mathématique collégiale
-    (moyenne des 3 juges, incluant les rejets à 0,00 $) afin de refléter fidèlement
-    la divergence des chambres (ex: [0 $, 84 600 $, 3 200 $] -> 29 266,67 $).
+    - Si le banc collégial comporte une dissidence de rejet à 0,00 $ (ex: [0 $, 84 600 $, 3 200 $]),
+      retourne l'espérance mathématique collégiale E[Q] (moyenne des 3 juges = 29 266,67 $).
+    - Si tous les juges du banc collégial accueillent la demande (min > 0, ex: [46 117,15 $, 46 117,15 $, 41 117,15 $]),
+      retourne le dispositif majoritaire (médiane collégiale = 46 117,15 $).
     """
     if not verdict_text:
         return 0.0
     q_list = extract_collegiate_quantums(verdict_text, max_claim_amount=max_claim_amount)
     if len(q_list) >= 2:
-        return round(sum(q_list) / len(q_list), 2)
+        if min(q_list) == 0.0:
+            return round(sum(q_list) / len(q_list), 2)
+        sorted_q = sorted(q_list)
+        return round(sorted_q[len(sorted_q) // 2], 2)
     return _single_judge_quantum(verdict_text, max_claim_amount=max_claim_amount)
 
 
@@ -596,7 +602,7 @@ class LegalSimulationRunner:
                     "personality": j_pers,
                     "verdict": verdict_j,
                     "is_defense_win": is_win_j,
-                    "quantum": _extract_single_verdict_quantum(verdict_j, max_claim_amount=max_claim)
+                    "quantum": _single_judge_quantum(verdict_j, max_claim_amount=max_claim)
                 })
             
             wins_count = sum(1 for r in collegiate_results if r["is_defense_win"])

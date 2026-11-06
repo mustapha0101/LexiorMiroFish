@@ -284,7 +284,7 @@ class JurisprudenceGrounding:
                 cpc_nums.append(core_cpc)
 
         lines = [
-            "\n\n=== MÉMOIRE NORMATIVE DÉTERMINISTE (SERVEUR MCP SQLITE QUÉBEC) ===",
+            "\n\n=== MÉMOIRE NORMATIVE DÉTERMINISTE (SERVEUR SQLITE C.C.Q. & C.P.C.) ===",
             "Utilise prioritairement les articles vérifiés ci-dessous (ne jamais inventer un numéro d'article) :"
         ]
         for num in ccq_nums[:12]:
