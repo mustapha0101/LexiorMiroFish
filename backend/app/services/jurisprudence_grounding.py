@@ -183,6 +183,8 @@ class JurisprudenceGrounding:
                     match = True
                 elif cat == "congediement_injustifie_lnt_124" and any(k in ctx_lower for k in ["congédiement", "salarié", "employeur", "l.n.t", "cnesst", "124"]):
                     match = True
+                elif cat == "saaq_irr_sequelles_taq" and any(k in ctx_lower for k in ["saaq", "assurance automobile", "l.a.a", "laa", "taq", "irr", "emploi convenable", "séquelle", "83.57"]):
+                    match = True
                 if match:
                     results.append({
                         "category": r[0],
@@ -258,6 +260,9 @@ class JurisprudenceGrounding:
         if any(k in ctx_lower for k in ["renseignement personnel", "confidentialité", "loi 25", "vie privée"]):
             for num in ["3.5", "17", "93.1"]:
                 special_statutes.append(("LOI25", num))
+        if any(k in ctx_lower for k in ["saaq", "assurance automobile", "l.a.a", "laa", "taq", "remplacement du revenu", "irr", "emploi convenable", "séquelle", "83.57"]):
+            for num in ["1", "2", "14", "45", "49", "73", "83.34", "83.57"]:
+                special_statutes.append(("LAA", num))
 
         # Socle transversal : Responsabilité, Causalité, Quantum, Intérêts légaux, Preuve et Prescription
         for core_ccq in ["1457", "1607", "1611", "1618", "1619", "2803", "2804", "2925"]:
