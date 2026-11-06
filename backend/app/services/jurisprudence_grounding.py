@@ -154,23 +154,78 @@ class JurisprudenceGrounding:
             logger.error(f"Erreur FTS5 ccq_cpc.db ({keyword}): {e}")
         return results
 
+    def get_quantum_benchmarks_local(self, context: str = "") -> List[dict]:
+        """Récupère les barèmes actuariels empiriques QCCQ/QCCS depuis la table quantum_benchmarks de ccq_cpc.db."""
+        if not hasattr(self, "ccq_cpc_db_path") or not os.path.exists(self.ccq_cpc_db_path):
+            return []
+        ctx_lower = (context or "").lower()
+        results = []
+        try:
+            conn = sqlite3.connect(self.ccq_cpc_db_path)
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT category, label, min_pct_claim, median_pct_claim, max_pct_claim, "
+                "troubles_inconvenients_median, art51_cpc_grant_rate_pct, key_rule, reference_case "
+                "FROM quantum_benchmarks"
+            )
+            rows = cur.fetchall()
+            conn.close()
+            for r in rows:
+                cat = r[0]
+                match = False
+                if not context:
+                    match = True
+                elif cat == "dol_restitution_prestation" and any(k in ctx_lower for k in ["dol", "1401", "1407", "marge", "profit caché", "tromp"]):
+                    match = True
+                elif cat == "vice_cache_malfacon_toiture" and any(k in ctx_lower for k in ["vice", "toiture", "malfaçon", "1726", "2100", "vétusté"]):
+                    match = True
+                elif cat == "protection_consommateur_lpc_272" and any(k in ctx_lower for k in ["consommateur", "commerçant", "l.p.c", "lpc", "272", "punitif"]):
+                    match = True
+                elif cat == "congediement_injustifie_lnt_124" and any(k in ctx_lower for k in ["congédiement", "salarié", "employeur", "l.n.t", "cnesst", "124"]):
+                    match = True
+                if match:
+                    results.append({
+                        "category": r[0],
+                        "label": r[1],
+                        "min_pct_claim": r[2],
+                        "median_pct_claim": r[3],
+                        "max_pct_claim": r[4],
+                        "troubles_inconvenients_median": r[5],
+                        "art51_cpc_grant_rate_pct": r[6],
+                        "key_rule": r[7],
+                        "reference_case": r[8],
+                    })
+        except Exception as e:
+            logger.error(f"Erreur lecture quantum_benchmarks: {e}")
+        return results
+
     def build_statutory_grounding_block(self, context: str, litigation_type: str = "civil") -> str:
         """
-        Pré-injecte de manière déterministe le texte officiel exact des articles du C.c.Q. et du C.p.c.
-        pertinents au dossier afin de garantir 0 % d'hallucination normative dès la génération initiale.
+        Pré-injecte de manière déterministe le texte officiel exact des articles du C.c.Q., du C.p.c.,
+        des lois statutaires québécoises (L.p.c., L.n.t., L.a.t.m.p., L.s.a.Q., C.s.r., Loi 25)
+        et des barèmes actuariels (`quantum_benchmarks`) pertinents au dossier.
         """
-        if litigation_type != "civil" or not hasattr(self, "ccq_cpc_db_path") or not os.path.exists(self.ccq_cpc_db_path):
+        if not hasattr(self, "ccq_cpc_db_path") or not os.path.exists(self.ccq_cpc_db_path):
             return ""
         ctx_lower = (context or "").lower()
         ccq_nums = []
         cpc_nums = []
+        special_statutes = []  # tuples (code, numero)
 
-        # 1. Extraire tous les articles explicitement mentionnés dans le dossier
+        # 1. Extraire tous les articles explicitement mentionnés dans le dossier (en excluant ceux explicitement rattachés à CPC/LPC/LNT/CSR/LSAQ)
+        non_ccq_explicit = set(re.findall(
+            r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)\s*(?:du\s+|de\s+la\s+)?(?:C\.p\.c\.|CPC|L\.p\.c\.|LPC|L\.n\.t\.|LNT|C\.s\.r\.|CSR|L\.s\.a\.Q\.|LSAQ|L\.a\.t\.m\.p\.|LATMP)',
+            context or "", re.IGNORECASE
+        ))
         for m in re.findall(r'(?:articles?|art\.?)\s*(\d+(?:\.\d+)?)', context or "", re.IGNORECASE):
-            if m not in ccq_nums:
+            if m not in ccq_nums and m not in non_ccq_explicit:
                 ccq_nums.append(m)
 
         # 2. Ajouter le socle normatif québécois selon la nature du litige
+        if any(k in ctx_lower for k in ["dol", "manoeuvre", "manœuvre", "1401", "1399", "erreur", "consentement"]):
+            for n in ["1399", "1400", "1401", "1407"]:
+                if n not in ccq_nums:
+                    ccq_nums.append(n)
         if any(k in ctx_lower for k in ["entrepreneur", "toiture", "toit", "travaux", "contrat d'entreprise", "service", "2100"]):
             for n in ["2098", "2100", "2120"]:
                 if n not in ccq_nums:
@@ -184,18 +239,38 @@ class JurisprudenceGrounding:
                 if n not in ccq_nums:
                     ccq_nums.append(n)
 
+        # 2B. Lois statutaires spécialisées (LPC, LNT, LATMP, LSAQ, CSR, LOI25)
+        if any(k in ctx_lower for k in ["consommateur", "commerçant", "l.p.c", "lpc", "représentation trompeuse", "272"]):
+            for num in ["272", "253", "219", "228", "53", "37", "38"]:
+                special_statutes.append(("LPC", num))
+        if any(k in ctx_lower for k in ["salarié", "congédiement", "harcèlement", "l.n.t", "lnt", "employeur", "cnesst"]):
+            for num in ["81.18", "82", "122", "124"]:
+                special_statutes.append(("LNT", num))
+        if any(k in ctx_lower for k in ["lésion professionnelle", "accident du travail", "latmp", "l.a.t.m.p"]):
+            for num in ["2", "28", "438"]:
+                special_statutes.append(("LATMP", num))
+        if any(k in ctx_lower for k in ["actionnaire", "administrateur", "oppression", "l.s.a.q", "lsaq", "société par actions"]):
+            for num in ["119", "450"]:
+                special_statutes.append(("LSAQ", num))
+        if any(k in ctx_lower for k in ["vitesse", "cinémomètre", "328", "sécurité routière", "c.s.r"]):
+            for num in ["328", "359"]:
+                special_statutes.append(("CSR", num))
+        if any(k in ctx_lower for k in ["renseignement personnel", "confidentialité", "loi 25", "vie privée"]):
+            for num in ["3.5", "17", "93.1"]:
+                special_statutes.append(("LOI25", num))
+
         # Socle transversal : Responsabilité, Causalité, Quantum, Intérêts légaux, Preuve et Prescription
         for core_ccq in ["1457", "1607", "1611", "1618", "1619", "2803", "2804", "2925"]:
             if core_ccq not in ccq_nums:
                 ccq_nums.append(core_ccq)
 
-        # Socle procédural C.p.c. (Proportionnalité, CRA, Irrecevabilité, Expertise, Petites créances)
-        for core_cpc in ["18", "168", "235", "536"]:
+        # Socle procédural C.p.c. (Proportionnalité, Abus art. 51, CRA, Irrecevabilité, Expertise)
+        for core_cpc in ["18", "51", "54", "168", "235"]:
             if core_cpc not in cpc_nums:
                 cpc_nums.append(core_cpc)
 
         lines = [
-            "\n\n=== MÉMOIRE NORMATIVE DÉTERMINISTE (SERVEUR SQLITE C.C.Q. & C.P.C.) ===",
+            "\n\n=== MÉMOIRE NORMATIVE DÉTERMINISTE (SERVEUR MCP SQLITE QUÉBEC) ===",
             "Utilise prioritairement les articles vérifiés ci-dessous (ne jamais inventer un numéro d'article) :"
         ]
         for num in ccq_nums[:12]:
@@ -212,6 +287,25 @@ class JurisprudenceGrounding:
                 if len(snippet) > 260:
                     snippet = snippet[:260] + "..."
                 lines.append(f"- [Art. {num} C.p.c.] : {snippet}")
+        for code_lbl, num in special_statutes[:6]:
+            row = self.get_code_article_local(code_lbl, num)
+            if row:
+                snippet = row["texte"].replace("\n", " ").strip()
+                if len(snippet) > 260:
+                    snippet = snippet[:260] + "..."
+                lines.append(f"- [Art. {num} {code_lbl}] : {snippet}")
+
+        # 3. Injecter les barèmes actuariels empiriques (quantum_benchmarks)
+        q_benchmarks = self.get_quantum_benchmarks_local(context)
+        if q_benchmarks:
+            lines.append("\n=== BARÈMES ACTUARIELS EMPIRIQUES DE QUANTUM (QCCQ / QCCS) ===")
+            for qb in q_benchmarks[:2]:
+                lines.append(
+                    f"- [{qb['label']}] : Fourchette historique de {qb['min_pct_claim']:.0f}% à {qb['max_pct_claim']:.0f}% "
+                    f"(médiane {qb['median_pct_claim']:.0f}%), troubles médians {qb['troubles_inconvenients_median']:.0f} $, "
+                    f"taux d'octroi art. 51 C.p.c. : {qb['art51_cpc_grant_rate_pct']:.0f}%. "
+                    f"Règle : {qb['key_rule']} (Réf: {qb['reference_case']})"
+                )
         return "\n".join(lines) + "\n"
 
     def _verify_with_llm(self, claim: str, source_text: str) -> bool:

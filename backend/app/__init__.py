@@ -63,10 +63,11 @@ def create_app(config_class=Config):
         return response
     
     # 注册蓝图
-    from .api import graph_bp, simulation_bp, report_bp
+    from .api import graph_bp, simulation_bp, report_bp, mcp_bp
     app.register_blueprint(graph_bp, url_prefix='/api/graph')
     app.register_blueprint(simulation_bp, url_prefix='/api/simulation')
     app.register_blueprint(report_bp, url_prefix='/api/report')
+    app.register_blueprint(mcp_bp, url_prefix='/api/mcp')
     
     # 健康检查
     @app.route('/health')
@@ -75,9 +76,10 @@ def create_app(config_class=Config):
         return {
             'status': 'ok',
             'service': 'Lexior Simulator Backend',
-            'version': '2.0.0',
+            'version': '2.1.0',
             'commit': os.environ.get('RENDER_GIT_COMMIT', 'local')[:8],
-            'ccq_cpc_sqlite_ready': os.path.exists(ccq_db)
+            'ccq_cpc_sqlite_ready': os.path.exists(ccq_db),
+            'mcp_endpoint': '/api/mcp/tools'
         }
     
     if should_log_startup:
