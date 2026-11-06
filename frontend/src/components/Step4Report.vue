@@ -295,7 +295,7 @@
             <!-- Hidden Audio Elements -->
             <audio 
               ref="audioDiscussionsRef" 
-              :src="getPodcastAudioUrl(props.reportId, 'discussions')" 
+              :src="getPodcastAudioUrl(props.reportId, 'discussions') + '&t=' + podcastCacheKey" 
               @play="isPlayingDiscussions = true"
               @pause="isPlayingDiscussions = false"
               @timeupdate="currentTimeDiscussions = $event.target.currentTime"
@@ -303,7 +303,7 @@
             ></audio>
             <audio 
               ref="audioOverviewRef" 
-              :src="getPodcastAudioUrl(props.reportId, 'overview')" 
+              :src="getPodcastAudioUrl(props.reportId, 'overview') + '&t=' + podcastCacheKey" 
               @play="isPlayingOverview = true"
               @pause="isPlayingOverview = false"
               @timeupdate="currentTimeOverview = $event.target.currentTime"
@@ -2885,6 +2885,7 @@ const isGeneratingPodcastDiscussions = ref(false)
 const isGeneratingPodcastOverview = ref(false)
 const podcastDiscussionsReady = ref(false)
 const podcastOverviewReady = ref(false)
+const podcastCacheKey = ref(Date.now())
 const currentAudioUrl = ref('')
 const currentAudioType = ref('') // 'discussions' or 'overview'
 
@@ -2973,8 +2974,14 @@ const handleGeneratePodcast = async (type) => {
   try {
     const res = await generatePodcast(props.reportId, { type })
     if (res.success) {
+      podcastCacheKey.value = Date.now()
+      if (isDiscussions) {
+        podcastDiscussionsReady.value = true
+      } else {
+        podcastOverviewReady.value = true
+      }
       await checkPodcastsStatus()
-      currentAudioUrl.value = getPodcastAudioUrl(props.reportId, type)
+      currentAudioUrl.value = getPodcastAudioUrl(props.reportId, type) + '&t=' + podcastCacheKey.value
       currentAudioType.value = type
       // Auto-play the newly generated podcast in the inline player
       nextTick(() => {
@@ -2986,6 +2993,8 @@ const handleGeneratePodcast = async (type) => {
           audio.play().catch(err => console.log("Auto-play blocked", err))
         }
       })
+    } else {
+      emit('add-log', `Échec de la génération audio: ${res.error || 'Erreur inconnue'}`)
     }
   } catch (err) {
     console.error("Erreur generation podcast:", err)

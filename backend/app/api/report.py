@@ -1895,28 +1895,81 @@ def clean_markdown(text: str) -> str:
     return text.strip()
 
 
+def _fallback_google_tts(text: str, voice: str, outfile: str):
+    """
+    Fallback TTS via Google Translate Neural HTTP endpoint when Microsoft Edge TTS
+    WebSocket fails (e.g. HTTP 403 Invalid response status on cloud servers).
+    """
+    import urllib.request
+    import urllib.parse
+    import re as _re
+
+    lang = "fr-CA" if "CA" in (voice or "") else "fr"
+    sentences = _re.split(r'(?<=[.!?;:])\s+', text.strip())
+    chunks = []
+    cur = ""
+    for s in sentences:
+        if not s:
+            continue
+        if len(cur) + len(s) + 1 <= 180:
+            cur = (cur + " " + s).strip() if cur else s
+        else:
+            if cur:
+                chunks.append(cur)
+            while len(s) > 180:
+                split_idx = s.rfind(" ", 0, 180)
+                if split_idx <= 0:
+                    split_idx = 180
+                chunks.append(s[:split_idx].strip())
+                s = s[split_idx:].strip()
+            cur = s
+    if cur:
+        chunks.append(cur)
+
+    audio_bytes = bytearray()
+    for ch in chunks:
+        if not ch:
+            continue
+        q = urllib.parse.quote(ch)
+        url = f"https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl={lang}&q={q}"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            audio_bytes.extend(resp.read())
+
+    if not audio_bytes:
+        raise RuntimeError("Fallback TTS produced empty audio buffer")
+    with open(outfile, "wb") as f:
+        f.write(audio_bytes)
+
+
 def generate_edge_tts(text: str, voice: str, outfile: str):
     """
-    Generate high-quality human-like neural TTS audio using Microsoft Edge TTS.
+    Generate high-quality human-like neural TTS audio using Microsoft Edge TTS,
+    with automatic fallback to Google Neural TTS if Edge WebSocket returns 403.
     """
     import asyncio
     import edge_tts
     import logging
-    
+
     logger = logging.getLogger("app.podcast")
-    
+
     async def _save():
         communicate = edge_tts.Communicate(text, voice)
         await communicate.save(outfile)
-        
+
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(_save())
-        loop.close()
+        try:
+            loop.run_until_complete(_save())
+        finally:
+            loop.close()
+        if os.path.exists(outfile) and os.path.getsize(outfile) > 256:
+            return
     except Exception as e:
-        logger.error(f"Error running edge_tts in event loop: {e}")
-        asyncio.run(_save())
+        logger.warning(f"Edge TTS failed ({e}), switching to fallback neural TTS...")
+
+    _fallback_google_tts(text, voice, outfile)
 
 
 @report_bp.route('/<report_id>/podcast/status', methods=['GET'])

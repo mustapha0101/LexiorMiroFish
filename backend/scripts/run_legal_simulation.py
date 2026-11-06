@@ -186,25 +186,37 @@ def _single_judge_quantum(verdict_str: str, max_claim_amount: float = 0.0) -> fl
     return round(min(res_q, max_claim_amount), 2) if max_claim_amount > 0 else round(res_q, 2)
 
 
-def extract_verdict_quantum(verdict_text: str, max_claim_amount: float = 0.0) -> float:
+def extract_collegiate_quantums(verdict_text: str, max_claim_amount: float = 0.0) -> list:
     """
-    Extrait le quantum financier total accordé par le Tribunal (unique ou collégial),
-    borné par le plafond de la demande principale (règle de l'ultra petita, art. 10 C.p.c.).
+    Extrait les quantums individuels [q1, q2, q3] accordés par chacun des juges
+    lorsqu'il s'agit d'un délibéré collégial (y compris 0,00 $ pour un juge ayant rejeté la demande).
     """
     if not verdict_text:
-        return 0.0
+        return []
     judge_splits = _re_mod.split(r'(?:^|\n)\s*-\s*Juge\s+\d+\s*\([^)]*\)\s*:\s*', verdict_text, flags=_re_mod.IGNORECASE)
     if len(judge_splits) >= 3:
         q_list = []
         for jv in judge_splits[1:]:
             if jv.strip():
                 q_j = _single_judge_quantum(jv, max_claim_amount=max_claim_amount)
-                if q_j > 0:
-                    q_list.append(q_j)
-        if q_list:
-            q_list.sort()
-            # Médiane des 3 juges (ou moyenne si 2)
-            return round(q_list[len(q_list) // 2], 2)
+                q_list.append(round(q_j, 2))
+        return q_list
+    return []
+
+
+def extract_verdict_quantum(verdict_text: str, max_claim_amount: float = 0.0) -> float:
+    """
+    Extrait le quantum financier total accordé par le Tribunal (unique ou collégial),
+    borné par le plafond de la demande principale (règle de l'ultra petita, art. 10 C.p.c.).
+    Pour un tribunal collégial de 3 juges, retourne l'espérance mathématique collégiale
+    (moyenne des 3 juges, incluant les rejets à 0,00 $) afin de refléter fidèlement
+    la divergence des chambres (ex: [0 $, 84 600 $, 3 200 $] -> 29 266,67 $).
+    """
+    if not verdict_text:
+        return 0.0
+    q_list = extract_collegiate_quantums(verdict_text, max_claim_amount=max_claim_amount)
+    if len(q_list) >= 2:
+        return round(sum(q_list) / len(q_list), 2)
     return _single_judge_quantum(verdict_text, max_claim_amount=max_claim_amount)
 
 
@@ -267,8 +279,14 @@ def normalize_legal_results_verdicts(res_data: dict) -> dict:
             ca = _re_mod.sub(r'\bcoupables?\b', 'responsables', ca, flags=_re_mod.IGNORECASE)
             det["clerk_analysis"] = ca
 
+        q_list_col = extract_collegiate_quantums(verdict_txt, max_claim_amount=max_claim)
+        if q_list_col:
+            det["collegiate_quantums"] = q_list_col
+            non_zero_col = [q for q in q_list_col if q > 0]
+            det["min_positive_quantum"] = min(non_zero_col) if non_zero_col else 0.0
+            det["max_collegiate_quantum"] = max(q_list_col)
         q_val = extract_verdict_quantum(verdict_txt, max_claim_amount=max_claim)
-        if q_val > 0 or is_def_win:
+        if q_val > 0 or is_def_win or q_list_col:
             det["awarded_quantum"] = q_val
 
     res_data["iterations"] = len(details)
