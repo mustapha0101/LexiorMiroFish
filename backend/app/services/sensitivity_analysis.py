@@ -135,7 +135,7 @@ class SensitivityAnalysisEngine:
         role_instruction = (
             "Vous êtes un analyste tactique juridique et actuariel de haut niveau du Barreau du Québec.\n"
             f"Votre rôle est d'analyser le dossier pour le camp représenté : {'DÉFENSE / DÉFENDEUR (ou ACCUSÉ)' if client_side == 'defense' else 'DEMANDEUR / POURSUITE / REQUÉRANT'}.\n"
-            "Vous devez croiser les nœuds sémantiques centraux du graphe Kuzu avec l'intégralité des postes financiers réclamés (demande principale, dommages moraux, honoraires extrajudiciaires art. 51 C.p.c., demande reconventionnelle, solidarité art. 1457/1526 C.c.Q.) pour identifier les « Puits de Potentiel » et les lignes de force décisives.\n"
+            "Vous devez croiser les nœuds sémantiques centraux du graphe du dossier avec l'intégralité des postes financiers réclamés (demande principale, dommages moraux, honoraires extrajudiciaires art. 51 C.p.c., demande reconventionnelle, solidarité art. 1457/1526 C.c.Q.) pour identifier les « Planchers de Condamnation » (réductions du quantum des dommages) et les moyens de droit décisifs.\n"
             "Employez STRICTEMENT la terminologie juridique québécoise et canadienne authentique."
         )
 

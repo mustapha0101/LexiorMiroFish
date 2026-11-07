@@ -7,7 +7,7 @@
         <img src="/logo.png" class="brand-logo" alt="Lexior" />
         <span class="brand-name">{{ $t('common.brandFirst') }} <span class="brand-sub">{{ $t('common.brandSecond') }}</span></span>
       </div>
-      <div class="header-title">Laboratoire Juridique • Monte-Carlo</div>
+      <div class="header-title">Chambre d'Audience & Évaluation du Quantum</div>
       <div class="header-right">
         <button class="back-btn" @click="goHome">Retour</button>
       </div>
@@ -30,7 +30,7 @@
         </div>
 
         <div class="form-group">
-          <label>Nombre de simulations de procès (Monte-Carlo)</label>
+          <label>Nombre de rondes d'audience contradictoire</label>
           <div class="slider-group">
             <input 
               type="range" 

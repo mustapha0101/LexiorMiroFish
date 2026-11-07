@@ -808,6 +808,12 @@ Description de la section : {section_description}
    - Le contexte est un procès de tribunal officiel. Les acteurs (juges, avocats, témoins) s'expriment exclusivement par le biais de délibérations, plaidoiries, dépositions sous serment ou témoignages à la barre.
    - Si les outils de recherche contiennent des mentions de réseaux sociaux (ex: "Reddit", "Twitter"), vous devez reformuler ces événements en termes judiciaires officiels (ex: "il a déclaré dans sa déposition" ou "exprimé dans les délibérations de la cour").
 
+6. [Lexique Juridique du Barreau du Québec & Clarté Exécutive]
+   - Utilisez la terminologie authentique des tribunaux québécois et canadiens : « quantum des dommages », « dispositif exécutoire », « motifs déterminants », « fardeau de preuve par prépondérance des probabilités (art. 2803-2804 C.c.Q.) », « fin de non-recevoir », « état préexistant », « provision actuarielle ».
+   - Dès la première mention du mot « quantum » dans une section, précisez brièvement entre parenthèses « quantum des dommages (montant accordé par le tribunal) » afin que le rapport soit immédiatement limpide tant pour les avocats plaideurs que pour les dirigeants, assureurs ou gestionnaires de réclamations.
+   - Privilégiez les expressions juridiques claires « plancher de condamnation », « quantum minimal après réduction » ou « point de bascule jurisprudentiel » plutôt que le jargon physique « puits de potentiel » (qui ne doit apparaître qu'à titre secondaire entre parenthèses s'il est mentionné).
+   - ❌ INTERDICTION ABSOLUE de mentionner des termes techniques ou informatiques internes dans le rapport (n'écrivez JAMAIS « MCP », « connecteurs MCP », « SQLite », « Kuzu », « GraphRAG », « JSON », « prompt » ou « LLM »).
+
 ═══════════════════════════════════════════════════════════════
 [Outils de recherche disponibles] (Appeler 3-5 fois par chapitre)
 ═══════════════════════════════════════════════════════════════
@@ -1064,7 +1070,7 @@ class ReportAgent:
                                         f"Décision Collégiale Partagée ({col_str}) — "
                                         f"Dispositif Majoritaire Exécutoire (2/3) = {maj_col:,.2f} $ | "
                                         f"Espérance Actuarielle E[Q] = {q_val:,.2f} $ | "
-                                        f"Puits de Potentiel = {min_pos_col:,.2f} $"
+                                        f"Plancher de Condamnation (Quantum minimal après réduction) = {min_pos_col:,.2f} $"
                                     )
                                     partial_defense_success_rounds += 1
                                 elif max_claim > 0 and q_val < max_claim * 0.96:
@@ -1133,16 +1139,16 @@ class ReportAgent:
                                     interest_law_label = "Intérêts légaux art. 1618 C.c.Q. + Indemnité additionnelle art. 1619 C.c.Q. estimés à +8,5 %"
                                     settlement_forum_label = "CRA (Conférence de règlement à l'amiable, art. 161 C.p.c.)"
                                 actuarial_header = (
-                                    "=== BILAN ACTUARIEL & FINANCIER VÉRIFIÉ (MOTEUR PIE v2 — RESPECT DU PLAFOND ULTRA PETITA) ===\n"
-                                    f"- Plafond de la Demande Principale Réclamée : {ref_ceiling:,.2f} $\n"
+                                    "=== BILAN ACTUARIEL & FINANCIER VÉRIFIÉ (RESPECT DU PLAFOND ULTRA PETITA) ===\n"
+                                    f"- Plafond de la Réclamation Principale en Litige : {ref_ceiling:,.2f} $\n"
                                     f"{col_breakdown_line}"
-                                    f"- Trajectoire de l'Espérance Collégiale par Round : {traj_str}\n"
-                                    f"- Quantum Maximal Accordé au Dispositif : {max_q:,.2f} $\n"
-                                    f"- Puits de Potentiel (Quantum Minimal après réduction sous {puits_law_label}) : {min_q:,.2f} $ (Économie Défense : -{drop_amt:,.2f} $, soit -{drop_pct:.1f}% d'atténuation du risque)\n"
-                                    f"- Espérance Mathématique Actuarielle en Capital E[Q] : {avg_q:,.2f} $\n"
+                                    f"- Trajectoire de l'Espérance Collégiale par Ronde d'Audience : {traj_str}\n"
+                                    f"- Quantum Maximal Accordé au Dispositif (montant maximal accordé par le tribunal) : {max_q:,.2f} $\n"
+                                    f"- Plancher de Condamnation / Quantum Minimal après réduction ({puits_law_label}) : {min_q:,.2f} $ (Économie Défense : -{drop_amt:,.2f} $, soit -{drop_pct:.1f}% d'atténuation du risque)\n"
+                                    f"- Espérance Mathématique de Condamnation en Capital E[Q] (provision actuarielle) : {avg_q:,.2f} $\n"
                                     f"- Majoration Légale Québécoise ({interest_law_label}) : +{legal_interest_markup:,.2f} $\n"
-                                    f"- Exposition Actuarielle Totale Estimée (Capital + Intérêts) : {total_actuarial_exposure:,.2f} $\n"
-                                    f"- Fourchette de Règlement Optimal en {settlement_forum_label} : entre {cra_settlement_floor:,.2f} $ (Plancher exécutoire) et {cra_settlement_target:,.2f} $ (Cible maximale d'arbitrage).\n\n"
+                                    f"- Exposition Financière Totale Estimée (Capital + Intérêts légaux) : {total_actuarial_exposure:,.2f} $\n"
+                                    f"- Fourchette de Règlement Optimal en {settlement_forum_label} : entre {cra_settlement_floor:,.2f} $ (Plancher de condamnation exécutoire) et {cra_settlement_target:,.2f} $ (Cible maximale de transaction).\n\n"
                                 )
                                 sample_verdicts = actuarial_header + sample_verdicts
                             
@@ -1560,18 +1566,18 @@ class ReportAgent:
             else:
                 side_label = "le Demandeur" if client_side == "plaintiff" else "la Défense"
                 title = f"Rapport Stratégique de Matérialité et d'Aléa Judiciaire pour {side_label}"
-                summary = f"Analyse prédictive de risque de bilan par simulation de Monte-Carlo. Taux de succès estimé : {client_win_rate}%."
+                summary = f"Analyse prédictive de l'aléa judiciaire et du quantum des dommages (montant accordé par le tribunal). Taux de succès estimé : {client_win_rate}%."
                 sections_desc = [
-                    ("1. Cartographie Factuelle & Diagnostic de Matérialité", 
-                     "Analyse approfondie des faits de l'affaire, force probante des pièces et forces/faiblesses initiales des thèses en présence (incluant les connecteurs MCP et le secret professionnel)."),
-                    ("2. Modélisation de l'Aléa Judiciaire & Risque de Bilan (Monte-Carlo)", 
-                     "Résilience des moyens de droit face aux pièces adverses, évaluation statistique des chances de succès et de l'exposition financière (incluant la matrice graphique des risques)."),
-                    ("3. Dynamiques Comportementales & Points de Bascule (Puits de Potentiel)", 
-                     "Modélisation des trajectoires cognitives et d'inertie du tribunal et des parties adverses. Identification des points de blocage ou d'ouverture stratégique."),
-                    ("4. Recommandations d'Arbitrage & Justification du Règlement à l'Amiable", 
-                     "Options stratégiques, opportunités de pivot et justification mathématique de l'intérêt d'une transaction ou règlement à l'amiable hors cour face à un procès incertain."),
-                    ("5. Journal d'Audience & Introspection Cognitive de la Simulation",
-                     "Synthèse chronologique des débats simulés et historique de l'évolution des tensions cognitives (PIE) des acteurs du procès.")
+                    ("1. Qualification Juridique des Faits & Diagnostic de la Preuve", 
+                     "Analyse approfondie des faits de l'affaire, force probante des pièces au dossier, fardeau de preuve et forces/faiblesses initiales des thèses en présence (incluant la recevabilité de la preuve et le secret professionnel)."),
+                    ("2. Évaluation de l'Aléa Judiciaire, du Quantum des Dommages & du Risque Financier", 
+                     "Résilience des moyens de droit face aux pièces adverses, évaluation statistique des chances de succès, du quantum des dommages (montant accordé par le tribunal) et de l'exposition financière (incluant la matrice graphique des risques)."),
+                    ("3. Motifs Déterminants du Tribunal, Plancher de Condamnation & Points de Bascule", 
+                     "Analyse des trajectoires décisionnelles des juges et des parties adverses, identification des réductions du quantum (plancher de condamnation) et des points de blocage ou d'ouverture stratégique."),
+                    ("4. Stratégie de Règlement Amiable (CRA / Conciliation) & Recommandations Tactiques", 
+                     "Options procédurales, opportunités de contre-interrogatoire et justification mathématique de l'intérêt d'une transaction ou d'un règlement à l'amiable hors cour face à l'aléa du procès."),
+                    ("5. Journal d'Audience Contradictoire & Analyse des Délibérés",
+                     "Synthèse chronologique des débats simulés et historique de l'évolution de la conviction des décideurs au fil des rondes d'audience.")
                 ]
                 
             sections = [ReportSection(title=s[0], content="") for s in sections_desc]

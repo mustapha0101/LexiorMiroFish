@@ -493,18 +493,18 @@ Exemples concrets de verdicts motivés rendus par les juges simulés :
 Rédige le rapport complet en français sous forme de dictionnaire JSON avec les clés suivantes :
 
 1. "title": Le titre du rapport (ex. "Rapport Stratégique de Matérialité et d'Aléa Judiciaire du Demandeur")
-2. "summary": Un résumé analytique percutant des conclusions statistiques. Interprète le taux de {client_win_rate}% de succès pour le demandeur sous l'angle du risque de bilan pour le client.
-3. "section1_title": "1. Cartographie Factuelle & Diagnostic de Matérialité"
-4. "section1_content": Analyse approfondie et détaillée des faits de l'affaire, des forces et faiblesses initiales du demandeur (ex. matérialité de l'exfiltration, Loi 25) et de la défense (ex. clauses de limitation de responsabilité, open-source). Utilise du gras et des puces détaillées.
-5. "section2_title": "2. Modélisation de l'Aléa Judiciaire & Risque de Bilan (Monte-Carlo)"
-6. "section2_content": Explique comment la simulation de Monte-Carlo a modélisé l'impact des 5 profils de juges. Comment les sensibilités des juges expliquent-elles le taux de {client_win_rate}% de succès pour le demandeur ? Analyse la variance de la décision et le niveau de prévisibilité.
-7. "section3_title": "3. Dynamiques Comportementales & Points de Bascule (Puits de Potentiel)"
-8. "section3_content": Quels ont été les arguments décisifs (points de bascule ou puits de potentiel) constatés pendant les simulations ? Identifie les moments où la conviction du juge a basculé en faveur ou contre le demandeur.
-9. "section4_title": "4. Recommandations d'Arbitrage & Justification du Règlement à l'Amiable"
+2. "summary": Un résumé analytique percutant des conclusions statistiques. Interprète le taux de {client_win_rate}% de succès pour le demandeur sous l'angle de l'aléa judiciaire et du quantum des dommages (montant accordé par le tribunal).
+3. "section1_title": "1. Qualification Juridique des Faits & Diagnostic de la Preuve"
+4. "section1_content": Analyse approfondie et détaillée des faits de l'affaire, de la force probante des pièces et des forces et faiblesses initiales du demandeur et de la défense. Utilise du gras et des puces détaillées.
+5. "section2_title": "2. Évaluation de l'Aléa Judiciaire, du Quantum des Dommages & du Risque Financier"
+6. "section2_content": Explique comment la simulation d'audience a modélisé l'impact des profils de juges. Précise dès la première mention « quantum des dommages (montant accordé par le tribunal) ». Comment les sensibilités jurisprudentielles des juges expliquent-elles le taux de {client_win_rate}% de succès pour le demandeur ? Analyse la variance de la décision et le niveau de prévisibilité.
+7. "section3_title": "3. Motifs Déterminants du Tribunal, Plancher de Condamnation & Points de Bascule"
+8. "section3_content": Quels ont été les motifs déterminants, réductions du quantum (plancher de condamnation) et points de bascule constatés pendant les simulations ? Identifie les moments où la conviction du juge a basculé en faveur ou contre le demandeur.
+9. "section4_title": "4. Stratégie de Règlement Amiable (CRA / Conciliation) & Recommandations Tactiques"
 10. "section4_content": Fournis une liste de recommandations actionnables pour l'avocat du demandeur :
   - Tactique d'audience face aux profils de juges.
-  - Éléments de preuve cruciaux à consolider (ex: rapports de sécurité, registres d'accès).
-  - Recommandation et justification mathématique sur l'opportunité de négocier un règlement à l'amiable hors cour ou d'aller au procès en se basant sur le taux de succès statistique.
+  - Éléments de preuve cruciaux à consolider.
+  - Recommandation et justification mathématique sur l'opportunité de négocier un règlement à l'amiable hors cour (CRA / séance de conciliation) ou d'aller au procès en se basant sur le taux de succès et l'espérance de condamnation.
 
 Renvoie uniquement un dictionnaire JSON valide. Ne mets pas de texte d'introduction ni de conclusion en dehors du JSON."""
         else:
@@ -529,18 +529,18 @@ Exemples concrets de verdicts motivés rendus par les juges simulés :
 Rédige le rapport complet en français sous forme de dictionnaire JSON avec les clés suivantes :
 
 1. "title": Le titre du rapport (ex. "Rapport Stratégique de Matérialité et d'Aléa Judiciaire pour la Défense")
-2. "summary": Un résumé analytique percutant des conclusions statistiques. Interprète le taux de {win_rate}% de succès pour la défense sous l'angle du risque de bilan pour le client.
-3. "section1_title": "1. Cartographie Factuelle & Diagnostic de Matérialité"
-4. "section1_content": Analyse approfondie et détaillée des faits de l'affaire, des forces et faiblesses initiales de l'accusation/demandeur (ex. matérialité de l'exfiltration, Loi 25) et de la défense (ex. ordre du PDG d'utiliser de l'open-source, absence de secret commercial). Utilise du gras et des puces détaillées.
-5. "section2_title": "2. Modélisation de l'Aléa Judiciaire & Risque de Bilan (Monte-Carlo)"
-6. "section2_content": Explique comment la simulation de Monte-Carlo a modélisé l'impact des 5 profils de juges (Formaliste strict, Sensible à l'équité, Conservateur, Progressiste, Imprévisible). Comment les sensibilités des juges expliquent-elles le taux de {win_rate}% ? Analyse la variance de la décision et le niveau de prévisibilité.
-7. "section3_title": "3. Dynamiques Comportementales & Points de Bascule (Puits de Potentiel)"
-8. "section3_content": Quels ont été les arguments décisifs (points de bascule ou puits de potentiel) constatés pendant les simulations ? Par exemple, comment le juge réagit-il à la clause contractuelle d'injonction, au fardeau de la preuve de la Loi 25, ou au courriel du PDG ? Identifie les moments où la conviction du juge a basculé.
-9. "section4_title": "4. Recommandations d'Arbitrage & Justification du Règlement à l'Amiable"
+2. "summary": Un résumé analytique percutant des conclusions statistiques. Interprète le taux de {win_rate}% de succès pour la défense sous l'angle de l'aléa judiciaire et du quantum des dommages (montant accordé par le tribunal).
+3. "section1_title": "1. Qualification Juridique des Faits & Diagnostic de la Preuve"
+4. "section1_content": Analyse approfondie et détaillée des faits de l'affaire, de la force probante des pièces et des forces et faiblesses initiales du demandeur et de la défense. Utilise du gras et des puces détaillées.
+5. "section2_title": "2. Évaluation de l'Aléa Judiciaire, du Quantum des Dommages & du Risque Financier"
+6. "section2_content": Explique comment la simulation d'audience a modélisé l'impact des profils de juges (Formaliste strict, Sensible à l'équité, Pragmatique). Précise dès la première mention « quantum des dommages (montant accordé par le tribunal) ». Comment les sensibilités des juges expliquent-elles le taux de {win_rate}% ? Analyse la variance de la décision et le niveau de prévisibilité.
+7. "section3_title": "3. Motifs Déterminants du Tribunal, Plancher de Condamnation & Points de Bascule"
+8. "section3_content": Quels ont été les motifs déterminants, réductions du quantum (plancher de condamnation) et points de bascule constatés pendant les simulations ? Identifie les moments où la conviction du juge a basculé.
+9. "section4_title": "4. Stratégie de Règlement Amiable (CRA / Conciliation) & Recommandations Tactiques"
 10. "section4_content": Fournis une liste de recommandations actionnables pour l'avocat de la défense :
-  - Tactique d'audience face à un juge formaliste strict (ex: soulever des arguments de pure procédure) vs un juge axé sur l'équité (ex: insister sur la mauvaise foi de la demanderesse ou la contrainte).
-  - Éléments de preuve cruciaux à consolider (ex: rapports de sécurité, registres d'accès).
-  - Recommandation sur l'opportunité et la justification mathématique de négocier un règlement à l'amiable ou d'aller au procès en se basant sur le taux de succès statistique.
+  - Tactique d'audience face à un juge formaliste strict vs un juge axé sur l'équité.
+  - Éléments de preuve cruciaux à consolider.
+  - Recommandation sur l'opportunité et la justification mathématique de négocier un règlement à l'amiable (CRA / séance de conciliation) ou d'aller au procès en se basant sur le plancher de condamnation et l'espérance mathématique.
 
 Renvoie uniquement un dictionnaire JSON valide. Ne mets pas de texte d'introduction ni de conclusion en dehors du JSON."""
 
@@ -571,28 +571,28 @@ Renvoie uniquement un dictionnaire JSON valide. Ne mets pas de texte d'introduct
             elif client_side == "plaintiff":
                 report_data = {
                     "title": "Rapport Stratégique de Matérialité et d'Aléa Judiciaire pour le Demandeur",
-                    "summary": f"Analyse prédictive de risque de bilan par simulation de Monte-Carlo. Taux de succès estimé : {client_win_rate}%.",
-                    "section1_title": "1. Cartographie Factuelle & Diagnostic de Matérialité",
+                    "summary": f"Analyse prédictive de l'aléa judiciaire et du quantum des dommages (montant accordé par le tribunal). Taux de succès estimé : {client_win_rate}%.",
+                    "section1_title": "1. Qualification Juridique des Faits & Diagnostic de la Preuve",
                     "section1_content": f"L'affaire repose sur les éléments décrits dans le dossier de procès : {simulation_requirement[:500]}...",
-                    "section2_title": "2. Modélisation de l'Aléa Judiciaire & Risque de Bilan (Monte-Carlo)",
-                    "section2_content": f"La simulation de Monte-Carlo montre un taux de succès stable à {client_win_rate}% pour le demandeur. Cette variation s'explique par les différentes sensibilités jurisprudentielles et de personnalité des juges simulés.",
-                    "section3_title": "3. Dynamiques Comportementales & Points de Bascule (Puits de Potentiel)",
-                    "section3_content": "Le Demandeur requiert l'application ferme de la loi, tandis que la Défense s'attache à instiller un doute raisonnable. Les points de bascule et puits de potentiel identifiés influencent grandement la décision du tribunal.",
-                    "section4_title": "4. Recommandations d'Arbitrage & Justification du Règlement à l'Amiable",
-                    "section4_content": "Il est recommandé de consolider les éléments de preuve présentés par le demandeur. La justification mathématique d'un arbitrage ou d'un règlement amiable dépend du taux de succès et de l'exposition financière."
+                    "section2_title": "2. Évaluation de l'Aléa Judiciaire, du Quantum des Dommages & du Risque Financier",
+                    "section2_content": f"La simulation d'audience montre un taux de succès stable à {client_win_rate}% pour le demandeur. Cette variation du quantum des dommages (montant accordé par le tribunal) s'explique par les différentes sensibilités jurisprudentielles des juges simulés.",
+                    "section3_title": "3. Motifs Déterminants du Tribunal, Plancher de Condamnation & Points de Bascule",
+                    "section3_content": "Le Demandeur requiert l'application ferme de la loi, tandis que la Défense soumet des moyens de réduction du quantum (plancher de condamnation). Les motifs déterminants identifiés influencent directement le dispositif du tribunal.",
+                    "section4_title": "4. Stratégie de Règlement Amiable (CRA / Conciliation) & Recommandations Tactiques",
+                    "section4_content": "Il est recommandé de consolider les éléments de preuve présentés par le demandeur. La justification mathématique d'une transaction en CRA ou en conciliation dépend du taux de succès et de l'exposition financière."
                 }
             else:
                 report_data = {
                     "title": "Rapport Stratégique de Matérialité et d'Aléa Judiciaire pour la Défense",
-                    "summary": f"Analyse prédictive de risque de bilan par simulation de Monte-Carlo. Taux de succès estimé : {win_rate}%.",
-                    "section1_title": "1. Cartographie Factuelle & Diagnostic de Matérialité",
+                    "summary": f"Analyse prédictive de l'aléa judiciaire et du quantum des dommages (montant accordé par le tribunal). Taux de succès estimé : {win_rate}%.",
+                    "section1_title": "1. Qualification Juridique des Faits & Diagnostic de la Preuve",
                     "section1_content": f"L'affaire repose sur les éléments décrits dans le dossier de procès : {simulation_requirement[:500]}...",
-                    "section2_title": "2. Modélisation de l'Aléa Judiciaire & Risque de Bilan (Monte-Carlo)",
-                    "section2_content": f"La simulation de Monte-Carlo montre un taux de succès stable à {win_rate}% pour la défense. Cette variation s'explique par les différentes sensibilités jurisprudentielles et de personnalité des juges simulés.",
-                    "section3_title": "3. Dynamiques Comportementales & Points de Bascule (Puits de Potentiel)",
-                    "section3_content": "L'accusation/demandeur requiert l'application ferme de la loi, tandis que la Défense s'attache à instiller un doute raisonnable. Les points de bascule et puits de potentiel identifiés influencent grandement la décision du tribunal.",
-                    "section4_title": "4. Recommandations d'Arbitrage & Justification du Règlement à l'Amiable",
-                    "section4_content": "Il est recommandé de consolider les éléments de preuve présentés par la défense. La justification mathématique d'un arbitrage ou d'un règlement amiable dépend du taux de succès et de l'exposition financière."
+                    "section2_title": "2. Évaluation de l'Aléa Judiciaire, du Quantum des Dommages & du Risque Financier",
+                    "section2_content": f"La simulation d'audience montre un taux de succès stable à {win_rate}% pour la défense. Cette variation du quantum des dommages (montant accordé par le tribunal) s'explique par les différentes sensibilités jurisprudentielles des juges simulés.",
+                    "section3_title": "3. Motifs Déterminants du Tribunal, Plancher de Condamnation & Points de Bascule",
+                    "section3_content": "Le Demandeur requiert l'application ferme de la loi, tandis que la Défense soumet des moyens de réduction du quantum (plancher de condamnation). Les motifs déterminants identifiés influencent directement le dispositif du tribunal.",
+                    "section4_title": "4. Stratégie de Règlement Amiable (CRA / Conciliation) & Recommandations Tactiques",
+                    "section4_content": "Il est recommandé de consolider les éléments de preuve présentés par la défense. La justification mathématique d'une transaction en CRA ou en conciliation dépend du taux de succès et de l'exposition financière."
                 }
 
         title = report_data.get("title", "Rapport officiel du Greffier")
